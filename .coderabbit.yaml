@@ -1,0 +1,38 @@
+language: "en"
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - master
+
+  path_filters:
+    - "!**/.dart_tool/**"
+    - "!**/build/**"
+    - "!**/*.g.dart"
+    - "!**/*.freezed.dart"
+    - "!**/generated/**"
+    - "!docs/**"
+
+  path_instructions:
+    - path: "lib/**"
+      instructions: |
+        Bu proje Flutter ile Clean Architecture + BLoC pattern kullanır.
+        Widget içinde doğrudan HTTP isteği YASAKTIR, BLoC/Cubit kullanılmalı.
+        Hardcoded Türkçe/İngilizce string YASAKTIR, lokalizasyon dosyası kullanılmalı.
+        Para birimi gösteriminde NumberFormat.currency(locale: 'tr_TR') kullanılmalı.
+        Katman sınırları: presentation → domain → data. Atlamak yasak.
+
+    - path: "test/**"
+      instructions: |
+        Test adlandırma: methodName_scenario_expectedResult.
+        Widget testlerinde gerçek BLoC yerine MockBloc kullanılabilir.
+
+chat:
+  auto_reply: true

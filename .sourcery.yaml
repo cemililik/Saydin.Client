@@ -1,0 +1,14 @@
+rule_settings:
+  enable:
+    - default
+
+github:
+  labels:
+    - sourcery
+
+  ignore:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/generated/**"
+    - "**/build/**"
+    - "docs/**"
