@@ -105,7 +105,11 @@ class _WhatIfPageState extends State<WhatIfPage> {
           }
           final amount = state.formInput.amount;
           if (amount != null) {
-            _amountController.text = amount.toString().replaceAll('.', ',');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _amountController.text = amount.toString().replaceAll('.', ',');
+              }
+            });
           }
         },
         builder: (context, state) {

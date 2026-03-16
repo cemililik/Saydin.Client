@@ -42,9 +42,15 @@ class _DateInputState extends State<DateInput> {
   void didUpdateWidget(DateInput oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
-      _controller.text = widget.value != null
-          ? DateInput._formatter.format(widget.value!)
-          : '';
+      // Build sırasında controller güncellemesi Form'un setState'ini tetikler;
+      // postFrameCallback ile bir sonraki frame'e erteleyerek bunu önlüyoruz.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _controller.text = widget.value != null
+              ? DateInput._formatter.format(widget.value!)
+              : '';
+        }
+      });
     }
   }
 
