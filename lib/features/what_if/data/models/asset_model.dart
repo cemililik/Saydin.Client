@@ -10,17 +10,17 @@ class AssetModel extends Asset {
   factory AssetModel.fromJson(Map<String, dynamic> json) {
     final symbol = json['symbol'];
     final displayName = json['displayName'];
-    final category = json['category'];
-    if (symbol is! String || displayName is! String || category is! String) {
+    final categoryRaw = json['category'];
+    if (symbol is! String || displayName is! String || categoryRaw == null) {
       throw FormatException(
         'AssetModel.fromJson: beklenen alanlar eksik veya yanlış tipte. '
-        'symbol=$symbol, displayName=$displayName, category=$category',
+        'symbol=$symbol, displayName=$displayName, category=$categoryRaw',
       );
     }
     return AssetModel(
       symbol: symbol,
       displayName: displayName,
-      category: category,
+      category: categoryRaw.toString(),
     );
   }
 }

@@ -12,9 +12,21 @@ final sl = GetIt.instance;
 
 void configureDependencies() {
   // Network
-  sl.registerLazySingleton<ApiClient>(
-    () => ApiClient(baseUrl: const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:5080')),
-  );
+  sl.registerLazySingleton<ApiClient>(() {
+    const baseUrl = String.fromEnvironment('API_BASE_URL');
+    assert(
+      baseUrl.isNotEmpty,
+      'API_BASE_URL dart-define is required. '
+      'Pass --dart-define=API_BASE_URL=http://<host>:5080',
+    );
+    if (baseUrl.isEmpty) {
+      throw StateError(
+        'API_BASE_URL dart-define is required. '
+        'Pass --dart-define=API_BASE_URL=http://<host>:5080',
+      );
+    }
+    return ApiClient(baseUrl: baseUrl);
+  });
 
   // Error handling
   sl.registerLazySingleton(() => const DioErrorMapper());

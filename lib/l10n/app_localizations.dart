@@ -250,6 +250,12 @@ abstract class AppLocalizations {
   /// **'Geçerli bir tutar giriniz'**
   String get validAmountRequired;
 
+  /// No description provided for @errorServer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sunucu hatası. Lütfen tekrar deneyin.'**
+  String get errorServer;
+
   /// No description provided for @errorGeneric.
   ///
   /// In tr, this message translates to:

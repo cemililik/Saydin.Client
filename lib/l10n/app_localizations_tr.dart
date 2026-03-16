@@ -87,6 +87,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get validAmountRequired => 'Geçerli bir tutar giriniz';
 
   @override
+  String get errorServer => 'Sunucu hatası. Lütfen tekrar deneyin.';
+
+  @override
   String get errorGeneric => 'Bir hata oluştu. Lütfen tekrar deneyin.';
 
   @override

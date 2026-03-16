@@ -43,15 +43,17 @@ class AmountInput extends StatelessWidget {
           child: DropdownButtonFormField<String>(
             key: ValueKey(amountType),
             initialValue: amountType,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-            ),
+            decoration: const InputDecoration(border: OutlineInputBorder()),
             items: [
               DropdownMenuItem(value: 'try', child: Text(l10n.amountTypeTry)),
               DropdownMenuItem(
-                  value: 'units', child: Text(l10n.amountTypeUnits)),
+                value: 'units',
+                child: Text(l10n.amountTypeUnits),
+              ),
               DropdownMenuItem(
-                  value: 'grams', child: Text(l10n.amountTypeGrams)),
+                value: 'grams',
+                child: Text(l10n.amountTypeGrams),
+              ),
             ],
             onChanged: (v) => v != null ? onAmountTypeChanged(v) : null,
           ),

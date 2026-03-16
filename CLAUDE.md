@@ -208,3 +208,25 @@ Color myColor = Color(0xFF2E7D32);  // magic number
 - `double`/`float` para tutarı için — YASAK (Dart'ta `num` veya server'dan gelen string → parse et)
 - Domain katmanında Flutter import — YASAK
 - BLoC'ta HTTP client — YASAK
+
+---
+
+## Dokümantasyon Standardı
+
+### Nereye Yazılır?
+
+| Kapsam | Konum |
+|--------|-------|
+| Flutter'a özgü mimari, BLoC, hata yönetimi, DI, ağ katmanı | `docs/architecture.md` |
+| Flutter geliştirme iş akışı (komutlar, env, build, sorun giderme) | `docs/development-guide.md` |
+| Proje geneli mimari (istemci + servisler arası ilişki, API sözleşmesi) | Kök `docs/` dizini |
+| Mimari kararlar (ADR) | Kök `docs/decisions/` dizini |
+
+### Kurallar
+
+- **Flutter'a özgü** her doküman `src/Saydin.Client/docs/` içine gider — kök `docs/` içine konmaz.
+- Kök `docs/`'a yalnızca birden fazla bileşeni (istemci + servisler) kapsayan belgeler eklenir.
+- Yeni özellik eklendiğinde `docs/architecture.md` güncellenir (yeni katman, pattern, paket).
+- `development-guide.md` iş akışı değiştiğinde güncellenir (yeni komut, env değişkeni, sorun).
+- Büyük mimari karar alındığında kök `docs/decisions/ADR-XXX-<konu>.md` oluşturulur.
+- Dokümanlar kod değişikliğiyle aynı commit'te güncellenir; ayrı PR açılmaz.

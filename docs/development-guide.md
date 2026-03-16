@@ -6,12 +6,12 @@
 |---|---|---|
 | Flutter | 3.41.0 | `flutter --version` |
 | Dart | 3.x (Flutter ile gelir) | `dart --version` |
-| Xcode | 15+ (iOS için) | `xcode-select --print-path` |
-| Android Studio | Koala+ (Android için) | |
+| Xcode | 16+ (iOS için) | `xcode-select --print-path` |
+| Android Studio | Ladybug+ (Android için) | AVD Manager için |
 | CocoaPods | latest (iOS için) | `pod --version` |
 
 ```bash
-# Flutter kurulum doğrulama
+# Ortam doğrulama
 flutter doctor
 ```
 
@@ -22,37 +22,51 @@ cd src/Saydin.Client
 flutter pub get
 ```
 
-## 2. Kodu Üret (Code Generation)
+## 2. Git Hook'larını Etkinleştir
 
 ```bash
-# Localization dosyaları (AppLocalizations)
-flutter gen-l10n
-
-# DI kodu (injectable)
-dart run build_runner build --delete-conflicting-outputs
+git config core.hooksPath .githooks
 ```
 
-> Bu adım her yeni dosya eklendiğinde veya `@injectable` annotation değiştiğinde tekrarlanmalıdır.
+Bu komut bir kez çalıştırılır. Sonrasında her `git commit`'te otomatik olarak:
+- `dart format` format kontrolü yapılır
+- `flutter analyze` analizi çalışır
+
+Commit format hatası verirse: `dart format lib/ test/` çalıştırıp tekrar commit edin.
+
+## 2. Lokalizasyon Kodunu Üret
+
+```bash
+# app_tr.arb → app_localizations.dart
+flutter gen-l10n
+```
+
+> Bu adım `app_tr.arb` her değiştiğinde tekrarlanmalıdır. CI'da da zorunludur.
 
 ## 3. Ortam Yapılandırması
 
-Backend API URL'sini `--dart-define` ile geçir — hardcoded URL yasaktır:
+API adresi ve Sentry DSN `--dart-define` ile enjekte edilir — kaynak koda gömülmez:
 
 ```bash
-# Geliştirme (yerel backend)
-flutter run --dart-define=API_BASE_URL=http://localhost:5000
+# Android Emülatör (10.0.2.2 = host makinesi)
+flutter run \
+  --dart-define=API_BASE_URL=http://10.0.2.2:5080 \
+  --dart-define=APP_ENV=development
 
-# iOS Simulator
-flutter run -d "iPhone 16" --dart-define=API_BASE_URL=http://localhost:5000
+# iOS Simulator / fiziksel cihaz
+flutter run \
+  --dart-define=API_BASE_URL=http://localhost:5080 \
+  --dart-define=APP_ENV=development
 
-# Android Emulator (localhost yerine 10.0.2.2)
-flutter run -d "Pixel_8" --dart-define=API_BASE_URL=http://10.0.2.2:5000
+# Sentry hata izleme etkin (opsiyonel)
+flutter run \
+  --dart-define=API_BASE_URL=http://10.0.2.2:5080 \
+  --dart-define=APP_ENV=development \
+  --dart-define=SENTRY_DSN=https://<key>@sentry.io/<project>
 ```
 
-Kod içinde kullanım:
-```dart
-const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:5000');
-```
+> `API_BASE_URL` tanımlı değilse varsayılan `http://10.0.2.2:5080` kullanılır.
+> `SENTRY_DSN` tanımlı değilse Sentry sessizce devre dışı kalır.
 
 ## 4. Uygulamayı Çalıştır
 
@@ -60,115 +74,138 @@ const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://
 # Bağlı cihazları listele
 flutter devices
 
-# Varsayılan cihazda çalıştır
-flutter run --dart-define=API_BASE_URL=http://localhost:5000
+# Android Emülatör
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5080
 
-# Release modda çalıştır (performans testi için)
-flutter run --release --dart-define=API_BASE_URL=http://localhost:5000
+# iOS Simulator
+flutter run -d "iPhone 16" --dart-define=API_BASE_URL=http://localhost:5080
+
+# Fiziksel cihaz (USB debug açık)
+flutter run -d <device-id> --dart-define=API_BASE_URL=http://<local-ip>:5080
+
+# Release modda (performans testi)
+flutter run --release --dart-define=API_BASE_URL=http://10.0.2.2:5080
 ```
 
 ## 5. Testleri Çalıştır
 
 ```bash
+# Önce l10n kodu üret
+flutter gen-l10n
+
 # Tüm testler
 flutter test
 
-# Belirli test dosyası
-flutter test test/features/what_if/bloc/what_if_bloc_test.dart
-
-# Coverage
+# Coverage raporu ile
 flutter test --coverage
 genhtml coverage/lcov.info -o coverage/html
 open coverage/html/index.html
+
+# Belirli test dosyası
+flutter test test/core/error/dio_error_mapper_test.dart
 ```
 
-## 6. Build
+## 6. Kod Kalitesi
+
+```bash
+# Analiz (--fatal-infos CI ile aynı kural)
+flutter analyze --fatal-infos
+
+# Format kontrolü (CI ile aynı)
+dart format --output=none --set-exit-if-changed lib/ test/
+
+# Format uygula
+dart format lib/ test/
+```
+
+## 7. Build
 
 ### iOS
 
 ```bash
-# TestFlight için
-flutter build ipa --dart-define=API_BASE_URL=https://api.saydin.app
+# TestFlight için IPA
+flutter build ipa \
+  --dart-define=API_BASE_URL=https://api.saydin.app \
+  --dart-define=APP_ENV=production \
+  --dart-define=SENTRY_DSN=<production-dsn>
 # Çıktı: build/ios/ipa/Saydin.ipa
-
-# Simülatör için
-flutter build ios --simulator --dart-define=API_BASE_URL=http://localhost:5000
 ```
 
 ### Android
 
 ```bash
 # Play Store için AAB
-flutter build appbundle --dart-define=API_BASE_URL=https://api.saydin.app
+flutter build appbundle \
+  --dart-define=API_BASE_URL=https://api.saydin.app \
+  --dart-define=APP_ENV=production \
+  --dart-define=SENTRY_DSN=<production-dsn>
 # Çıktı: build/app/outputs/bundle/release/app-release.aab
 
-# APK (test dağıtımı)
-flutter build apk --dart-define=API_BASE_URL=https://api.saydin.app
+# Debug APK (test dağıtımı)
+flutter build apk --dart-define=API_BASE_URL=http://10.0.2.2:5080
 ```
 
-## 7. Sık Kullanılan Komutlar
+## 8. Sık Kullanılan Komutlar
 
 ```bash
-# Analiz (linting)
-flutter analyze
-
-# Format
-dart format lib/ test/
-
 # Paketleri güncelle
 flutter pub upgrade
 
 # Cache temizle (sorun çözme)
-flutter clean && flutter pub get
+flutter clean && flutter pub get && flutter gen-l10n
 
-# Widget test'te golden güncelle
-flutter test --update-goldens
+# Tüm bağımlılıkları gözden geçir
+flutter pub outdated
 ```
 
-## 8. Proje Yapısına Yeni Özellik Ekleme
+## 9. Yeni Feature Ekleme
 
 1. `lib/features/<feature_name>/` dizinini oluştur
-2. Alt dizinleri oluştur: `data/models/`, `data/repositories/`, `domain/entities/`, `domain/repositories/`, `domain/usecases/`, `presentation/bloc/`, `presentation/pages/`, `presentation/widgets/`
+2. Katmanları oluştur: `data/models/`, `data/repositories/`, `domain/entities/`, `domain/repositories/`, `domain/usecases/`, `presentation/bloc/`, `presentation/pages/`, `presentation/widgets/`
 3. Domain entity'sini yaz (Flutter import'suz saf Dart)
 4. Repository interface'ini domain katmanına ekle
 5. Data modelini ve repository implementasyonunu yaz
 6. Use case yaz
-7. BLoC, Event, State yaz
-8. Sayfayı `core/router/` içine kaydet
-9. DI kaydını `@injectable` ile ekle, `build_runner` çalıştır
-10. Yeni string'leri `l10n/app_tr.arb`'a ekle, `flutter gen-l10n` çalıştır
+7. BLoC, Event, State yaz — state'lerde `AppError` kullan, string mesaj **yok**
+8. Widget'ta hata mesajını `switch(state.error)` + `context.l10n.errorXxx` ile çöz
+9. `lib/core/di/injection.dart` dosyasına DI kayıtlarını ekle
+10. Yeni string'leri `lib/l10n/app_tr.arb`'a ekle, `flutter gen-l10n` çalıştır
+11. Birim testleri yaz (`test/features/<feature_name>/`)
 
-## 9. Localization Ekleme
+## 10. Lokalizasyon Ekleme
 
-```bash
-# l10n/app_tr.arb dosyasını düzenle, ardından:
-flutter gen-l10n
-```
+`lib/l10n/app_tr.arb` dosyasını düzenle:
 
-`app_tr.arb` örneği:
 ```json
 {
   "@@locale": "tr",
-  "calculate": "Hesapla",
-  "loadingResult": "Sonuç yükleniyor...",
-  "profitMessage": "{amount} kazanç ({percent})",
-  "@profitMessage": {
+  "myNewKey": "Yeni metin",
+  "myParamKey": "{amount} TL yatırım",
+  "@myParamKey": {
     "placeholders": {
-      "amount": {"type": "String"},
-      "percent": {"type": "String"}
+      "amount": {"type": "String"}
     }
   }
 }
 ```
 
-## 10. Yaygın Sorunlar
+Ardından kodu üret:
+```bash
+flutter gen-l10n
+```
 
-### `flutter gen-l10n` sonrası hata
+Kullanım:
+```dart
+context.l10n.myNewKey
+context.l10n.myParamKey(amount: '10.000')
+```
+
+## 11. Yaygın Sorunlar
+
+### `flutter gen-l10n` sonrası derleme hatası
 
 ```bash
-flutter clean
-flutter pub get
-flutter gen-l10n
+flutter clean && flutter pub get && flutter gen-l10n
 ```
 
 ### iOS CocoaPods sorunu
@@ -177,16 +214,16 @@ flutter gen-l10n
 cd ios && pod install --repo-update && cd ..
 ```
 
-### build_runner çakışması
-
-```bash
-dart run build_runner clean
-dart run build_runner build --delete-conflicting-outputs
-```
-
 ### Android emülatörde backend'e bağlanılamıyor
 
-Android emülatörde `localhost` yerine `10.0.2.2` kullan:
+`localhost` yerine `10.0.2.2` kullan:
 ```bash
-flutter run -d emulator --dart-define=API_BASE_URL=http://10.0.2.2:5000
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5080
+```
+
+### `flutter analyze` lint hatası
+
+CI ile aynı kuralları çalıştır:
+```bash
+flutter analyze --fatal-infos
 ```

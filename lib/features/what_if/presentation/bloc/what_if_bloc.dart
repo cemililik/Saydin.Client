@@ -20,12 +20,18 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     this._calculateWhatIf, {
     DioErrorMapper errorMapper = const DioErrorMapper(),
     ErrorReporter reporter = const ErrorReporter(),
-  })  : _errorMapper = errorMapper,
-        _reporter = reporter,
-        super(const WhatIfInitial()) {
+  }) : _errorMapper = errorMapper,
+       _reporter = reporter,
+       super(const WhatIfInitial()) {
     on<WhatIfAssetsRequested>(_onAssetsRequested);
+    on<WhatIfSymbolChanged>(_onSymbolChanged);
+    on<WhatIfBuyDateChanged>(_onBuyDateChanged);
+    on<WhatIfSellDateChanged>(_onSellDateChanged);
+    on<WhatIfAmountTypeChanged>(_onAmountTypeChanged);
     on<WhatIfCalculateRequested>(_onCalculateRequested);
   }
+
+  WhatIfFormInput get _formInput => state.formInput;
 
   Future<void> _onAssetsRequested(
     WhatIfAssetsRequested event,
@@ -34,21 +40,69 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     emit(const WhatIfAssetsLoading());
     try {
       final assets = await _getAssets();
-      emit(WhatIfAssetsLoaded(assets));
+      emit(WhatIfAssetsLoaded(assets, formInput: _formInput));
     } on DioException catch (e, st) {
       final error = _errorMapper.map(e);
       if (error is UnknownError || error is ServerError) {
         await _reporter.report(e, st, context: 'get_assets');
       }
-      emit(WhatIfFailure(assets: [], message: _messageFor(error), error: error));
+      emit(WhatIfFailure(assets: [], error: error, formInput: _formInput));
     } catch (e, st) {
       await _reporter.report(e, st, context: 'get_assets');
-      emit(WhatIfFailure(
-        assets: [],
-        message: 'Bir hata oluştu. Lütfen tekrar deneyin.',
-        error: UnknownError(cause: e),
-      ));
+      emit(
+        WhatIfFailure(
+          assets: [],
+          error: UnknownError(cause: e),
+          formInput: _formInput,
+        ),
+      );
     }
+  }
+
+  void _onSymbolChanged(WhatIfSymbolChanged event, Emitter<WhatIfState> emit) {
+    _emitWithUpdatedForm(
+      emit,
+      _formInput.copyWith(selectedSymbol: event.symbol),
+    );
+  }
+
+  void _onBuyDateChanged(
+    WhatIfBuyDateChanged event,
+    Emitter<WhatIfState> emit,
+  ) {
+    _emitWithUpdatedForm(emit, _formInput.copyWith(buyDate: event.date));
+  }
+
+  void _onSellDateChanged(
+    WhatIfSellDateChanged event,
+    Emitter<WhatIfState> emit,
+  ) {
+    _emitWithUpdatedForm(emit, _formInput.copyWith(sellDate: event.date));
+  }
+
+  void _onAmountTypeChanged(
+    WhatIfAmountTypeChanged event,
+    Emitter<WhatIfState> emit,
+  ) {
+    _emitWithUpdatedForm(
+      emit,
+      _formInput.copyWith(amountType: event.amountType),
+    );
+  }
+
+  void _emitWithUpdatedForm(
+    Emitter<WhatIfState> emit,
+    WhatIfFormInput updated,
+  ) {
+    final current = state;
+    if (current is WhatIfAssetsLoaded) {
+      emit(current.copyWith(formInput: updated));
+    } else if (current is WhatIfSuccess) {
+      emit(current.copyWith(formInput: updated));
+    } else if (current is WhatIfFailure) {
+      emit(current.copyWith(formInput: updated));
+    }
+    // WhatIfCalculating: form değişikliği hesaplama süresince yoksayılır
   }
 
   Future<void> _onCalculateRequested(
@@ -64,11 +118,11 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     };
 
     await _reporter.addBreadcrumb(
-      'WhatIf hesaplandı: ${event.assetSymbol} ${event.buyDate}',
+      'WhatIf calculated: ${event.assetSymbol} ${event.buyDate.toIso8601String()}',
       category: 'what_if',
     );
 
-    emit(WhatIfCalculating(currentAssets));
+    emit(WhatIfCalculating(currentAssets, formInput: _formInput));
     try {
       final result = await _calculateWhatIf(
         assetSymbol: event.assetSymbol,
@@ -77,32 +131,34 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
         amount: event.amount,
         amountType: event.amountType,
       );
-      emit(WhatIfSuccess(assets: currentAssets, result: result));
+      emit(
+        WhatIfSuccess(
+          assets: currentAssets,
+          result: result,
+          formInput: _formInput,
+        ),
+      );
     } on DioException catch (e, st) {
       final error = _errorMapper.map(e);
       if (error is UnknownError || error is ServerError) {
         await _reporter.report(e, st, context: 'calculate_what_if');
       }
-      emit(WhatIfFailure(
-        assets: currentAssets,
-        message: _messageFor(error),
-        error: error,
-      ));
+      emit(
+        WhatIfFailure(
+          assets: currentAssets,
+          error: error,
+          formInput: _formInput,
+        ),
+      );
     } catch (e, st) {
       await _reporter.report(e, st, context: 'calculate_what_if');
-      emit(WhatIfFailure(
-        assets: currentAssets,
-        message: 'Hesaplama başarısız. Lütfen tekrar deneyin.',
-        error: UnknownError(cause: e),
-      ));
+      emit(
+        WhatIfFailure(
+          assets: currentAssets,
+          error: UnknownError(cause: e),
+          formInput: _formInput,
+        ),
+      );
     }
   }
-
-  String _messageFor(AppError error) => switch (error) {
-        PriceNotFoundError() => 'Bu tarih için fiyat bilgisi bulunamadı.',
-        DailyLimitError()    => 'Günlük hesaplama limitine ulaştınız.',
-        NoInternetError()    => 'İnternet bağlantısı yok.',
-        ServerError()        => 'Sunucu hatası. Lütfen tekrar deneyin.',
-        UnknownError()       => 'Bir hata oluştu. Lütfen tekrar deneyin.',
-      };
 }

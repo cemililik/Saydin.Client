@@ -4,4 +4,7 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Debug ortamında yerel geliştirme sunucusuna (10.0.2.2) HTTP ile bağlanmak için gerekli.
+         Production build'lerde bu flag aktif değildir. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>
