@@ -18,14 +18,14 @@ class WhatIfAssetsLoading extends WhatIfState {
 
 class WhatIfAssetsLoaded extends WhatIfState {
   final List<Asset> assets;
-  const WhatIfAssetsLoaded(this.assets);
+  WhatIfAssetsLoaded(List<Asset> assets) : assets = List.unmodifiable(assets);
   @override
   List<Object?> get props => [assets];
 }
 
 class WhatIfCalculating extends WhatIfState {
   final List<Asset> assets;
-  const WhatIfCalculating(this.assets);
+  WhatIfCalculating(List<Asset> assets) : assets = List.unmodifiable(assets);
   @override
   List<Object?> get props => [assets];
 }
@@ -33,7 +33,8 @@ class WhatIfCalculating extends WhatIfState {
 class WhatIfSuccess extends WhatIfState {
   final List<Asset> assets;
   final WhatIfResult result;
-  const WhatIfSuccess({required this.assets, required this.result});
+  WhatIfSuccess({required List<Asset> assets, required this.result})
+      : assets = List.unmodifiable(assets);
   @override
   List<Object?> get props => [assets, result];
 }
@@ -41,7 +42,8 @@ class WhatIfSuccess extends WhatIfState {
 class WhatIfFailure extends WhatIfState {
   final List<Asset> assets;
   final String message;
-  const WhatIfFailure({required this.assets, required this.message});
+  WhatIfFailure({required List<Asset> assets, required this.message})
+      : assets = List.unmodifiable(assets);
   @override
   List<Object?> get props => [assets, message];
 }

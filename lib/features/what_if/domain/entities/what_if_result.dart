@@ -1,15 +1,17 @@
-class WhatIfResult {
+import 'package:equatable/equatable.dart';
+
+class WhatIfResult extends Equatable {
   final String assetSymbol;
   final String assetDisplayName;
   final DateTime buyDate;
   final DateTime? sellDate;
-  final num buyPrice;
-  final num sellPrice;
-  final num unitsAcquired;
-  final num initialValueTry;
-  final num finalValueTry;
-  final num profitLossTry;
-  final num profitLossPercent;
+  final double buyPrice;
+  final double sellPrice;
+  final double unitsAcquired;
+  final double initialValueTry;
+  final double finalValueTry;
+  final double profitLossTry;
+  final double profitLossPercent;
   final bool isProfit;
 
   const WhatIfResult({
@@ -26,4 +28,20 @@ class WhatIfResult {
     required this.profitLossPercent,
     required this.isProfit,
   });
+
+  @override
+  List<Object?> get props => [
+        assetSymbol,
+        assetDisplayName,
+        buyDate,
+        sellDate,
+        buyPrice,
+        sellPrice,
+        unitsAcquired,
+        initialValueTry,
+        finalValueTry,
+        profitLossTry,
+        profitLossPercent,
+        isProfit,
+      ];
 }

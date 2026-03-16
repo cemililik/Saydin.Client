@@ -22,12 +22,18 @@ class DeviceIdInterceptor extends Interceptor {
 
   Future<String> _getOrCreateDeviceId() async {
     if (_cachedDeviceId != null) return _cachedDeviceId!;
-    var deviceId = await _storage.read(key: _storageKey);
-    if (deviceId == null) {
-      deviceId = const Uuid().v4();
-      await _storage.write(key: _storageKey, value: deviceId);
+    try {
+      var deviceId = await _storage.read(key: _storageKey);
+      if (deviceId == null) {
+        deviceId = const Uuid().v4();
+        await _storage.write(key: _storageKey, value: deviceId);
+      }
+      _cachedDeviceId = deviceId;
+      return deviceId;
+    } catch (_) {
+      // Storage unavailable — use an ephemeral ID for this session only
+      _cachedDeviceId ??= const Uuid().v4();
+      return _cachedDeviceId!;
     }
-    _cachedDeviceId = deviceId;
-    return deviceId;
   }
 }

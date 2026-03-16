@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
+import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 
 class ResultCard extends StatelessWidget {
@@ -15,13 +16,9 @@ class ResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tryFormatter = _tryFormatter;
-    final pctFormatter = _pctFormatter;
-
-    final color =
-        result.isProfit ? AppColors.profit : AppColors.loss;
-    final icon =
-        result.isProfit ? Icons.trending_up : Icons.trending_down;
+    final l10n = context.l10n;
+    final color = result.isProfit ? AppColors.profit : AppColors.loss;
+    final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
 
     return Card(
       elevation: 4,
@@ -35,7 +32,7 @@ class ResultCard extends StatelessWidget {
                 Icon(icon, color: color, size: 28),
                 const SizedBox(width: 8),
                 Text(
-                  result.isProfit ? 'Kazanç' : 'Kayıp',
+                  result.isProfit ? l10n.profit : l10n.loss,
                   style: Theme.of(context)
                       .textTheme
                       .titleLarge
@@ -44,19 +41,19 @@ class ResultCard extends StatelessWidget {
               ],
             ),
             const Divider(height: 24),
-            _Row('Başlangıç Değeri',
-                tryFormatter.format(result.initialValueTry)),
-            _Row('Bugünkü Değer',
-                tryFormatter.format(result.finalValueTry),
+            _Row(l10n.initialValue,
+                _tryFormatter.format(result.initialValueTry)),
+            _Row(l10n.finalValue,
+                _tryFormatter.format(result.finalValueTry),
                 bold: true),
             _Row(
-              result.isProfit ? 'Kar' : 'Zarar',
-              tryFormatter.format(result.profitLossTry),
+              result.isProfit ? l10n.profitLabel : l10n.lossLabel,
+              _tryFormatter.format(result.profitLossTry),
               valueColor: color,
             ),
             _Row(
-              'Getiri',
-              pctFormatter.format(result.profitLossPercent / 100),
+              l10n.profitLossPercent,
+              _pctFormatter.format(result.profitLossPercent / 100),
               valueColor: color,
               bold: true,
             ),
@@ -82,8 +79,7 @@ class _Row extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: Theme.of(context).textTheme.bodyMedium),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(

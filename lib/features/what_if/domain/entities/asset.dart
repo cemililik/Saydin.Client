@@ -1,4 +1,6 @@
-class Asset {
+import 'package:equatable/equatable.dart';
+
+class Asset extends Equatable {
   final String symbol;
   final String displayName;
   final String category;
@@ -8,4 +10,7 @@ class Asset {
     required this.displayName,
     required this.category,
   });
+
+  @override
+  List<Object?> get props => [symbol, displayName, category];
 }

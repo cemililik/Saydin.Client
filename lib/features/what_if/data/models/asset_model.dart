@@ -7,9 +7,20 @@ class AssetModel extends Asset {
     required super.category,
   });
 
-  factory AssetModel.fromJson(Map<String, dynamic> json) => AssetModel(
-        symbol: json['symbol'] as String,
-        displayName: json['displayName'] as String,
-        category: json['category'] as String,
+  factory AssetModel.fromJson(Map<String, dynamic> json) {
+    final symbol = json['symbol'];
+    final displayName = json['displayName'];
+    final category = json['category'];
+    if (symbol is! String || displayName is! String || category is! String) {
+      throw FormatException(
+        'AssetModel.fromJson: beklenen alanlar eksik veya yanlış tipte. '
+        'symbol=$symbol, displayName=$displayName, category=$category',
       );
+    }
+    return AssetModel(
+      symbol: symbol,
+      displayName: displayName,
+      category: category,
+    );
+  }
 }

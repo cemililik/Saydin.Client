@@ -36,7 +36,11 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
         'amountType': amountType,
       },
     );
-    return WhatIfResponseModel.fromJson(response.data!);
+    final data = response.data;
+    if (data == null) {
+      throw const FormatException('WhatIf yanıtı boş geldi.');
+    }
+    return WhatIfResponseModel.fromJson(data);
   }
 
   String _formatDate(DateTime date) =>

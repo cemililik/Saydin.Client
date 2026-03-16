@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_event.dart';
@@ -38,16 +39,17 @@ class _WhatIfPageState extends State<WhatIfPage> {
   }
 
   void _onCalculate() {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
     if (_selectedSymbol == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Varlık seçiniz')),
+        SnackBar(content: Text(l10n.assetRequired)),
       );
       return;
     }
     if (_buyDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alış tarihi giriniz')),
+        SnackBar(content: Text(l10n.buyDateRequired)),
       );
       return;
     }
@@ -55,7 +57,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
     final amount = num.tryParse(_amountController.text.replaceAll(',', '.'));
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Geçerli bir tutar giriniz')),
+        SnackBar(content: Text(l10n.validAmountRequired)),
       );
       return;
     }
@@ -71,9 +73,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ya Alsaydım?'),
+        title: Text(l10n.whatIfTitle),
         centerTitle: true,
       ),
       body: BlocConsumer<WhatIfBloc, WhatIfState>(
@@ -114,14 +117,14 @@ class _WhatIfPageState extends State<WhatIfPage> {
                   ),
                   const SizedBox(height: 16),
                   DateInput(
-                    label: 'Alış Tarihi',
+                    label: l10n.buyDate,
                     value: _buyDate,
                     lastDate: DateTime.now(),
                     onChanged: (v) => setState(() => _buyDate = v),
                   ),
                   const SizedBox(height: 16),
                   DateInput(
-                    label: 'Satış Tarihi (opsiyonel)',
+                    label: l10n.sellDate,
                     value: _sellDate,
                     firstDate: _buyDate,
                     lastDate: DateTime.now(),
@@ -151,8 +154,8 @@ class _WhatIfPageState extends State<WhatIfPage> {
                         : const Icon(Icons.calculate),
                     label: Text(
                       state is WhatIfCalculating
-                          ? 'Hesaplanıyor...'
-                          : 'Hesapla',
+                          ? l10n.calculating
+                          : l10n.calculate,
                     ),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),

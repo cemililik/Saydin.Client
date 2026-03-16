@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 
 class AssetSelector extends StatelessWidget {
@@ -18,10 +19,10 @@ class AssetSelector extends StatelessWidget {
     return DropdownButtonFormField<String>(
       key: ValueKey(selectedSymbol),
       initialValue: selectedSymbol,
-      decoration: const InputDecoration(
-        labelText: 'Varlık Seçin',
-        border: OutlineInputBorder(),
-        prefixIcon: Icon(Icons.show_chart),
+      decoration: InputDecoration(
+        labelText: context.l10n.selectAsset,
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.show_chart),
       ),
       items: assets
           .map((a) => DropdownMenuItem(

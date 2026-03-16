@@ -24,13 +24,13 @@ class WhatIfResponseModel extends WhatIfResult {
         sellDate: json['sellDate'] != null
             ? DateTime.parse(json['sellDate'] as String)
             : null,
-        buyPrice: json['buyPrice'] as num,
-        sellPrice: json['sellPrice'] as num,
-        unitsAcquired: json['unitsAcquired'] as num,
-        initialValueTry: json['initialValueTry'] as num,
-        finalValueTry: json['finalValueTry'] as num,
-        profitLossTry: json['profitLossTry'] as num,
-        profitLossPercent: json['profitLossPercent'] as num,
+        buyPrice: (json['buyPrice'] as num).toDouble(),
+        sellPrice: (json['sellPrice'] as num).toDouble(),
+        unitsAcquired: (json['unitsAcquired'] as num).toDouble(),
+        initialValueTry: (json['initialValueTry'] as num).toDouble(),
+        finalValueTry: (json['finalValueTry'] as num).toDouble(),
+        profitLossTry: (json['profitLossTry'] as num).toDouble(),
+        profitLossPercent: (json['profitLossPercent'] as num).toDouble(),
         isProfit: json['isProfit'] as bool,
       );
 }

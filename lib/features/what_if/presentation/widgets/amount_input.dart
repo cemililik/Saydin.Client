@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:saydin/core/l10n/l10n_extensions.dart';
 
 class AmountInput extends StatelessWidget {
   final TextEditingController controller;
@@ -15,6 +16,7 @@ class AmountInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -26,13 +28,13 @@ class AmountInput extends StatelessWidget {
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
             ],
-            decoration: const InputDecoration(
-              labelText: 'Tutar',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.attach_money),
+            decoration: InputDecoration(
+              labelText: l10n.amount,
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.attach_money),
             ),
             validator: (v) =>
-                (v == null || v.isEmpty) ? 'Tutar giriniz' : null,
+                (v == null || v.isEmpty) ? l10n.enterAmount : null,
           ),
         ),
         const SizedBox(width: 8),
@@ -44,10 +46,12 @@ class AmountInput extends StatelessWidget {
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
             ),
-            items: const [
-              DropdownMenuItem(value: 'try', child: Text('₺ TL')),
-              DropdownMenuItem(value: 'units', child: Text('Adet')),
-              DropdownMenuItem(value: 'grams', child: Text('Gram')),
+            items: [
+              DropdownMenuItem(value: 'try', child: Text(l10n.amountTypeTry)),
+              DropdownMenuItem(
+                  value: 'units', child: Text(l10n.amountTypeUnits)),
+              DropdownMenuItem(
+                  value: 'grams', child: Text(l10n.amountTypeGrams)),
             ],
             onChanged: (v) => v != null ? onAmountTypeChanged(v) : null,
           ),
