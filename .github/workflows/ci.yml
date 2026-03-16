@@ -49,7 +49,7 @@ jobs:
           files: coverage/lcov.info
           fail_ci_if_error: false
 
-  # ── Android Build ───────────────────────────────────────────────────────────
+  # ── Android Build (PR — debug APK) ──────────────────────────────────────────
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
@@ -92,7 +92,7 @@ jobs:
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
 
-  # ── iOS Build ───────────────────────────────────────────────────────────────
+  # ── iOS Build (PR — no codesign) ─────────────────────────────────────────────
   build-ios:
     name: Build iOS (no codesign)
     runs-on: macos-15
@@ -117,3 +117,109 @@ jobs:
       - name: Build iOS (no codesign)
         run: flutter build ios --debug --no-codesign
           --dart-define=API_BASE_URL=https://api.saydin.app
+
+  # ── Android Release AAB (main push) ─────────────────────────────────────────
+  release-android:
+    name: Release Android AAB
+    runs-on: ubuntu-latest
+    needs: analyze-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate l10n
+        run: flutter gen-l10n
+
+      - name: Pre-install CMake (required for sentry_flutter native build)
+        run: |
+          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode \
+            > android/saydin-release.jks
+
+      - name: Build AAB (release)
+        env:
+          STORE_FILE: saydin-release.jks
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          flutter build appbundle --release \
+            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=APP_ENV=production
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saydin-release-${{ github.sha }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+  # ── iOS Release IPA + TestFlight (main push) ─────────────────────────────────
+  release-ios:
+    name: Release iOS + TestFlight
+    runs-on: macos-15
+    needs: analyze-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate l10n
+        run: flutter gen-l10n
+
+      - name: Import code signing certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+          p12-password: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+
+      - name: Download provisioning profile
+        uses: apple-actions/download-provisioning-profiles@v3
+        with:
+          bundle-id: com.saydin.saydin
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+
+      - name: Build IPA (release)
+        run: |
+          flutter build ipa --release \
+            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=APP_ENV=production \
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: build/ios/ipa/saydin.ipa
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}

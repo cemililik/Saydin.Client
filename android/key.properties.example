@@ -1,0 +1,8 @@
+# android/key.properties.example
+# Bu dosyayı android/key.properties olarak kopyalayın ve gerçek değerleri girin.
+# key.properties .gitignore'da — asla commit etmeyin.
+
+storeFile=../saydin-release.jks
+storePassword=YOUR_STORE_PASSWORD
+keyAlias=saydin
+keyPassword=YOUR_KEY_PASSWORD
