@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-class DateInput extends StatelessWidget {
+class DateInput extends StatefulWidget {
   final String label;
   final DateTime? value;
   final DateTime? firstDate;
@@ -22,28 +22,61 @@ class DateInput extends StatelessWidget {
   static final _formatter = DateFormat('dd.MM.yyyy', 'tr_TR');
 
   @override
+  State<DateInput> createState() => _DateInputState();
+}
+
+class _DateInputState extends State<DateInput> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.value != null
+          ? DateInput._formatter.format(widget.value!)
+          : '',
+    );
+  }
+
+  @override
+  void didUpdateWidget(DateInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      _controller.text = widget.value != null
+          ? DateInput._formatter.format(widget.value!)
+          : '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final effectiveFirst = firstDate ?? DateTime(2010);
-    final effectiveLast = lastDate ?? DateTime.now();
+    final effectiveFirst = widget.firstDate ?? DateTime(2010);
+    final effectiveLast = widget.lastDate ?? DateTime.now();
 
     return TextFormField(
       readOnly: true,
-      initialValue: value != null ? _formatter.format(value!) : '',
+      controller: _controller,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: widget.label,
         border: const OutlineInputBorder(),
         prefixIcon: const Icon(Icons.calendar_today),
-        suffixIcon: !required && value != null
+        suffixIcon: !widget.required && widget.value != null
             ? IconButton(
                 icon: const Icon(Icons.clear),
-                onPressed: () => onChanged(null),
+                onPressed: () => widget.onChanged(null),
               )
             : null,
       ),
       onTap: () async {
         // initialDate'i [firstDate, lastDate] aralığına sıkıştır — runtime exception önler
-        final initialDate = value != null
-            ? value!.clamp(effectiveFirst, effectiveLast)
+        final initialDate = widget.value != null
+            ? widget.value!.clamp(effectiveFirst, effectiveLast)
             : effectiveLast;
 
         final picked = await showDatePicker(
@@ -53,7 +86,7 @@ class DateInput extends StatelessWidget {
           lastDate: effectiveLast,
           locale: const Locale('tr', 'TR'),
         );
-        onChanged(picked);
+        widget.onChanged(picked);
       },
     );
   }

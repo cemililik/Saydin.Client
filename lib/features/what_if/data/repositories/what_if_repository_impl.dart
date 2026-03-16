@@ -12,8 +12,9 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
 
   @override
   Future<List<Asset>> getAssets() async {
-    final response = await _dio.get<List<dynamic>>(ApiEndpoints.assets);
-    return (response.data ?? [])
+    final response = await _dio.get<Map<String, dynamic>>(ApiEndpoints.assets);
+    final list = (response.data?['assets'] as List<dynamic>?) ?? [];
+    return list
         .map((e) => AssetModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
