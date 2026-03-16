@@ -27,9 +27,9 @@ class DioErrorMapper {
     return ServerError(statusCode: status);
   }
 
-  static DateTime _tomorrowMidnight() => DateTime.utc(
-    DateTime.now().year,
-    DateTime.now().month,
-    DateTime.now().day + 1,
-  );
+  static DateTime _tomorrowMidnight() {
+    final now = DateTime.now();
+    final tomorrow = now.add(const Duration(days: 1));
+    return DateTime.utc(tomorrow.year, tomorrow.month, tomorrow.day);
+  }
 }

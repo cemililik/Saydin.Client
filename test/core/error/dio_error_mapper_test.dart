@@ -6,7 +6,7 @@ import 'package:saydin/core/error/dio_error_mapper.dart';
 void main() {
   const mapper = DioErrorMapper();
 
-  DioException _make(DioExceptionType type, {int? statusCode, dynamic data}) =>
+  DioException make(DioExceptionType type, {int? statusCode, dynamic data}) =>
       DioException(
         requestOptions: RequestOptions(),
         type: type,
@@ -21,22 +21,22 @@ void main() {
 
   group('DioErrorMapper', () {
     test('connectionError → NoInternetError', () {
-      final e = _make(DioExceptionType.connectionError);
+      final e = make(DioExceptionType.connectionError);
       expect(mapper.map(e), isA<NoInternetError>());
     });
 
     test('unknown type → NoInternetError', () {
-      final e = _make(DioExceptionType.unknown);
+      final e = make(DioExceptionType.unknown);
       expect(mapper.map(e), isA<NoInternetError>());
     });
 
     test('404 → PriceNotFoundError', () {
-      final e = _make(DioExceptionType.badResponse, statusCode: 404);
+      final e = make(DioExceptionType.badResponse, statusCode: 404);
       expect(mapper.map(e), isA<PriceNotFoundError>());
     });
 
     test('429 without resetAt → DailyLimitError with tomorrow midnight', () {
-      final e = _make(DioExceptionType.badResponse, statusCode: 429);
+      final e = make(DioExceptionType.badResponse, statusCode: 429);
       final error = mapper.map(e);
       expect(error, isA<DailyLimitError>());
       final limit = error as DailyLimitError;
@@ -45,7 +45,7 @@ void main() {
 
     test('429 with resetAt in response → DailyLimitError parses timestamp', () {
       final tomorrow = DateTime.utc(2026, 3, 17);
-      final e = _make(
+      final e = make(
         DioExceptionType.badResponse,
         statusCode: 429,
         data: {
@@ -57,14 +57,14 @@ void main() {
     });
 
     test('500 → ServerError with statusCode', () {
-      final e = _make(DioExceptionType.badResponse, statusCode: 500);
+      final e = make(DioExceptionType.badResponse, statusCode: 500);
       final error = mapper.map(e);
       expect(error, isA<ServerError>());
       expect((error as ServerError).statusCode, equals(500));
     });
 
     test('503 → ServerError', () {
-      final e = _make(DioExceptionType.badResponse, statusCode: 503);
+      final e = make(DioExceptionType.badResponse, statusCode: 503);
       expect(mapper.map(e), isA<ServerError>());
     });
   });
