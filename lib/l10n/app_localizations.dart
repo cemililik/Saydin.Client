@@ -435,6 +435,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'{count} yıl'**
   String durationYears(int count);
+
+  /// No description provided for @dateAdjustedWarning.
+  ///
+  /// In tr, this message translates to:
+  /// **'Seçilen tarih bu varlık için uygun değil, en yakın geçerli tarihe ayarlandı.'**
+  String get dateAdjustedWarning;
+
+  /// No description provided for @scenarioDuplicate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu senaryo zaten kaydedilmiş.'**
+  String get scenarioDuplicate;
+
+  /// No description provided for @priceDisclaimer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir.'**
+  String get priceDisclaimer;
 }
 
 class _AppLocalizationsDelegate

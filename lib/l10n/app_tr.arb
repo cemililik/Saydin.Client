@@ -78,5 +78,8 @@
   "durationYears": "{count} yıl",
   "@durationYears": {
     "placeholders": { "count": { "type": "int" } }
-  }
+  },
+  "dateAdjustedWarning": "Seçilen tarih bu varlık için uygun değil, en yakın geçerli tarihe ayarlandı.",
+  "scenarioDuplicate": "Bu senaryo zaten kaydedilmiş.",
+  "priceDisclaimer": "Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir."
 }

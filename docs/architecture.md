@@ -24,8 +24,8 @@ lib/
 │   │   └── presentation/
 │   │       ├── bloc/              ← WhatIfBloc, WhatIfEvent, WhatIfState, WhatIfFormInput
 │   │       ├── pages/             ← WhatIfPage
-│   │       └── widgets/           ← AssetSelector (bottom sheet + arama), DateInput,
-│   │                                 AmountInput (dinamik tip/ikon), ResultCard
+│   │       └── widgets/           ← AssetSelector (bottom sheet + arama), DateInput (asset tarih aralığı),
+│   │                                 AmountInput (dinamik tip/ikon), ResultCard, ResultChart (fl_chart)
 │   └── scenarios/                 ← Kaydedilen senaryolar
 │       ├── data/
 │       │   ├── models/            ← SavedScenarioModel (fromJson)
@@ -89,10 +89,16 @@ WhatIfAssetsLoading
 
 WhatIfAssetsLoaded / WhatIfSuccess / WhatIfFailure
     │
-    │ WhatIfSymbolChanged / WhatIfBuyDateChanged / ... (form event'leri)
+    │ WhatIfSymbolChanged
+    ▼
+    Aynı state, formInput güncellenerek yeniden emit edilir.
+    • amountType yeni asset için geçersizse → 'try'e sıfırlanır
+    • buyDate/sellDate asset'in [firstDate, lastDate] dışındaysa → sıkıştırılır,
+      formInput.dateAdjusted = true (tek seferlik flag — UI snackbar gösterir, sonra false olur)
+
+    │ WhatIfBuyDateChanged / WhatIfSellDateChanged / WhatIfAmountTypeChanged
     ▼
     Aynı state, formInput güncellenerek yeniden emit edilir
-    (WhatIfSymbolChanged: yeni asset'e uyumsuz amountType varsa 'try'e sıfırlanır)
 
     │ WhatIfCalculateRequested
     ▼
@@ -100,6 +106,17 @@ WhatIfCalculating(assets, formInput)
     ├─ başarı ──► WhatIfSuccess(assets, result, formInput)
     └─ hata ───► WhatIfFailure(assets, error, formInput)
 ```
+
+**`WhatIfFormInput` alanları:**
+
+| Alan | Tip | Açıklama |
+|---|---|---|
+| `selectedSymbol` | `String?` | Seçili asset sembolü |
+| `buyDate` | `DateTime?` | Alış tarihi |
+| `sellDate` | `DateTime?` | Satış tarihi (opsiyonel) |
+| `amountType` | `String` | `try` \| `units` \| `grams` |
+| `amount` | `num?` | Tutar (replay/senaryo yüklemede doldurulur) |
+| `dateAdjusted` | `bool` | Sembol değişince tarih sıkıştırıldıysa `true` — bir kez UI'a iletildikten sonra `copyWith` ile otomatik `false`'a döner (one-shot flag) |
 
 **State kuralları:**
 - Tüm state'ler `Equatable` implement eder → gereksiz widget rebuild önlenir
@@ -125,23 +142,41 @@ ScenariosLoaded
     └─ API hata ──► ScenariosFailure(scenarios orijinal, error)
 
     │ ScenarioSaveRequested
+    ├─ duplicate ──► ScenariosDuplicate(scenarios)  ← API'ye gidilmez, UI snackbar gösterir
     ▼
 ScenariosSaving(scenarios)
     ├─ başarı ──► ScenariosLoaded([yeni, ...scenarios])
     └─ hata ───► ScenariosFailure(scenarios, error)
 ```
 
+**Duplicate kontrolü:** Kaydetmeden önce mevcut liste; `assetSymbol` + `buyDate` + `sellDate` + `amount` + `amountType` bileşimine göre taranır. Aynı kombinasyon zaten varsa `ScenariosDuplicate` emit edilir — API çağrısı yapılmaz.
+
 ## Domain Mantığı — Asset
 
-`Asset` entity'si saf Dart olmasına karşın tutar tipi kısıtlarını da taşır:
+`Asset` entity'si saf Dart olmasına karşın tutar tipi kısıtlarını ve veri aralığını da taşır:
 
 ```dart
-// Asset.allowedAmountTypes getter
-'precious_metal' → ['try', 'grams']   // Altın, gümüş: TL veya gram
-diğerleri        → ['try', 'units']   // Döviz, kripto, hisse: TL veya adet
+class Asset {
+  final String symbol;
+  final String displayName;
+  final String category;
+  final DateTime? firstDate;   // Veritabanındaki en eski fiyat tarihi
+  final DateTime? lastDate;    // Veritabanındaki en yeni fiyat tarihi
+
+  // Tutar tipi kısıtı:
+  // 'precious_metal' → ['try', 'grams']
+  // diğerleri        → ['try', 'units']
+  List<String> get allowedAmountTypes { ... }
+}
 ```
 
-Asset değiştiğinde `WhatIfBloc._onSymbolChanged` mevcut `amountType`'ı kontrol eder; yeni asset için geçersizse `'try'`'a sıfırlar. `AmountInput` widget'ı da aynı listeyi kullanarak dropdown seçeneklerini ve prefix ikonu dinamik olarak gösterir:
+`firstDate`/`lastDate` alanları `GET /assets` yanıtından (`firstPriceDate`/`lastPriceDate`) parse edilir ve `DateInput` widget'larına geçirilerek takvim aralığı kısıtlanır.
+
+Asset değiştiğinde `WhatIfBloc._onSymbolChanged`:
+1. Mevcut `amountType` yeni asset için geçersizse → `'try'`'a sıfırlar
+2. `buyDate`/`sellDate` yeni asset'in `[firstDate, lastDate]` dışındaysa → sıkıştırır (`dateAdjusted = true`)
+
+`AmountInput` widget'ı da `allowedAmountTypes` listesini kullanarak dropdown seçeneklerini ve prefix ikonu dinamik olarak gösterir:
 
 | amountType | Prefix ikon |
 |---|---|
@@ -245,6 +280,25 @@ Text(l10n.errorPriceNotFound)
 ```
 
 **Kural:** BLoC Türkçe string üretmez. Hata metni widget katmanında `switch (state.error)` ile l10n'dan çözülür.
+
+## Grafik (ResultChart)
+
+`ResultCard` içinde `ResultChart` widget'ı (`fl_chart ^0.70.2`) ile alış-satış aralığındaki fiyat geçmişi çizilir.
+
+### Veri Akışı
+
+`WhatIfResult.priceHistory: List<ChartPoint>` — API'nin `priceHistory` alanından parse edilir (max 60 nokta).
+
+### Etkileşim Modları
+
+| Mod | Tetikleyici | Davranış |
+|---|---|---|
+| Tooltip | Tek dokunuş | O noktadaki tarih ve fiyatı gösterir (2 ondalık) |
+| Range seçimi | Uzun basış + sürükleme | İki nokta arası dolgu + dikey çizgiler; alt çubukta tarih aralığı ve % değişim |
+
+Range modunda tooltip devre dışı kalır (`handleBuiltInTouches: !_isRangeMode`). Dışarı tıklamak range'i temizler.
+
+---
 
 ## Sonuç Gösterimi Kuralları
 

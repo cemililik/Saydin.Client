@@ -4,6 +4,7 @@ import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
+import 'package:saydin/features/scenarios/presentation/bloc/scenarios_state.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/l10n/app_localizations.dart';
@@ -91,81 +92,103 @@ class _WhatIfPageState extends State<WhatIfPage> {
     final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.whatIfTitle), centerTitle: true),
-      body: BlocConsumer<WhatIfBloc, WhatIfState>(
-        listenWhen: (prev, curr) =>
-            curr is WhatIfFailure ||
-            prev.formInput.amount != curr.formInput.amount,
+      body: BlocListener<ScenariosBloc, ScenariosState>(
+        listenWhen: (prev, curr) => curr is ScenariosDuplicate,
         listener: (context, state) {
-          if (state is WhatIfFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_errorMessage(state.error, context.l10n)),
-                backgroundColor: Colors.red.shade700,
-              ),
-            );
-          }
-          final amount = state.formInput.amount;
-          if (amount != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _amountController.text = amount.toString().replaceAll('.', ',');
-              }
-            });
-          }
-        },
-        builder: (context, state) {
-          if (state is WhatIfAssetsLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final assets = switch (state) {
-            WhatIfAssetsLoaded(:final assets) => assets,
-            WhatIfCalculating(:final assets) => assets,
-            WhatIfSuccess(:final assets) => assets,
-            WhatIfFailure(:final assets) => assets,
-            _ => <Asset>[],
-          };
-
-          final formInput = state.formInput;
-          final successResult = state is WhatIfSuccess ? state.result : null;
-          return _WhatIfForm(
-            formKey: _formKey,
-            assets: assets,
-            selectedSymbol: formInput.selectedSymbol,
-            buyDate: formInput.buyDate,
-            sellDate: formInput.sellDate,
-            amountType: formInput.amountType,
-            amountController: _amountController,
-            isCalculating: state is WhatIfCalculating,
-            result: successResult,
-            onAssetChanged: (v) =>
-                context.read<WhatIfBloc>().add(WhatIfSymbolChanged(v)),
-            onBuyDateChanged: (v) =>
-                context.read<WhatIfBloc>().add(WhatIfBuyDateChanged(v)),
-            onSellDateChanged: (v) =>
-                context.read<WhatIfBloc>().add(WhatIfSellDateChanged(v)),
-            onAmountTypeChanged: (v) =>
-                context.read<WhatIfBloc>().add(WhatIfAmountTypeChanged(v)),
-            onCalculate: _onCalculate,
-            onSave: successResult != null
-                ? () => context.read<ScenariosBloc>().add(
-                    ScenarioSaveRequested(
-                      assetSymbol: successResult.assetSymbol,
-                      assetDisplayName: successResult.assetDisplayName,
-                      buyDate: successResult.buyDate,
-                      sellDate: successResult.sellDate,
-                      amount: _amountController.text.isEmpty
-                          ? 0
-                          : num.tryParse(
-                                  _amountController.text.replaceAll(',', '.'),
-                                ) ??
-                                0,
-                      amountType: formInput.amountType,
-                    ),
-                  )
-                : null,
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.scenarioDuplicate)),
           );
         },
+        child: BlocConsumer<WhatIfBloc, WhatIfState>(
+          listenWhen: (prev, curr) =>
+              curr is WhatIfFailure ||
+              prev.formInput.amount != curr.formInput.amount ||
+              (!prev.formInput.dateAdjusted && curr.formInput.dateAdjusted),
+          listener: (context, state) {
+            if (state is WhatIfFailure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_errorMessage(state.error, context.l10n)),
+                  backgroundColor: Colors.red.shade700,
+                ),
+              );
+            }
+            if (state.formInput.dateAdjusted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.dateAdjustedWarning)),
+              );
+            }
+            final amount = state.formInput.amount;
+            if (amount != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  _amountController.text = amount.toString().replaceAll(
+                    '.',
+                    ',',
+                  );
+                }
+              });
+            }
+          },
+          builder: (context, state) {
+            if (state is WhatIfAssetsLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final assets = switch (state) {
+              WhatIfAssetsLoaded(:final assets) => assets,
+              WhatIfCalculating(:final assets) => assets,
+              WhatIfSuccess(:final assets) => assets,
+              WhatIfFailure(:final assets) => assets,
+              _ => <Asset>[],
+            };
+
+            final formInput = state.formInput;
+            final successResult = state is WhatIfSuccess ? state.result : null;
+            final selectedAsset = assets
+                .where((a) => a.symbol == formInput.selectedSymbol)
+                .firstOrNull;
+            return _WhatIfForm(
+              formKey: _formKey,
+              assets: assets,
+              selectedSymbol: formInput.selectedSymbol,
+              buyDate: formInput.buyDate,
+              sellDate: formInput.sellDate,
+              amountType: formInput.amountType,
+              amountController: _amountController,
+              isCalculating: state is WhatIfCalculating,
+              result: successResult,
+              assetFirstDate: selectedAsset?.firstDate,
+              assetLastDate: selectedAsset?.lastDate,
+              onAssetChanged: (v) =>
+                  context.read<WhatIfBloc>().add(WhatIfSymbolChanged(v)),
+              onBuyDateChanged: (v) =>
+                  context.read<WhatIfBloc>().add(WhatIfBuyDateChanged(v)),
+              onSellDateChanged: (v) =>
+                  context.read<WhatIfBloc>().add(WhatIfSellDateChanged(v)),
+              onAmountTypeChanged: (v) =>
+                  context.read<WhatIfBloc>().add(WhatIfAmountTypeChanged(v)),
+              onCalculate: _onCalculate,
+              onSave: successResult != null
+                  ? () => context.read<ScenariosBloc>().add(
+                      ScenarioSaveRequested(
+                        assetSymbol: successResult.assetSymbol,
+                        assetDisplayName: successResult.assetDisplayName,
+                        buyDate: successResult.buyDate,
+                        sellDate: successResult.sellDate,
+                        amount: _amountController.text.isEmpty
+                            ? 0
+                            : num.tryParse(
+                                    _amountController.text.replaceAll(',', '.'),
+                                  ) ??
+                                  0,
+                        amountType: formInput.amountType,
+                      ),
+                    )
+                  : null,
+            );
+          },
+        ),
       ),
     );
   }
@@ -187,6 +210,8 @@ class _WhatIfForm extends StatelessWidget {
     required this.onSellDateChanged,
     required this.onAmountTypeChanged,
     required this.onCalculate,
+    this.assetFirstDate,
+    this.assetLastDate,
     this.onSave,
   });
 
@@ -204,6 +229,8 @@ class _WhatIfForm extends StatelessWidget {
   final ValueChanged<DateTime?> onSellDateChanged;
   final ValueChanged<String> onAmountTypeChanged;
   final VoidCallback onCalculate;
+  final DateTime? assetFirstDate;
+  final DateTime? assetLastDate;
   final VoidCallback? onSave;
 
   @override
@@ -225,15 +252,16 @@ class _WhatIfForm extends StatelessWidget {
             DateInput(
               label: l10n.buyDate,
               value: buyDate,
-              lastDate: DateTime.now(),
+              firstDate: assetFirstDate,
+              lastDate: assetLastDate ?? DateTime.now(),
               onChanged: onBuyDateChanged,
             ),
             const SizedBox(height: 16),
             DateInput(
               label: l10n.sellDate,
               value: sellDate,
-              firstDate: buyDate,
-              lastDate: DateTime.now(),
+              firstDate: buyDate ?? assetFirstDate,
+              lastDate: assetLastDate ?? DateTime.now(),
               required: false,
               onChanged: onSellDateChanged,
             ),
@@ -280,6 +308,26 @@ class _WhatIfForm extends StatelessWidget {
                 ),
               ),
             ],
+            const SizedBox(height: 24),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 14,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.priceDisclaimer,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

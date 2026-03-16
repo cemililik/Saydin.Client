@@ -58,3 +58,13 @@ class ScenariosFailure extends ScenariosState {
   @override
   List<Object?> get props => [scenarios, error];
 }
+
+class ScenariosDuplicate extends ScenariosState {
+  @override
+  final List<SavedScenario> scenarios;
+
+  const ScenariosDuplicate(this.scenarios);
+
+  @override
+  List<Object?> get props => [scenarios];
+}

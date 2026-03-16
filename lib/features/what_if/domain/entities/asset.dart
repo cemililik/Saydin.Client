@@ -4,11 +4,15 @@ class Asset extends Equatable {
   final String symbol;
   final String displayName;
   final String category;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
 
   const Asset({
     required this.symbol,
     required this.displayName,
     required this.category,
+    this.firstDate,
+    this.lastDate,
   });
 
   /// Bu asset için geçerli tutar tipleri.
@@ -18,5 +22,11 @@ class Asset extends Equatable {
   };
 
   @override
-  List<Object?> get props => [symbol, displayName, category];
+  List<Object?> get props => [
+    symbol,
+    displayName,
+    category,
+    firstDate,
+    lastDate,
+  ];
 }

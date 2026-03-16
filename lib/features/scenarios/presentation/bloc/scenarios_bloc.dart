@@ -60,6 +60,20 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     Emitter<ScenariosState> emit,
   ) async {
     final current = state.scenarios;
+
+    final isDuplicate = current.any(
+      (s) =>
+          s.assetSymbol == event.assetSymbol &&
+          s.buyDate == event.buyDate &&
+          s.sellDate == event.sellDate &&
+          s.amount == event.amount &&
+          s.amountType == event.amountType,
+    );
+    if (isDuplicate) {
+      emit(ScenariosDuplicate(current));
+      return;
+    }
+
     emit(ScenariosSaving(current));
     try {
       final saved = await _saveScenario(

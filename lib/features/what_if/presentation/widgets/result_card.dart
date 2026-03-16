@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
+import 'package:saydin/features/what_if/presentation/widgets/result_chart.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
 class ResultCard extends StatelessWidget {
@@ -82,6 +83,8 @@ class ResultCard extends StatelessWidget {
                 ),
               ],
             ),
+
+            ResultChart(result: result),
 
             const Divider(height: 24),
 

@@ -9,6 +9,66 @@ import 'package:saydin/features/scenarios/presentation/bloc/scenarios_state.dart
 import 'package:saydin/features/scenarios/presentation/widgets/scenario_card.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
+class _SwipeToDeleteCard extends StatefulWidget {
+  final SavedScenario scenario;
+  final VoidCallback onDelete;
+  final VoidCallback? onTap;
+
+  const _SwipeToDeleteCard({
+    super.key,
+    required this.scenario,
+    required this.onDelete,
+    this.onTap,
+  });
+
+  @override
+  State<_SwipeToDeleteCard> createState() => _SwipeToDeleteCardState();
+}
+
+class _SwipeToDeleteCardState extends State<_SwipeToDeleteCard> {
+  double _progress = 0.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bgColor = theme.colorScheme.errorContainer.withValues(
+      alpha: _progress,
+    );
+    final iconOpacity = (_progress * 1.5).clamp(0.0, 1.0);
+    final iconScale = 0.6 + _progress * 0.4;
+
+    return Dismissible(
+      key: ValueKey(widget.scenario.id),
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) => widget.onDelete(),
+      onUpdate: (details) {
+        setState(() {
+          _progress = details.reached ? 1.0 : details.progress;
+        });
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Transform.scale(
+          scale: iconScale,
+          child: Opacity(
+            opacity: iconOpacity,
+            child: Icon(
+              Icons.delete_outline_rounded,
+              color: theme.colorScheme.onErrorContainer,
+            ),
+          ),
+        ),
+      ),
+      child: ScenarioCard(scenario: widget.scenario, onTap: widget.onTap),
+    );
+  }
+}
+
 class ScenariosPage extends StatefulWidget {
   final ValueChanged<SavedScenario>? onScenarioTap;
 
@@ -110,28 +170,13 @@ class _ScenariosPageState extends State<ScenariosPage> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, i) {
                 final scenario = state.scenarios[i];
-                return Dismissible(
+                return _SwipeToDeleteCard(
                   key: ValueKey(scenario.id),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (_) => _onDelete(context, scenario),
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.delete_outline_rounded,
-                      color: theme.colorScheme.onErrorContainer,
-                    ),
-                  ),
-                  child: ScenarioCard(
-                    scenario: scenario,
-                    onTap: widget.onScenarioTap != null
-                        ? () => widget.onScenarioTap!(scenario)
-                        : null,
-                  ),
+                  scenario: scenario,
+                  onDelete: () => _onDelete(context, scenario),
+                  onTap: widget.onScenarioTap != null
+                      ? () => widget.onScenarioTap!(scenario)
+                      : null,
                 );
               },
             ),

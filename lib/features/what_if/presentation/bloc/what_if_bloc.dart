@@ -9,6 +9,14 @@ import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'what_if_event.dart';
 import 'what_if_state.dart';
 
+extension on DateTime {
+  DateTime clamp(DateTime min, DateTime max) {
+    if (isBefore(min)) return min;
+    if (isAfter(max)) return max;
+    return this;
+  }
+}
+
 class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   final GetAssets _getAssets;
   final CalculateWhatIf _calculateWhatIf;
@@ -73,11 +81,39 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     final newAmountType = allowed.contains(_formInput.amountType)
         ? _formInput.amountType
         : 'try';
+
+    // Seçili tarihler yeni asset'in veri aralığı dışındaysa en yakın geçerli tarihe sıkıştır.
+    final firstDate = asset?.firstDate;
+    final lastDate = asset?.lastDate;
+    var newBuyDate = _formInput.buyDate;
+    var newSellDate = _formInput.sellDate;
+    var dateAdjusted = false;
+
+    if (firstDate != null && lastDate != null) {
+      if (newBuyDate != null) {
+        final clamped = newBuyDate.clamp(firstDate, lastDate);
+        if (clamped != newBuyDate) {
+          newBuyDate = clamped;
+          dateAdjusted = true;
+        }
+      }
+      if (newSellDate != null) {
+        final clamped = newSellDate.clamp(firstDate, lastDate);
+        if (clamped != newSellDate) {
+          newSellDate = clamped;
+          dateAdjusted = true;
+        }
+      }
+    }
+
     _emitWithUpdatedForm(
       emit,
       _formInput.copyWith(
         selectedSymbol: event.symbol,
         amountType: newAmountType,
+        buyDate: newBuyDate,
+        sellDate: newSellDate,
+        dateAdjusted: dateAdjusted,
       ),
     );
   }

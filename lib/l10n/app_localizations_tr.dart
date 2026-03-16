@@ -189,4 +189,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String durationYears(int count) {
     return '$count yıl';
   }
+
+  @override
+  String get dateAdjustedWarning =>
+      'Seçilen tarih bu varlık için uygun değil, en yakın geçerli tarihe ayarlandı.';
+
+  @override
+  String get scenarioDuplicate => 'Bu senaryo zaten kaydedilmiş.';
+
+  @override
+  String get priceDisclaimer =>
+      'Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir.';
 }

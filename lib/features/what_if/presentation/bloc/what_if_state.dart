@@ -11,12 +11,17 @@ class WhatIfFormInput extends Equatable {
   final String amountType;
   final num? amount;
 
+  /// Sembol değiştiğinde seçili tarihler asset aralığı dışındaysa
+  /// otomatik sıkıştırıldı — bir kez gösterildikten sonra sıfırlanır.
+  final bool dateAdjusted;
+
   const WhatIfFormInput({
     this.selectedSymbol,
     this.buyDate,
     this.sellDate,
     this.amountType = 'try',
     this.amount,
+    this.dateAdjusted = false,
   });
 
   WhatIfFormInput copyWith({
@@ -25,6 +30,7 @@ class WhatIfFormInput extends Equatable {
     Object? sellDate = _sentinel,
     String? amountType,
     Object? amount = _sentinel,
+    bool dateAdjusted = false,
   }) {
     return WhatIfFormInput(
       selectedSymbol: identical(selectedSymbol, _sentinel)
@@ -38,6 +44,7 @@ class WhatIfFormInput extends Equatable {
           : sellDate as DateTime?,
       amountType: amountType ?? this.amountType,
       amount: identical(amount, _sentinel) ? this.amount : amount as num?,
+      dateAdjusted: dateAdjusted,
     );
   }
 
@@ -48,6 +55,7 @@ class WhatIfFormInput extends Equatable {
     sellDate,
     amountType,
     amount,
+    dateAdjusted,
   ];
 }
 
