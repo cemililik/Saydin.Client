@@ -291,6 +291,60 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Tekrar Hesapla'**
   String get tryAgain;
+
+  /// No description provided for @scenariosTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senaryolarım'**
+  String get scenariosTitle;
+
+  /// No description provided for @scenariosEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz kaydedilen senaryo yok'**
+  String get scenariosEmpty;
+
+  /// No description provided for @scenariosEmptyHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesaplama yaptıktan sonra senaryolarınızı kaydedebilirsiniz.'**
+  String get scenariosEmptyHint;
+
+  /// No description provided for @saveScenario.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kaydet'**
+  String get saveScenario;
+
+  /// No description provided for @scenarioSaved.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senaryo kaydedildi.'**
+  String get scenarioSaved;
+
+  /// No description provided for @scenarioDeleted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senaryo silindi.'**
+  String get scenarioDeleted;
+
+  /// No description provided for @deleteScenario.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sil'**
+  String get deleteScenario;
+
+  /// No description provided for @tabCalculate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesapla'**
+  String get tabCalculate;
+
+  /// No description provided for @tabScenarios.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senaryolarım'**
+  String get tabScenarios;
 }
 
 class _AppLocalizationsDelegate

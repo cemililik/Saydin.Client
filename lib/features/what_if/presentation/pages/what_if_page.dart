@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
+import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/l10n/app_localizations.dart';
@@ -113,6 +115,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
           };
 
           final formInput = state.formInput;
+          final successResult = state is WhatIfSuccess ? state.result : null;
           return _WhatIfForm(
             formKey: _formKey,
             assets: assets,
@@ -122,7 +125,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
             amountType: formInput.amountType,
             amountController: _amountController,
             isCalculating: state is WhatIfCalculating,
-            result: state is WhatIfSuccess ? state.result : null,
+            result: successResult,
             onAssetChanged: (v) =>
                 context.read<WhatIfBloc>().add(WhatIfSymbolChanged(v)),
             onBuyDateChanged: (v) =>
@@ -132,6 +135,23 @@ class _WhatIfPageState extends State<WhatIfPage> {
             onAmountTypeChanged: (v) =>
                 context.read<WhatIfBloc>().add(WhatIfAmountTypeChanged(v)),
             onCalculate: _onCalculate,
+            onSave: successResult != null
+                ? () => context.read<ScenariosBloc>().add(
+                    ScenarioSaveRequested(
+                      assetSymbol: successResult.assetSymbol,
+                      assetDisplayName: successResult.assetDisplayName,
+                      buyDate: successResult.buyDate,
+                      sellDate: successResult.sellDate,
+                      amount: _amountController.text.isEmpty
+                          ? 0
+                          : num.tryParse(
+                                  _amountController.text.replaceAll(',', '.'),
+                                ) ??
+                                0,
+                      amountType: formInput.amountType,
+                    ),
+                  )
+                : null,
           );
         },
       ),
@@ -155,6 +175,7 @@ class _WhatIfForm extends StatelessWidget {
     required this.onSellDateChanged,
     required this.onAmountTypeChanged,
     required this.onCalculate,
+    this.onSave,
   });
 
   final GlobalKey<FormState> formKey;
@@ -171,6 +192,7 @@ class _WhatIfForm extends StatelessWidget {
   final ValueChanged<DateTime?> onSellDateChanged;
   final ValueChanged<String> onAmountTypeChanged;
   final VoidCallback onCalculate;
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -230,6 +252,15 @@ class _WhatIfForm extends StatelessWidget {
             if (result != null) ...[
               const SizedBox(height: 24),
               ResultCard(result: result!),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: onSave,
+                icon: const Icon(Icons.bookmark_border),
+                label: Text(l10n.saveScenario),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
             ],
           ],
         ),

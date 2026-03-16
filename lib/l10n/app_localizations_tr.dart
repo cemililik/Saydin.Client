@@ -106,4 +106,32 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tryAgain => 'Tekrar Hesapla';
+
+  @override
+  String get scenariosTitle => 'Senaryolarım';
+
+  @override
+  String get scenariosEmpty => 'Henüz kaydedilen senaryo yok';
+
+  @override
+  String get scenariosEmptyHint =>
+      'Hesaplama yaptıktan sonra senaryolarınızı kaydedebilirsiniz.';
+
+  @override
+  String get saveScenario => 'Kaydet';
+
+  @override
+  String get scenarioSaved => 'Senaryo kaydedildi.';
+
+  @override
+  String get scenarioDeleted => 'Senaryo silindi.';
+
+  @override
+  String get deleteScenario => 'Sil';
+
+  @override
+  String get tabCalculate => 'Hesapla';
+
+  @override
+  String get tabScenarios => 'Senaryolarım';
 }

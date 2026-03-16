@@ -32,5 +32,14 @@
   "errorDailyLimit": "Günlük hesaplama limitine ulaştınız.",
   "errorNoInternet": "İnternet bağlantısı yok.",
   "retry": "Tekrar Dene",
-  "tryAgain": "Tekrar Hesapla"
+  "tryAgain": "Tekrar Hesapla",
+  "scenariosTitle": "Senaryolarım",
+  "scenariosEmpty": "Henüz kaydedilen senaryo yok",
+  "scenariosEmptyHint": "Hesaplama yaptıktan sonra senaryolarınızı kaydedebilirsiniz.",
+  "saveScenario": "Kaydet",
+  "scenarioSaved": "Senaryo kaydedildi.",
+  "scenarioDeleted": "Senaryo silindi.",
+  "deleteScenario": "Sil",
+  "tabCalculate": "Hesapla",
+  "tabScenarios": "Senaryolarım"
 }
