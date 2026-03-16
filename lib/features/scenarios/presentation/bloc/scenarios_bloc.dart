@@ -64,8 +64,8 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     final isDuplicate = current.any(
       (s) =>
           s.assetSymbol == event.assetSymbol &&
-          s.buyDate == event.buyDate &&
-          s.sellDate == event.sellDate &&
+          _isSameDay(s.buyDate, event.buyDate) &&
+          _isSameDay(s.sellDate, event.sellDate) &&
           s.amount == event.amount &&
           s.amountType == event.amountType,
     );
@@ -100,6 +100,12 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
         ),
       );
     }
+  }
+
+  static bool _isSameDay(DateTime? a, DateTime? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   Future<void> _onDeleteRequested(

@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 
 class Asset extends Equatable {
+  static const categoryPreciousMetal = 'precious_metal';
+
   final String symbol;
   final String displayName;
   final String category;
@@ -17,7 +19,7 @@ class Asset extends Equatable {
 
   /// Bu asset için geçerli tutar tipleri.
   List<String> get allowedAmountTypes => switch (category) {
-    'precious_metal' => ['try', 'grams'],
+    Asset.categoryPreciousMetal => ['try', 'grams'],
     _ => ['try', 'units'],
   };
 

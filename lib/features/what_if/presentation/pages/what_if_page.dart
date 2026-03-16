@@ -41,17 +41,19 @@ class _WhatIfPageState extends State<WhatIfPage> {
 
   void _onCalculate() {
     final l10n = context.l10n;
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState?.validate() != true) return;
 
     final formInput = context.read<WhatIfBloc>().state.formInput;
 
-    if (formInput.selectedSymbol == null) {
+    final symbol = formInput.selectedSymbol;
+    if (symbol == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.assetRequired)));
       return;
     }
-    if (formInput.buyDate == null) {
+    final buyDate = formInput.buyDate;
+    if (buyDate == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.buyDateRequired)));
@@ -68,8 +70,8 @@ class _WhatIfPageState extends State<WhatIfPage> {
 
     context.read<WhatIfBloc>().add(
       WhatIfCalculateRequested(
-        assetSymbol: formInput.selectedSymbol!,
-        buyDate: formInput.buyDate!,
+        assetSymbol: symbol,
+        buyDate: buyDate,
         sellDate: formInput.sellDate,
         amount: amount,
         amountType: formInput.amountType,
@@ -295,9 +297,9 @@ class _WhatIfForm extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
-            if (result != null) ...[
+            if (result case final result?) ...[
               const SizedBox(height: 24),
-              ResultCard(result: result!),
+              ResultCard(result: result),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: onSave,

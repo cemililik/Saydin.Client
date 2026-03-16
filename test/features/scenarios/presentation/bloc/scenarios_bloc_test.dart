@@ -21,6 +21,7 @@ void main() {
   late MockDeleteScenario mockDeleteScenario;
 
   setUp(() {
+    registerFallbackValue(DateTime(2020));
     mockGetScenarios = MockGetScenarios();
     mockSaveScenario = MockSaveScenario();
     mockDeleteScenario = MockDeleteScenario();

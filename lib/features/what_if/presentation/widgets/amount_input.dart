@@ -16,7 +16,7 @@ class AmountInput extends StatelessWidget {
     required this.onAmountTypeChanged,
   });
 
-  Widget _prefixIcon() => switch (amountType) {
+  Widget _prefixIcon(String type) => switch (type) {
     'grams' => const Icon(Icons.scale_outlined),
     'units' => const Icon(Icons.tag),
     _ => const Icon(Icons.currency_lira),
@@ -55,7 +55,7 @@ class AmountInput extends StatelessWidget {
             decoration: InputDecoration(
               labelText: l10n.amount,
               border: const OutlineInputBorder(),
-              prefixIcon: _prefixIcon(),
+              prefixIcon: _prefixIcon(effectiveType),
             ),
             validator: (v) =>
                 (v == null || v.isEmpty) ? l10n.enterAmount : null,

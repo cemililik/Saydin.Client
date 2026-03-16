@@ -22,7 +22,8 @@ class ScenariosLoading extends ScenariosState {
   @override
   final List<SavedScenario> scenarios;
 
-  const ScenariosLoading({this.scenarios = const []});
+  ScenariosLoading({List<SavedScenario> scenarios = const []})
+    : scenarios = List.unmodifiable(scenarios);
 
   @override
   List<Object?> get props => [scenarios];
@@ -32,7 +33,8 @@ class ScenariosLoaded extends ScenariosState {
   @override
   final List<SavedScenario> scenarios;
 
-  const ScenariosLoaded(this.scenarios);
+  ScenariosLoaded(List<SavedScenario> scenarios)
+    : scenarios = List.unmodifiable(scenarios);
 
   @override
   List<Object?> get props => [scenarios];
@@ -42,7 +44,8 @@ class ScenariosSaving extends ScenariosState {
   @override
   final List<SavedScenario> scenarios;
 
-  const ScenariosSaving(this.scenarios);
+  ScenariosSaving(List<SavedScenario> scenarios)
+    : scenarios = List.unmodifiable(scenarios);
 
   @override
   List<Object?> get props => [scenarios];
@@ -53,7 +56,10 @@ class ScenariosFailure extends ScenariosState {
   final List<SavedScenario> scenarios;
   final AppError error;
 
-  const ScenariosFailure({required this.scenarios, required this.error});
+  ScenariosFailure({
+    required List<SavedScenario> scenarios,
+    required this.error,
+  }) : scenarios = List.unmodifiable(scenarios);
 
   @override
   List<Object?> get props => [scenarios, error];
@@ -63,7 +69,8 @@ class ScenariosDuplicate extends ScenariosState {
   @override
   final List<SavedScenario> scenarios;
 
-  const ScenariosDuplicate(this.scenarios);
+  ScenariosDuplicate(List<SavedScenario> scenarios)
+    : scenarios = List.unmodifiable(scenarios);
 
   @override
   List<Object?> get props => [scenarios];

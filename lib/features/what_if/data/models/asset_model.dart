@@ -23,12 +23,17 @@ class AssetModel extends Asset {
       symbol: symbol,
       displayName: displayName,
       category: categoryRaw.toString(),
-      firstDate: json['firstPriceDate'] != null
-          ? DateTime.parse(json['firstPriceDate'] as String)
-          : null,
-      lastDate: json['lastPriceDate'] != null
-          ? DateTime.parse(json['lastPriceDate'] as String)
-          : null,
+      firstDate: _tryParseDate(json['firstPriceDate']),
+      lastDate: _tryParseDate(json['lastPriceDate']),
     );
+  }
+
+  static DateTime? _tryParseDate(Object? value) {
+    if (value is! String) return null;
+    try {
+      return DateTime.parse(value);
+    } on FormatException {
+      return null;
+    }
   }
 }

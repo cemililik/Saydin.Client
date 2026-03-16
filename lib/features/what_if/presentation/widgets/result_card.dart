@@ -16,6 +16,10 @@ class ResultCard extends StatelessWidget {
     symbol: '₺',
     decimalDigits: 2,
   );
+  static final _pctFormatter = NumberFormat.decimalPercentPattern(
+    locale: 'tr_TR',
+    decimalDigits: 2,
+  );
   static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
 
   /// Küçük sayılar için anlamlı ondalık basamak (kripto, gram vb.)
@@ -105,7 +109,7 @@ class ResultCard extends StatelessWidget {
             ),
             _Row(
               l10n.profitLossPercent,
-              '${result.profitLossPercent >= 0 ? '+' : ''}${NumberFormat('#,##0.##', 'tr_TR').format(result.profitLossPercent)}%',
+              '${result.profitLossPercent >= 0 ? '+' : ''}${_pctFormatter.format(result.profitLossPercent / 100)}',
               valueColor: color,
               bold: true,
             ),

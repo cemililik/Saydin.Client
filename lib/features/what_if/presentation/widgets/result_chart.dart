@@ -51,6 +51,16 @@ class _ResultChartState extends State<ResultChart> {
   }
 
   @override
+  void didUpdateWidget(ResultChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.result.priceHistory != widget.result.priceHistory) {
+      _isRangeMode = false;
+      _fromIdx = null;
+      _toIdx = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final history = widget.result.priceHistory;
     if (history.length < 2) return const SizedBox.shrink();
@@ -191,7 +201,7 @@ class _RangeInfoBar extends StatelessWidget {
     final theme = Theme.of(context);
 
     final pctStr =
-        '${isUp ? "+" : ""}${NumberFormat("#,##0.##", "tr_TR").format(pct)}%';
+        '${isUp ? "+" : ""}${NumberFormat.decimalPercentPattern(locale: "tr_TR", decimalDigits: 2).format(pct / 100)}';
 
     return Padding(
       padding: const EdgeInsets.only(top: 6),

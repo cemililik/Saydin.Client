@@ -77,7 +77,7 @@ jobs:
       - name: Generate l10n
         run: flutter gen-l10n
 
-      - name: Pre-install CMake (sentry_flutter native build için gerekli)
+      - name: Pre-install CMake (required for sentry_flutter native build)
         run: |
           yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
 
