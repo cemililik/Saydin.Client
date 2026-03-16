@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 
@@ -42,8 +43,12 @@ class WhatIfSuccess extends WhatIfState {
 class WhatIfFailure extends WhatIfState {
   final List<Asset> assets;
   final String message;
-  WhatIfFailure({required List<Asset> assets, required this.message})
-      : assets = List.unmodifiable(assets);
+  final AppError error;
+  WhatIfFailure({
+    required List<Asset> assets,
+    required this.message,
+    required this.error,
+  }) : assets = List.unmodifiable(assets);
   @override
-  List<Object?> get props => [assets, message];
+  List<Object?> get props => [assets, message, error];
 }
