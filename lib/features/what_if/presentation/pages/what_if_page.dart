@@ -241,6 +241,12 @@ class _WhatIfForm extends StatelessWidget {
             AmountInput(
               controller: amountController,
               amountType: amountType,
+              allowedTypes:
+                  assets
+                      .where((a) => a.symbol == selectedSymbol)
+                      .map((a) => a.allowedAmountTypes)
+                      .firstOrNull ??
+                  const ['try'],
               onAmountTypeChanged: onAmountTypeChanged,
             ),
             const SizedBox(height: 24),

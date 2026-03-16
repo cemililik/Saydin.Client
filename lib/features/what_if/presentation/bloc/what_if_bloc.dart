@@ -61,9 +61,24 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   }
 
   void _onSymbolChanged(WhatIfSymbolChanged event, Emitter<WhatIfState> emit) {
+    final assets = switch (state) {
+      WhatIfAssetsLoaded(:final assets) => assets,
+      WhatIfSuccess(:final assets) => assets,
+      WhatIfFailure(:final assets) => assets,
+      WhatIfCalculating(:final assets) => assets,
+      _ => <Asset>[],
+    };
+    final asset = assets.where((a) => a.symbol == event.symbol).firstOrNull;
+    final allowed = asset?.allowedAmountTypes ?? ['try'];
+    final newAmountType = allowed.contains(_formInput.amountType)
+        ? _formInput.amountType
+        : 'try';
     _emitWithUpdatedForm(
       emit,
-      _formInput.copyWith(selectedSymbol: event.symbol),
+      _formInput.copyWith(
+        selectedSymbol: event.symbol,
+        amountType: newAmountType,
+      ),
     );
   }
 

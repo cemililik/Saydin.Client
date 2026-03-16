@@ -340,6 +340,12 @@ abstract class AppLocalizations {
   /// **'Sil'**
   String get deleteScenario;
 
+  /// No description provided for @undo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geri Al'**
+  String get undo;
+
   /// No description provided for @tabCalculate.
   ///
   /// In tr, this message translates to:
@@ -351,6 +357,84 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Senaryolarım'**
   String get tabScenarios;
+
+  /// No description provided for @searchAsset.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık ara...'**
+  String get searchAsset;
+
+  /// No description provided for @categoryCurrency.
+  ///
+  /// In tr, this message translates to:
+  /// **'Döviz'**
+  String get categoryCurrency;
+
+  /// No description provided for @categoryPreciousMetal.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kıymetli Maden'**
+  String get categoryPreciousMetal;
+
+  /// No description provided for @categoryCrypto.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kripto Para'**
+  String get categoryCrypto;
+
+  /// No description provided for @categoryStock.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hisse Senedi'**
+  String get categoryStock;
+
+  /// No description provided for @resultBuyPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alış Fiyatı'**
+  String get resultBuyPrice;
+
+  /// No description provided for @resultSellPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış/Güncel Fiyatı'**
+  String get resultSellPrice;
+
+  /// No description provided for @resultUnitsAcquired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Edinilen Miktar'**
+  String get resultUnitsAcquired;
+
+  /// No description provided for @resultDuration.
+  ///
+  /// In tr, this message translates to:
+  /// **'Süre'**
+  String get resultDuration;
+
+  /// No description provided for @durationDays.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} gün'**
+  String durationDays(int count);
+
+  /// No description provided for @durationMonths.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} ay'**
+  String durationMonths(int count);
+
+  /// No description provided for @durationYearsMonths.
+  ///
+  /// In tr, this message translates to:
+  /// **'{years} yıl {months} ay'**
+  String durationYearsMonths(int years, int months);
+
+  /// No description provided for @durationYears.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} yıl'**
+  String durationYears(int count);
 }
 
 class _AppLocalizationsDelegate

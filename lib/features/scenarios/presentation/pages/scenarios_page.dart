@@ -35,9 +35,24 @@ class _ScenariosPageState extends State<ScenariosPage> {
         UnknownError() => l10n.errorGeneric,
       };
 
+  void _onDelete(BuildContext context, SavedScenario scenario) {
+    final l10n = context.l10n;
+    context.read<ScenariosBloc>().add(ScenarioDeleteRequested(scenario.id));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(l10n.scenarioDeleted),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.scenariosTitle), centerTitle: true),
       body: BlocConsumer<ScenariosBloc, ScenariosState>(
@@ -47,6 +62,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
               SnackBar(
                 content: Text(_errorMessage(state.error, l10n)),
                 backgroundColor: Colors.red.shade700,
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }
@@ -61,25 +77,22 @@ class _ScenariosPageState extends State<ScenariosPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.bookmark_border,
-                    size: 64,
-                    color: Colors.grey,
+                  Icon(
+                    Icons.bookmark_border_rounded,
+                    size: 72,
+                    color: theme.colorScheme.outlineVariant,
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    l10n.scenariosEmpty,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text(l10n.scenariosEmpty, style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: Text(
                       l10n.scenariosEmptyHint,
                       textAlign: TextAlign.center,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
@@ -95,15 +108,32 @@ class _ScenariosPageState extends State<ScenariosPage> {
               padding: const EdgeInsets.all(16),
               itemCount: state.scenarios.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, i) => ScenarioCard(
-                scenario: state.scenarios[i],
-                onTap: widget.onScenarioTap != null
-                    ? () => widget.onScenarioTap!(state.scenarios[i])
-                    : null,
-                onDelete: () => context.read<ScenariosBloc>().add(
-                  ScenarioDeleteRequested(state.scenarios[i].id),
-                ),
-              ),
+              itemBuilder: (context, i) {
+                final scenario = state.scenarios[i];
+                return Dismissible(
+                  key: ValueKey(scenario.id),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (_) => _onDelete(context, scenario),
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
+                  ),
+                  child: ScenarioCard(
+                    scenario: scenario,
+                    onTap: widget.onScenarioTap != null
+                        ? () => widget.onScenarioTap!(scenario)
+                        : null,
+                  ),
+                );
+              },
             ),
           );
         },

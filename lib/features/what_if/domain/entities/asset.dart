@@ -11,6 +11,12 @@ class Asset extends Equatable {
     required this.category,
   });
 
+  /// Bu asset için geçerli tutar tipleri.
+  List<String> get allowedAmountTypes => switch (category) {
+    'precious_metal' => ['try', 'grams'],
+    _ => ['try', 'units'],
+  };
+
   @override
   List<Object?> get props => [symbol, displayName, category];
 }

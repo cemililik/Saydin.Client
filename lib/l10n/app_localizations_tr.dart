@@ -99,8 +99,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get errorDailyLimit => 'Günlük hesaplama limitine ulaştınız.';
 
   @override
-  String errorScenarioLimit(int limit) =>
-      'Ücretsiz planda en fazla $limit senaryo kaydedebilirsiniz.';
+  String errorScenarioLimit(int limit) {
+    return 'Ücretsiz planda en fazla $limit senaryo kaydedebilirsiniz.';
+  }
 
   @override
   String get errorNoInternet => 'İnternet bağlantısı yok.';
@@ -134,8 +135,58 @@ class AppLocalizationsTr extends AppLocalizations {
   String get deleteScenario => 'Sil';
 
   @override
+  String get undo => 'Geri Al';
+
+  @override
   String get tabCalculate => 'Hesapla';
 
   @override
   String get tabScenarios => 'Senaryolarım';
+
+  @override
+  String get searchAsset => 'Varlık ara...';
+
+  @override
+  String get categoryCurrency => 'Döviz';
+
+  @override
+  String get categoryPreciousMetal => 'Kıymetli Maden';
+
+  @override
+  String get categoryCrypto => 'Kripto Para';
+
+  @override
+  String get categoryStock => 'Hisse Senedi';
+
+  @override
+  String get resultBuyPrice => 'Alış Fiyatı';
+
+  @override
+  String get resultSellPrice => 'Satış/Güncel Fiyatı';
+
+  @override
+  String get resultUnitsAcquired => 'Edinilen Miktar';
+
+  @override
+  String get resultDuration => 'Süre';
+
+  @override
+  String durationDays(int count) {
+    return '$count gün';
+  }
+
+  @override
+  String durationMonths(int count) {
+    return '$count ay';
+  }
+
+  @override
+  String durationYearsMonths(int years, int months) {
+    return '$years yıl $months ay';
+  }
+
+  @override
+  String durationYears(int count) {
+    return '$count yıl';
+  }
 }

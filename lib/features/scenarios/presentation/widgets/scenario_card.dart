@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
@@ -5,73 +7,118 @@ import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 
 class ScenarioCard extends StatelessWidget {
   final SavedScenario scenario;
-  final VoidCallback onDelete;
   final VoidCallback? onTap;
 
-  const ScenarioCard({
-    super.key,
-    required this.scenario,
-    required this.onDelete,
-    this.onTap,
-  });
+  const ScenarioCard({super.key, required this.scenario, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
     final dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-    final sellDateLabel = scenario.sellDate != null
+
+    final buyLabel = dateFormatter.format(scenario.buyDate);
+    final sellLabel = scenario.sellDate != null
         ? dateFormatter.format(scenario.sellDate!)
         : l10n.today;
 
-    final amountLabel = _formatAmount(scenario.amount, scenario.amountType);
+    final rawSymbol = scenario.assetSymbol.replaceAll(RegExp(r'TRY$'), '');
+    final avatarText = rawSymbol
+        .substring(0, min(3, rawSymbol.length))
+        .toUpperCase();
 
     return Card(
-      child: ListTile(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: onTap,
-        title: Text(
-          scenario.assetDisplayName,
-          style: Theme.of(context).textTheme.titleMedium,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Text(
+                  avatarText,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                    fontSize: avatarText.length > 2 ? 10 : 12,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      scenario.assetDisplayName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$buyLabel → $sellLabel',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.payments_outlined,
+                          size: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatAmount(scenario.amount, scenario.amountType),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (onTap != null) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ],
+          ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              '${dateFormatter.format(scenario.buyDate)} → $sellDateLabel',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 2),
-            Text(amountLabel, style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 2),
-            Text(
-              dateFormatter.format(scenario.createdAt.toLocal()),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline),
-          color: Colors.red,
-          onPressed: onDelete,
-          tooltip: l10n.deleteScenario,
-        ),
-        isThreeLine: true,
       ),
     );
   }
 
   String _formatAmount(num amount, String amountType) {
     if (amountType == 'try') {
-      final formatter = NumberFormat.currency(
+      return NumberFormat.currency(
         locale: 'tr_TR',
         symbol: '₺',
         decimalDigits: 2,
-      );
-      return formatter.format(amount);
+      ).format(amount);
     }
-    final formatter = NumberFormat.decimalPattern('tr_TR');
-    return '${formatter.format(amount)} $amountType';
+    final suffix = amountType == 'grams' ? 'gram' : 'adet';
+    return '${NumberFormat.decimalPattern('tr_TR').format(amount)} $suffix';
   }
 }

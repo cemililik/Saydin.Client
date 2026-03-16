@@ -93,20 +93,24 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     Emitter<ScenariosState> emit,
   ) async {
     final original = state.scenarios;
-    emit(ScenariosLoading(scenarios: original));
+    // Optimistic delete: UI'dan hemen kaldır, hata olursa geri yükle
+    emit(ScenariosLoaded(original.where((s) => s.id != event.id).toList()));
     try {
       await _deleteScenario(event.id);
-      final updated = original.where((s) => s.id != event.id).toList();
-      emit(ScenariosLoaded(updated));
     } on DioException catch (e, st) {
       final error = _errorMapper.map(e);
       if (error is UnknownError || error is ServerError) {
         await _reporter.report(e, st, context: 'delete_scenario');
       }
-      emit(ScenariosLoaded(original));
+      emit(ScenariosFailure(scenarios: original, error: error));
     } catch (e, st) {
       await _reporter.report(e, st, context: 'delete_scenario');
-      emit(ScenariosLoaded(original));
+      emit(
+        ScenariosFailure(
+          scenarios: original,
+          error: UnknownError(cause: e),
+        ),
+      );
     }
   }
 }

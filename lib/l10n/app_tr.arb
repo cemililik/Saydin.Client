@@ -46,6 +46,37 @@
   "scenarioSaved": "Senaryo kaydedildi.",
   "scenarioDeleted": "Senaryo silindi.",
   "deleteScenario": "Sil",
+  "undo": "Geri Al",
   "tabCalculate": "Hesapla",
-  "tabScenarios": "Senaryolarım"
+  "tabScenarios": "Senaryolarım",
+
+  "searchAsset": "Varlık ara...",
+  "categoryCurrency": "Döviz",
+  "categoryPreciousMetal": "Kıymetli Maden",
+  "categoryCrypto": "Kripto Para",
+  "categoryStock": "Hisse Senedi",
+
+  "resultBuyPrice": "Alış Fiyatı",
+  "resultSellPrice": "Satış/Güncel Fiyatı",
+  "resultUnitsAcquired": "Edinilen Miktar",
+  "resultDuration": "Süre",
+  "durationDays": "{count} gün",
+  "@durationDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "durationMonths": "{count} ay",
+  "@durationMonths": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "durationYearsMonths": "{years} yıl {months} ay",
+  "@durationYearsMonths": {
+    "placeholders": {
+      "years": { "type": "int" },
+      "months": { "type": "int" }
+    }
+  },
+  "durationYears": "{count} yıl",
+  "@durationYears": {
+    "placeholders": { "count": { "type": "int" } }
+  }
 }
