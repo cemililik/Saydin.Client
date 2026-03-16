@@ -26,7 +26,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     } on DioException catch (e) {
       emit(WhatIfFailure(assets: const [], message: _mapDioError(e)));
     } catch (_) {
-      emit(const WhatIfFailure(assets: [], message: 'Bir hata oluştu.'));
+      emit(WhatIfFailure(assets: [], message: 'Bir hata oluştu.'));
     }
   }
 

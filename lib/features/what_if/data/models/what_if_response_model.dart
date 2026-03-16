@@ -1,7 +1,7 @@
 import '../../domain/entities/what_if_result.dart';
 
 class WhatIfResponseModel extends WhatIfResult {
-  WhatIfResponseModel({
+  const WhatIfResponseModel({
     required super.assetSymbol,
     required super.assetDisplayName,
     required super.buyDate,
