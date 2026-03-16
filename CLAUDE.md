@@ -5,6 +5,7 @@
 Saydın Flutter mobil uygulaması. Türk kullanıcılara yönelik finansal "ya alsaydım?" hesaplama arayüzü.
 
 - **Flutter versiyonu:** 3.41.0
+- **Flutter binary:** `/Users/dev/development/flutter/bin/flutter`
 - **Platform:** iOS + Android
 - **Mimari:** Feature-first Clean Architecture + BLoC
 

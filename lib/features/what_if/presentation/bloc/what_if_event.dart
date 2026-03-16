@@ -38,6 +38,32 @@ class WhatIfAmountTypeChanged extends WhatIfEvent {
   List<Object?> get props => [amountType];
 }
 
+/// Kaydedilmiş senaryoyu yeniden hesaplar: formu doldurur + calculate tetikler.
+class WhatIfReplayRequested extends WhatIfEvent {
+  final String assetSymbol;
+  final DateTime buyDate;
+  final DateTime? sellDate;
+  final num amount;
+  final String amountType;
+
+  const WhatIfReplayRequested({
+    required this.assetSymbol,
+    required this.buyDate,
+    this.sellDate,
+    required this.amount,
+    required this.amountType,
+  });
+
+  @override
+  List<Object?> get props => [
+    assetSymbol,
+    buyDate,
+    sellDate,
+    amount,
+    amountType,
+  ];
+}
+
 class WhatIfCalculateRequested extends WhatIfEvent {
   final String assetSymbol;
   final DateTime buyDate;

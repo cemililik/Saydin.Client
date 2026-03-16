@@ -91,6 +91,9 @@ class _WhatIfPageState extends State<WhatIfPage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.whatIfTitle), centerTitle: true),
       body: BlocConsumer<WhatIfBloc, WhatIfState>(
+        listenWhen: (prev, curr) =>
+            curr is WhatIfFailure ||
+            prev.formInput.amount != curr.formInput.amount,
         listener: (context, state) {
           if (state is WhatIfFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -99,6 +102,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
                 backgroundColor: Colors.red.shade700,
               ),
             );
+          }
+          final amount = state.formInput.amount;
+          if (amount != null) {
+            _amountController.text = amount.toString().replaceAll('.', ',');
           }
         },
         builder: (context, state) {

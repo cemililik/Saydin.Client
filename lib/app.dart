@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/di/injection.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
+import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/pages/scenarios_page.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
+import 'package:saydin/features/what_if/presentation/bloc/what_if_event.dart';
 import 'package:saydin/features/what_if/presentation/pages/what_if_page.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -50,13 +52,29 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
+  void _onScenarioTap(SavedScenario scenario) {
+    context.read<WhatIfBloc>().add(
+      WhatIfReplayRequested(
+        assetSymbol: scenario.assetSymbol,
+        buyDate: scenario.buyDate,
+        sellDate: scenario.sellDate,
+        amount: scenario.amount,
+        amountType: scenario.amountType,
+      ),
+    );
+    setState(() => _selectedIndex = 0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [WhatIfPage(), ScenariosPage()],
+        children: [
+          const WhatIfPage(),
+          ScenariosPage(onScenarioTap: _onScenarioTap),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,

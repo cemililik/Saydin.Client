@@ -28,6 +28,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     on<WhatIfBuyDateChanged>(_onBuyDateChanged);
     on<WhatIfSellDateChanged>(_onSellDateChanged);
     on<WhatIfAmountTypeChanged>(_onAmountTypeChanged);
+    on<WhatIfReplayRequested>(_onReplayRequested);
     on<WhatIfCalculateRequested>(_onCalculateRequested);
   }
 
@@ -103,6 +104,30 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       emit(current.copyWith(formInput: updated));
     }
     // WhatIfCalculating: form değişikliği hesaplama süresince yoksayılır
+  }
+
+  Future<void> _onReplayRequested(
+    WhatIfReplayRequested event,
+    Emitter<WhatIfState> emit,
+  ) async {
+    final filled = _formInput.copyWith(
+      selectedSymbol: event.assetSymbol,
+      buyDate: event.buyDate,
+      sellDate: event.sellDate,
+      amountType: event.amountType,
+      amount: event.amount,
+    );
+    _emitWithUpdatedForm(emit, filled);
+    await _onCalculateRequested(
+      WhatIfCalculateRequested(
+        assetSymbol: event.assetSymbol,
+        buyDate: event.buyDate,
+        sellDate: event.sellDate,
+        amount: event.amount,
+        amountType: event.amountType,
+      ),
+      emit,
+    );
   }
 
   Future<void> _onCalculateRequested(

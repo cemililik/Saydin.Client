@@ -9,12 +9,14 @@ class WhatIfFormInput extends Equatable {
   final DateTime? buyDate;
   final DateTime? sellDate;
   final String amountType;
+  final num? amount;
 
   const WhatIfFormInput({
     this.selectedSymbol,
     this.buyDate,
     this.sellDate,
     this.amountType = 'try',
+    this.amount,
   });
 
   WhatIfFormInput copyWith({
@@ -22,6 +24,7 @@ class WhatIfFormInput extends Equatable {
     Object? buyDate = _sentinel,
     Object? sellDate = _sentinel,
     String? amountType,
+    Object? amount = _sentinel,
   }) {
     return WhatIfFormInput(
       selectedSymbol: identical(selectedSymbol, _sentinel)
@@ -34,11 +37,18 @@ class WhatIfFormInput extends Equatable {
           ? this.sellDate
           : sellDate as DateTime?,
       amountType: amountType ?? this.amountType,
+      amount: identical(amount, _sentinel) ? this.amount : amount as num?,
     );
   }
 
   @override
-  List<Object?> get props => [selectedSymbol, buyDate, sellDate, amountType];
+  List<Object?> get props => [
+    selectedSymbol,
+    buyDate,
+    sellDate,
+    amountType,
+    amount,
+  ];
 }
 
 // Sentinel değer: nullable alanlar için copyWith'te "değiştirilmedi" işareti.

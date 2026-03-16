@@ -6,11 +6,13 @@ import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 class ScenarioCard extends StatelessWidget {
   final SavedScenario scenario;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   const ScenarioCard({
     super.key,
     required this.scenario,
     required this.onDelete,
+    this.onTap,
   });
 
   @override
@@ -25,6 +27,7 @@ class ScenarioCard extends StatelessWidget {
 
     return Card(
       child: ListTile(
+        onTap: onTap,
         title: Text(
           scenario.assetDisplayName,
           style: Theme.of(context).textTheme.titleMedium,

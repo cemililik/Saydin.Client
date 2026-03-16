@@ -3,13 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
+import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_state.dart';
 import 'package:saydin/features/scenarios/presentation/widgets/scenario_card.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
 class ScenariosPage extends StatefulWidget {
-  const ScenariosPage({super.key});
+  final ValueChanged<SavedScenario>? onScenarioTap;
+
+  const ScenariosPage({super.key, this.onScenarioTap});
 
   @override
   State<ScenariosPage> createState() => _ScenariosPageState();
@@ -93,6 +96,9 @@ class _ScenariosPageState extends State<ScenariosPage> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, i) => ScenarioCard(
                 scenario: state.scenarios[i],
+                onTap: widget.onScenarioTap != null
+                    ? () => widget.onScenarioTap!(state.scenarios[i])
+                    : null,
                 onDelete: () => context.read<ScenariosBloc>().add(
                   ScenarioDeleteRequested(state.scenarios[i].id),
                 ),
