@@ -24,7 +24,7 @@ class DateInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveFirst = firstDate ?? DateTime(2010);
-    final effectiveLast  = lastDate ?? DateTime.now();
+    final effectiveLast = lastDate ?? DateTime.now();
 
     return TextFormField(
       readOnly: true,

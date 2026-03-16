@@ -42,43 +42,42 @@ class _WhatIfPageState extends State<WhatIfPage> {
     final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
     if (_selectedSymbol == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.assetRequired)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.assetRequired)));
       return;
     }
     if (_buyDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.buyDateRequired)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.buyDateRequired)));
       return;
     }
 
     final amount = num.tryParse(_amountController.text.replaceAll(',', '.'));
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.validAmountRequired)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.validAmountRequired)));
       return;
     }
 
-    context.read<WhatIfBloc>().add(WhatIfCalculateRequested(
-          assetSymbol: _selectedSymbol!,
-          buyDate: _buyDate!,
-          sellDate: _sellDate,
-          amount: amount,
-          amountType: _amountType,
-        ));
+    context.read<WhatIfBloc>().add(
+      WhatIfCalculateRequested(
+        assetSymbol: _selectedSymbol!,
+        buyDate: _buyDate!,
+        sellDate: _sellDate,
+        amount: amount,
+        amountType: _amountType,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.whatIfTitle),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text(l10n.whatIfTitle), centerTitle: true),
       body: BlocConsumer<WhatIfBloc, WhatIfState>(
         listener: (context, state) {
           if (state is WhatIfFailure) {
@@ -135,13 +134,11 @@ class _WhatIfPageState extends State<WhatIfPage> {
                   AmountInput(
                     controller: _amountController,
                     amountType: _amountType,
-                    onAmountTypeChanged: (v) =>
-                        setState(() => _amountType = v),
+                    onAmountTypeChanged: (v) => setState(() => _amountType = v),
                   ),
                   const SizedBox(height: 24),
                   FilledButton.icon(
-                    onPressed:
-                        state is WhatIfCalculating ? null : _onCalculate,
+                    onPressed: state is WhatIfCalculating ? null : _onCalculate,
                     icon: state is WhatIfCalculating
                         ? const SizedBox(
                             width: 18,

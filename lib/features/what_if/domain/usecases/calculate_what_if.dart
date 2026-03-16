@@ -11,12 +11,11 @@ class CalculateWhatIf {
     DateTime? sellDate,
     required num amount,
     required String amountType,
-  }) =>
-      _repository.calculate(
-        assetSymbol: assetSymbol,
-        buyDate: buyDate,
-        sellDate: sellDate,
-        amount: amount,
-        amountType: amountType,
-      );
+  }) => _repository.calculate(
+    assetSymbol: assetSymbol,
+    buyDate: buyDate,
+    sellDate: sellDate,
+    amount: amount,
+    amountType: amountType,
+  );
 }

@@ -20,9 +20,9 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     this._calculateWhatIf, {
     DioErrorMapper errorMapper = const DioErrorMapper(),
     ErrorReporter reporter = const ErrorReporter(),
-  })  : _errorMapper = errorMapper,
-        _reporter = reporter,
-        super(const WhatIfInitial()) {
+  }) : _errorMapper = errorMapper,
+       _reporter = reporter,
+       super(const WhatIfInitial()) {
     on<WhatIfAssetsRequested>(_onAssetsRequested);
     on<WhatIfCalculateRequested>(_onCalculateRequested);
   }
@@ -40,14 +40,18 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       if (error is UnknownError || error is ServerError) {
         await _reporter.report(e, st, context: 'get_assets');
       }
-      emit(WhatIfFailure(assets: [], message: _messageFor(error), error: error));
+      emit(
+        WhatIfFailure(assets: [], message: _messageFor(error), error: error),
+      );
     } catch (e, st) {
       await _reporter.report(e, st, context: 'get_assets');
-      emit(WhatIfFailure(
-        assets: [],
-        message: 'Bir hata oluştu. Lütfen tekrar deneyin.',
-        error: UnknownError(cause: e),
-      ));
+      emit(
+        WhatIfFailure(
+          assets: [],
+          message: 'Bir hata oluştu. Lütfen tekrar deneyin.',
+          error: UnknownError(cause: e),
+        ),
+      );
     }
   }
 
@@ -83,26 +87,30 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       if (error is UnknownError || error is ServerError) {
         await _reporter.report(e, st, context: 'calculate_what_if');
       }
-      emit(WhatIfFailure(
-        assets: currentAssets,
-        message: _messageFor(error),
-        error: error,
-      ));
+      emit(
+        WhatIfFailure(
+          assets: currentAssets,
+          message: _messageFor(error),
+          error: error,
+        ),
+      );
     } catch (e, st) {
       await _reporter.report(e, st, context: 'calculate_what_if');
-      emit(WhatIfFailure(
-        assets: currentAssets,
-        message: 'Hesaplama başarısız. Lütfen tekrar deneyin.',
-        error: UnknownError(cause: e),
-      ));
+      emit(
+        WhatIfFailure(
+          assets: currentAssets,
+          message: 'Hesaplama başarısız. Lütfen tekrar deneyin.',
+          error: UnknownError(cause: e),
+        ),
+      );
     }
   }
 
   String _messageFor(AppError error) => switch (error) {
-        PriceNotFoundError() => 'Bu tarih için fiyat bilgisi bulunamadı.',
-        DailyLimitError()    => 'Günlük hesaplama limitine ulaştınız.',
-        NoInternetError()    => 'İnternet bağlantısı yok.',
-        ServerError()        => 'Sunucu hatası. Lütfen tekrar deneyin.',
-        UnknownError()       => 'Bir hata oluştu. Lütfen tekrar deneyin.',
-      };
+    PriceNotFoundError() => 'Bu tarih için fiyat bilgisi bulunamadı.',
+    DailyLimitError() => 'Günlük hesaplama limitine ulaştınız.',
+    NoInternetError() => 'İnternet bağlantısı yok.',
+    ServerError() => 'Sunucu hatası. Lütfen tekrar deneyin.',
+    UnknownError() => 'Bir hata oluştu. Lütfen tekrar deneyin.',
+  };
 }

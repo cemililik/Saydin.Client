@@ -35,7 +35,7 @@ class WhatIfSuccess extends WhatIfState {
   final List<Asset> assets;
   final WhatIfResult result;
   WhatIfSuccess({required List<Asset> assets, required this.result})
-      : assets = List.unmodifiable(assets);
+    : assets = List.unmodifiable(assets);
   @override
   List<Object?> get props => [assets, result];
 }

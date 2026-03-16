@@ -19,14 +19,11 @@ void main() async {
         'APP_ENV',
         defaultValue: 'development',
       );
-      options.tracesSampleRate = 0.2;   // %20 performance tracing
+      options.tracesSampleRate = 0.2; // %20 performance tracing
       options.attachScreenshot = true;
     },
     appRunner: () => runApp(
-      DefaultAssetBundle(
-        bundle: SentryAssetBundle(),
-        child: const SaydinApp(),
-      ),
+      DefaultAssetBundle(bundle: SentryAssetBundle(), child: const SaydinApp()),
     ),
   );
 }

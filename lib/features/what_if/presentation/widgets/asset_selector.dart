@@ -25,10 +25,10 @@ class AssetSelector extends StatelessWidget {
         prefixIcon: const Icon(Icons.show_chart),
       ),
       items: assets
-          .map((a) => DropdownMenuItem(
-                value: a.symbol,
-                child: Text(a.displayName),
-              ))
+          .map(
+            (a) =>
+                DropdownMenuItem(value: a.symbol, child: Text(a.displayName)),
+          )
           .toList(),
       onChanged: (v) => v != null ? onChanged(v) : null,
     );

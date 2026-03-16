@@ -26,5 +26,11 @@ class WhatIfCalculateRequested extends WhatIfEvent {
   });
 
   @override
-  List<Object?> get props => [assetSymbol, buyDate, sellDate, amount, amountType];
+  List<Object?> get props => [
+    assetSymbol,
+    buyDate,
+    sellDate,
+    amount,
+    amountType,
+  ];
 }

@@ -9,10 +9,15 @@ class ResultCard extends StatelessWidget {
 
   const ResultCard({super.key, required this.result});
 
-  static final _tryFormatter =
-      NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 2);
-  static final _pctFormatter =
-      NumberFormat.decimalPercentPattern(locale: 'tr_TR', decimalDigits: 2);
+  static final _tryFormatter = NumberFormat.currency(
+    locale: 'tr_TR',
+    symbol: '₺',
+    decimalDigits: 2,
+  );
+  static final _pctFormatter = NumberFormat.decimalPercentPattern(
+    locale: 'tr_TR',
+    decimalDigits: 2,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -33,19 +38,23 @@ class ResultCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   result.isProfit ? l10n.profit : l10n.loss,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(color: color, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
             const Divider(height: 24),
-            _Row(l10n.initialValue,
-                _tryFormatter.format(result.initialValueTry)),
-            _Row(l10n.finalValue,
-                _tryFormatter.format(result.finalValueTry),
-                bold: true),
+            _Row(
+              l10n.initialValue,
+              _tryFormatter.format(result.initialValueTry),
+            ),
+            _Row(
+              l10n.finalValue,
+              _tryFormatter.format(result.finalValueTry),
+              bold: true,
+            ),
             _Row(
               result.isProfit ? l10n.profitLabel : l10n.lossLabel,
               _tryFormatter.format(result.profitLossTry),
@@ -83,9 +92,9 @@ class _Row extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: valueColor,
-                  fontWeight: bold ? FontWeight.bold : null,
-                ),
+              color: valueColor,
+              fontWeight: bold ? FontWeight.bold : null,
+            ),
           ),
         ],
       ),

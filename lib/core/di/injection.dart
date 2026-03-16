@@ -13,7 +13,12 @@ final sl = GetIt.instance;
 void configureDependencies() {
   // Network
   sl.registerLazySingleton<ApiClient>(
-    () => ApiClient(baseUrl: const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:5080')),
+    () => ApiClient(
+      baseUrl: const String.fromEnvironment(
+        'API_BASE_URL',
+        defaultValue: 'http://10.0.2.2:5080',
+      ),
+    ),
   );
 
   // Error handling

@@ -31,17 +31,17 @@ class WhatIfResult extends Equatable {
 
   @override
   List<Object?> get props => [
-        assetSymbol,
-        assetDisplayName,
-        buyDate,
-        sellDate,
-        buyPrice,
-        sellPrice,
-        unitsAcquired,
-        initialValueTry,
-        finalValueTry,
-        profitLossTry,
-        profitLossPercent,
-        isProfit,
-      ];
+    assetSymbol,
+    assetDisplayName,
+    buyDate,
+    sellDate,
+    buyPrice,
+    sellPrice,
+    unitsAcquired,
+    initialValueTry,
+    finalValueTry,
+    profitLossTry,
+    profitLossPercent,
+    isProfit,
+  ];
 }
