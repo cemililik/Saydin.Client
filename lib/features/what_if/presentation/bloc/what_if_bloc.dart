@@ -66,7 +66,10 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     );
   }
 
-  void _onBuyDateChanged(WhatIfBuyDateChanged event, Emitter<WhatIfState> emit) {
+  void _onBuyDateChanged(
+    WhatIfBuyDateChanged event,
+    Emitter<WhatIfState> emit,
+  ) {
     _emitWithUpdatedForm(emit, _formInput.copyWith(buyDate: event.date));
   }
 
@@ -87,7 +90,10 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     );
   }
 
-  void _emitWithUpdatedForm(Emitter<WhatIfState> emit, WhatIfFormInput updated) {
+  void _emitWithUpdatedForm(
+    Emitter<WhatIfState> emit,
+    WhatIfFormInput updated,
+  ) {
     final current = state;
     if (current is WhatIfAssetsLoaded) {
       emit(current.copyWith(formInput: updated));

@@ -72,8 +72,10 @@ class WhatIfAssetsLoaded extends WhatIfState {
   @override
   final WhatIfFormInput formInput;
 
-  WhatIfAssetsLoaded(List<Asset> assets, {this.formInput = const WhatIfFormInput()})
-      : assets = List.unmodifiable(assets);
+  WhatIfAssetsLoaded(
+    List<Asset> assets, {
+    this.formInput = const WhatIfFormInput(),
+  }) : assets = List.unmodifiable(assets);
 
   WhatIfAssetsLoaded copyWith({WhatIfFormInput? formInput}) =>
       WhatIfAssetsLoaded(assets, formInput: formInput ?? this.formInput);
@@ -88,7 +90,7 @@ class WhatIfCalculating extends WhatIfState {
   final WhatIfFormInput formInput;
 
   WhatIfCalculating(List<Asset> assets, {required this.formInput})
-      : assets = List.unmodifiable(assets);
+    : assets = List.unmodifiable(assets);
 
   @override
   List<Object?> get props => [assets, formInput];
@@ -107,10 +109,10 @@ class WhatIfSuccess extends WhatIfState {
   }) : assets = List.unmodifiable(assets);
 
   WhatIfSuccess copyWith({WhatIfFormInput? formInput}) => WhatIfSuccess(
-        assets: assets,
-        result: result,
-        formInput: formInput ?? this.formInput,
-      );
+    assets: assets,
+    result: result,
+    formInput: formInput ?? this.formInput,
+  );
 
   @override
   List<Object?> get props => [assets, result, formInput];
@@ -129,10 +131,10 @@ class WhatIfFailure extends WhatIfState {
   }) : assets = List.unmodifiable(assets);
 
   WhatIfFailure copyWith({WhatIfFormInput? formInput}) => WhatIfFailure(
-        assets: assets,
-        error: error,
-        formInput: formInput ?? this.formInput,
-      );
+    assets: assets,
+    error: error,
+    formInput: formInput ?? this.formInput,
+  );
 
   @override
   List<Object?> get props => [assets, error, formInput];
