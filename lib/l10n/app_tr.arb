@@ -30,6 +30,12 @@
   "errorGeneric": "Bir hata oluştu. Lütfen tekrar deneyin.",
   "errorPriceNotFound": "Bu tarih için fiyat bilgisi bulunamadı.",
   "errorDailyLimit": "Günlük hesaplama limitine ulaştınız.",
+  "errorScenarioLimit": "Ücretsiz planda en fazla {limit} senaryo kaydedebilirsiniz.",
+  "@errorScenarioLimit": {
+    "placeholders": {
+      "limit": { "type": "int" }
+    }
+  },
   "errorNoInternet": "İnternet bağlantısı yok.",
   "retry": "Tekrar Dene",
   "tryAgain": "Tekrar Hesapla",

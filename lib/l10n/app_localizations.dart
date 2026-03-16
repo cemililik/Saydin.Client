@@ -274,6 +274,12 @@ abstract class AppLocalizations {
   /// **'Günlük hesaplama limitine ulaştınız.'**
   String get errorDailyLimit;
 
+  /// No description provided for @errorScenarioLimit.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücretsiz planda en fazla {limit} senaryo kaydedebilirsiniz.'**
+  String errorScenarioLimit(int limit);
+
   /// No description provided for @errorNoInternet.
   ///
   /// In tr, this message translates to:

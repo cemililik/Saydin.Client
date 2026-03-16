@@ -80,6 +80,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
       switch (error) {
         PriceNotFoundError() => l10n.errorPriceNotFound,
         DailyLimitError() => l10n.errorDailyLimit,
+        ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
         NoInternetError() => l10n.errorNoInternet,
         ServerError() => l10n.errorServer,
         UnknownError() => l10n.errorGeneric,

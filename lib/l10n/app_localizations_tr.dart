@@ -99,6 +99,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get errorDailyLimit => 'Günlük hesaplama limitine ulaştınız.';
 
   @override
+  String errorScenarioLimit(int limit) =>
+      'Ücretsiz planda en fazla $limit senaryo kaydedebilirsiniz.';
+
+  @override
   String get errorNoInternet => 'İnternet bağlantısı yok.';
 
   @override
