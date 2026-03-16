@@ -22,6 +22,18 @@ cd src/Saydin.Client
 flutter pub get
 ```
 
+## 2. Git Hook'larını Etkinleştir
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Bu komut bir kez çalıştırılır. Sonrasında her `git commit`'te otomatik olarak:
+- `dart format` format kontrolü yapılır
+- `flutter analyze` analizi çalışır
+
+Commit format hatası verirse: `dart format lib/ test/` çalıştırıp tekrar commit edin.
+
 ## 2. Lokalizasyon Kodunu Üret
 
 ```bash

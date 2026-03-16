@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Flutter SDK yolunu bul
+if command -v flutter &>/dev/null; then
+  FLUTTER="flutter"
+  DART="dart"
+elif [ -f "$HOME/development/flutter/bin/flutter" ]; then
+  FLUTTER="$HOME/development/flutter/bin/flutter"
+  DART="$HOME/development/flutter/bin/dart"
+else
+  echo "⚠️  Flutter SDK bulunamadı, pre-commit hook atlandı."
+  exit 0
+fi
+
+echo "→ dart format kontrolü..."
+if ! $DART format --output=none --set-exit-if-changed lib/ test/ 2>&1; then
+  echo ""
+  echo "✗ Format hatası. Düzeltmek için:"
+  echo "  dart format lib/ test/"
+  echo ""
+  exit 1
+fi
+
+echo "→ flutter analyze..."
+if ! $FLUTTER analyze --no-pub 2>&1; then
+  echo ""
+  echo "✗ Analiz hatası. Yukarıdaki sorunları düzeltin."
+  echo ""
+  exit 1
+fi
+
+echo "✓ Tüm kontroller geçti."
