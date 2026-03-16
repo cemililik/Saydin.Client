@@ -26,6 +26,7 @@
   "assetRequired": "Varlık seçiniz",
   "buyDateRequired": "Alış tarihi giriniz",
   "validAmountRequired": "Geçerli bir tutar giriniz",
+  "errorServer": "Sunucu hatası. Lütfen tekrar deneyin.",
   "errorGeneric": "Bir hata oluştu. Lütfen tekrar deneyin.",
   "errorPriceNotFound": "Bu tarih için fiyat bilgisi bulunamadı.",
   "errorDailyLimit": "Günlük hesaplama limitine ulaştınız.",

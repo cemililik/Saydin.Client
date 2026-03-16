@@ -42,13 +42,9 @@ class WhatIfSuccess extends WhatIfState {
 
 class WhatIfFailure extends WhatIfState {
   final List<Asset> assets;
-  final String message;
   final AppError error;
-  WhatIfFailure({
-    required List<Asset> assets,
-    required this.message,
-    required this.error,
-  }) : assets = List.unmodifiable(assets);
+  WhatIfFailure({required List<Asset> assets, required this.error})
+    : assets = List.unmodifiable(assets);
   @override
-  List<Object?> get props => [assets, message, error];
+  List<Object?> get props => [assets, error];
 }

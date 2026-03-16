@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'device_id_interceptor.dart';
+import 'retry_interceptor.dart';
 
 class ApiClient {
   late final Dio _dio;
@@ -15,9 +16,10 @@ class ApiClient {
       ),
     );
 
-    _dio.interceptors.add(
+    _dio.interceptors.addAll([
       DeviceIdInterceptor(storage ?? const FlutterSecureStorage()),
-    );
+      RetryInterceptor(dio: _dio),
+    ]);
   }
 
   Dio get dio => _dio;
