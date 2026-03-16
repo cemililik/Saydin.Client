@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 /// Ağ kaynaklı geçici hatalarda (connectionError, receiveTimeout) isteği
 /// üstel geri çekilme (exponential backoff) ile otomatik olarak yeniler.
@@ -23,6 +24,8 @@ class RetryInterceptor extends Interceptor {
 
   static const _idempotentMethods = {'GET', 'HEAD'};
 
+  static final _random = Random();
+
   @override
   Future<void> onError(
     DioException err,
@@ -42,6 +45,10 @@ class RetryInterceptor extends Interceptor {
     }
 
     final delay = _backoffDelay(retryCount);
+    debugPrint(
+      '[RetryInterceptor] Retrying (attempt ${retryCount + 1}/$maxRetries) '
+      '${options.method} ${options.path} after ${delay.inMilliseconds}ms',
+    );
     await Future<void>.delayed(delay);
 
     options.extra[_retryCountKey] = retryCount + 1;
@@ -57,7 +64,7 @@ class RetryInterceptor extends Interceptor {
   /// 2^attempt * 200ms, maksimum 2 saniye (+ küçük jitter)
   static Duration _backoffDelay(int attempt) {
     final base = min(200 * pow(2, attempt).toInt(), 2000);
-    final jitter = Random().nextInt(100);
+    final jitter = _random.nextInt(100);
     return Duration(milliseconds: base + jitter);
   }
 }

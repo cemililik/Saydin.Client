@@ -28,8 +28,8 @@ class DioErrorMapper {
   }
 
   static DateTime _tomorrowMidnight() {
-    final now = DateTime.now();
-    final tomorrow = now.add(const Duration(days: 1));
-    return DateTime.utc(tomorrow.year, tomorrow.month, tomorrow.day);
+    final nowUtc = DateTime.now().toUtc();
+    final tomorrowUtc = nowUtc.add(const Duration(days: 1));
+    return DateTime.utc(tomorrowUtc.year, tomorrowUtc.month, tomorrowUtc.day);
   }
 }

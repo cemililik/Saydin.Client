@@ -217,8 +217,8 @@ Color myColor = Color(0xFF2E7D32);  // magic number
 
 | Kapsam | Konum |
 |--------|-------|
-| Flutter'a özgü mimari, BLoC, hata yönetimi, DI, ağ katmanı | `src/Saydin.Client/docs/architecture.md` |
-| Flutter geliştirme iş akışı (komutlar, env, build, sorun giderme) | `src/Saydin.Client/docs/development-guide.md` |
+| Flutter'a özgü mimari, BLoC, hata yönetimi, DI, ağ katmanı | `docs/architecture.md` |
+| Flutter geliştirme iş akışı (komutlar, env, build, sorun giderme) | `docs/development-guide.md` |
 | Proje geneli mimari (istemci + servisler arası ilişki, API sözleşmesi) | Kök `docs/` dizini |
 | Mimari kararlar (ADR) | Kök `docs/decisions/` dizini |
 

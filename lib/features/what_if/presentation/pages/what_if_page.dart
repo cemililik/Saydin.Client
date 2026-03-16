@@ -24,11 +24,6 @@ class _WhatIfPageState extends State<WhatIfPage> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
 
-  String? _selectedSymbol;
-  DateTime? _buyDate;
-  DateTime? _sellDate;
-  String _amountType = 'try';
-
   @override
   void initState() {
     super.initState();
@@ -44,13 +39,16 @@ class _WhatIfPageState extends State<WhatIfPage> {
   void _onCalculate() {
     final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedSymbol == null) {
+
+    final formInput = context.read<WhatIfBloc>().state.formInput;
+
+    if (formInput.selectedSymbol == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.assetRequired)));
       return;
     }
-    if (_buyDate == null) {
+    if (formInput.buyDate == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.buyDateRequired)));
@@ -67,11 +65,11 @@ class _WhatIfPageState extends State<WhatIfPage> {
 
     context.read<WhatIfBloc>().add(
       WhatIfCalculateRequested(
-        assetSymbol: _selectedSymbol!,
-        buyDate: _buyDate!,
-        sellDate: _sellDate,
+        assetSymbol: formInput.selectedSymbol!,
+        buyDate: formInput.buyDate!,
+        sellDate: formInput.sellDate,
         amount: amount,
-        amountType: _amountType,
+        amountType: formInput.amountType,
       ),
     );
   }
@@ -114,20 +112,25 @@ class _WhatIfPageState extends State<WhatIfPage> {
             _ => <Asset>[],
           };
 
+          final formInput = state.formInput;
           return _WhatIfForm(
             formKey: _formKey,
             assets: assets,
-            selectedSymbol: _selectedSymbol,
-            buyDate: _buyDate,
-            sellDate: _sellDate,
-            amountType: _amountType,
+            selectedSymbol: formInput.selectedSymbol,
+            buyDate: formInput.buyDate,
+            sellDate: formInput.sellDate,
+            amountType: formInput.amountType,
             amountController: _amountController,
             isCalculating: state is WhatIfCalculating,
             result: state is WhatIfSuccess ? state.result : null,
-            onAssetChanged: (v) => setState(() => _selectedSymbol = v),
-            onBuyDateChanged: (v) => setState(() => _buyDate = v),
-            onSellDateChanged: (v) => setState(() => _sellDate = v),
-            onAmountTypeChanged: (v) => setState(() => _amountType = v),
+            onAssetChanged: (v) =>
+                context.read<WhatIfBloc>().add(WhatIfSymbolChanged(v)),
+            onBuyDateChanged: (v) =>
+                context.read<WhatIfBloc>().add(WhatIfBuyDateChanged(v)),
+            onSellDateChanged: (v) =>
+                context.read<WhatIfBloc>().add(WhatIfSellDateChanged(v)),
+            onAmountTypeChanged: (v) =>
+                context.read<WhatIfBloc>().add(WhatIfAmountTypeChanged(v)),
             onCalculate: _onCalculate,
           );
         },
