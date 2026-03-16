@@ -6,140 +6,206 @@ Feature-first Clean Architecture + BLoC pattern. Her özellik kendi klasöründe
 
 ```
 lib/
-├── core/                   ← Uygulamaya özel paylaşılan altyapı
-│   ├── constants/          ← AppColors, ApiEndpoints, AppStrings
-│   ├── network/            ← Dio client, interceptors, base repository
-│   ├── di/                 ← Dependency injection (get_it + injectable)
-│   ├── router/             ← go_router route tanımları
-│   └── widgets/            ← Uygulamaya özel ortak widget'lar
+├── core/                          ← Özelliklerden bağımsız altyapı
+│   ├── constants/                 ← AppColors, ApiEndpoints
+│   ├── di/                        ← injection.dart (get_it servis locator)
+│   ├── error/                     ← AppError, DioErrorMapper, ErrorReporter
+│   ├── l10n/                      ← L10nContext extension (context.l10n)
+│   └── network/                   ← ApiClient, DeviceIdInterceptor, RetryInterceptor
 ├── features/
-│   ├── what_if/            ← Ana özellik: "ya alsaydım" hesaplama
-│   ├── assets/             ← Asset listesi ve arama
-│   └── portfolio/          ← Phase 2 scaffold (henüz aktif değil)
-└── l10n/
-    └── app_tr.arb          ← Tüm UI string'leri (hardcoded string YASAK)
+│   └── what_if/                   ← Ana özellik: "ya alsaydım" hesaplama
+│       ├── data/
+│       │   ├── models/            ← JSON ↔ Dart dönüşümü (fromJson/toJson)
+│       │   └── repositories/     ← WhatIfRepositoryImpl (Dio çağrıları burada)
+│       ├── domain/
+│       │   ├── entities/          ← Saf Dart: Asset, WhatIfResult (Flutter import yok)
+│       │   ├── repositories/     ← WhatIfRepository (abstract interface)
+│       │   └── usecases/         ← GetAssets, CalculateWhatIf
+│       └── presentation/
+│           ├── bloc/              ← WhatIfBloc, WhatIfEvent, WhatIfState
+│           ├── pages/             ← WhatIfPage (tam sayfa widget)
+│           └── widgets/           ← AssetSelector, DateInput, AmountInput, ResultCard
+└── l10n/                          ← flutter gen-l10n çıktısı (commit'lenir)
+    ├── app_localizations.dart
+    ├── app_localizations_tr.dart
+    └── app_tr.arb                 ← Kaynak dosya (elle düzenlenen tek dosya)
 ```
 
-## Katman Mimarisi (Her Feature)
-
-```
-features/<feature>/
-├── data/
-│   ├── models/             ← JSON ↔ Dart dönüşümü (fromJson/toJson)
-│   └── repositories/       ← Abstract interface'lerin implementasyonu
-├── domain/
-│   ├── entities/           ← Saf Dart class'ları — Flutter import YOK
-│   ├── repositories/       ← Abstract interface'ler (data bağımlılığını tersine çevirir)
-│   └── usecases/           ← Tek sorumluluğa sahip iş mantığı sınıfları
-└── presentation/
-    ├── bloc/               ← BLoC, Event, State
-    ├── pages/              ← Tam sayfa widget'lar (route hedefleri)
-    └── widgets/            ← Sayfada kullanılan bileşen widget'lar
-```
-
-### Bağımlılık Yönü
+## Katman Mimarisi
 
 ```
 presentation → domain ← data
 ```
 
-- `data` katmanı `domain` interface'lerini implement eder
+- `data` katmanı `domain` repository interface'lerini implement eder
 - `presentation` katmanı `domain` entity ve use case'lerini kullanır
 - `data` ve `presentation` birbirini referans almaz
+- **Domain katmanında `package:flutter` import YASAKTIR** — saf Dart kalmalıdır
 
-## BLoC Pattern
+## Bağımlılık Enjeksiyonu (get_it)
 
-Her **sayfa** için bir BLoC. Widget başına BLoC açılmaz.
+`lib/core/di/injection.dart` içinde `sl` (service locator) nesnesi merkezi olarak konfigüre edilir. Code generation (`injectable`, `build_runner`) **kullanılmaz** — kayıtlar elle yazılır.
 
-```
-Kullanıcı etkileşimi → Event → BLoC → UseCase → Repository → API
-                                BLoC → State → Widget render
-```
-
-### Event → State Akışı (what_if örneği)
-
-```
-WhatIfCalculateRequested
-    → WhatIfLoading
-    → WhatIfSuccess(result) / WhatIfFailure(message)
-```
-
-### Kural: BLoC sadece Use Case çağırır
+| Kayıt Tipi | Kullanıldığı Yer | Gerekçe |
+|---|---|---|
+| `registerLazySingleton` | ApiClient, Repository, UseCase, DioErrorMapper, ErrorReporter | Bir kez oluşturulur, tüm uygulama boyunca paylaşılır |
+| `registerFactory` | WhatIfBloc | Her sayfa açılışında yeni instance — eski state sızmaz |
 
 ```dart
-// DOĞRU ✓
-on<WhatIfCalculateRequested>((event, emit) async {
-  emit(WhatIfLoading());
-  final result = await _calculateWhatIf(event.request);  // UseCase
-  result.fold(
-    (failure) => emit(WhatIfFailure(failure.message)),
-    (data) => emit(WhatIfSuccess(data)),
-  );
-});
-
-// YANLIŞ ✗ — BLoC'ta doğrudan HTTP
-on<WhatIfCalculateRequested>((event, emit) async {
-  final response = await _dioClient.post('/what-if/calculate', ...);
-});
+// Sayfa açılırken BLoC sağlanır
+BlocProvider(
+  create: (_) => sl<WhatIfBloc>()..add(const WhatIfAssetsRequested()),
+  child: const WhatIfPage(),
+)
 ```
 
-## Feature: what_if
-
-Ana özellik. Kullanıcı akışı:
+## BLoC State Makinesi
 
 ```
-AssetSelectionPage → DateRangeSelectionPage → AmountInputPage → ResultPage
+WhatIfInitial
+    │
+    │ WhatIfAssetsRequested
+    ▼
+WhatIfAssetsLoading
+    ├─ başarı ──► WhatIfAssetsLoaded(assets)
+    └─ hata ───► WhatIfFailure(assets: [], error: AppError)
+
+WhatIfAssetsLoaded / WhatIfSuccess / WhatIfFailure
+    │
+    │ WhatIfCalculateRequested
+    ▼
+WhatIfCalculating(assets)
+    ├─ başarı ──► WhatIfSuccess(assets, result)
+    └─ hata ───► WhatIfFailure(assets, error: AppError)
 ```
 
-Her sayfa arası geçiş `go_router` ile yapılır. Hesaplama `WhatIfBloc` tarafından yönetilir.
+**State kuralları:**
+- Tüm state'ler `Equatable` implement eder → gereksiz widget rebuild önlenir
+- `List<Asset>` alanları `List.unmodifiable()` ile sarılır — dış mutasyon engellenir
+- **`WhatIfFailure` hata mesajı taşımaz** — yalnızca `AppError` tipi taşır (bkz. ADR-006)
 
-### Sonuç Gösterimi Kuralları
+## Ağ Katmanı
 
-- **Tutar:** `NumberFormat.currency(locale: 'tr_TR', symbol: '₺')` — örnek: ₺47.010,34
-- **Yüzde:** `NumberFormat.decimalPercentPattern(locale: 'tr_TR', decimalDigits: 2)`
-- **Tarih:** `DateFormat('dd.MM.yyyy', 'tr_TR')` — örnek: 01.03.2020
-- **Kar/zarar rengi:** Yeşil (0xFF2E7D32) veya kırmızı (0xFFC62828), ikona eşlik eder (erişilebilirlik)
+### Interceptor Zinciri
 
-## Dependency Injection
+```
+İstek gönderilecek
+    │
+    ▼
+DeviceIdInterceptor   ← Her isteğe X-Device-ID header ekler
+    │
+    ▼
+RetryInterceptor      ← GET/HEAD: max 2 yenileme, üstel backoff
+    │
+    ▼
+Sunucu
+```
 
-`get_it` + `injectable` kullanılır. Her modül kendi DI kaydını `@injectable` annotation'larıyla tanımlar.
+### DeviceIdInterceptor
+
+`FlutterSecureStorage` ile `saydin_device_id` anahtarı altında UUID v4 saklanır.
+**Fallback:** Storage erişimi başarısız olursa oturum süreli ephemeral UUID kullanılır — kullanıcı hata görmez.
+
+### RetryInterceptor
+
+- Kapsam: yalnızca GET ve HEAD (idempotent)
+- Tetikleyici: `connectionError`, `receiveTimeout`, `connectionTimeout`
+- Yenilenmeyenler: 4xx, 5xx — bunlar domain hatasına dönüştürülür
+- Gecikme: `min(200 * 2^attempt, 2000) + jitter(0..100)` ms
+
+## Hata Yönetimi
+
+### AppError Hiyerarşisi (`sealed class`)
 
 ```dart
-// Kayıt (otomatik generated)
-@injectable
-class CalculateWhatIf {
-  CalculateWhatIf(this._repository);
-  final IWhatIfRepository _repository;
+sealed class AppError { ... }
+class PriceNotFoundError extends AppError { ... }   // 404
+class DailyLimitError   extends AppError {           // 429
+  final DateTime resetAt;
 }
-
-// Kullanım
-final calculateWhatIf = getIt<CalculateWhatIf>();
+class NoInternetError   extends AppError { ... }    // connectionError
+class ServerError       extends AppError {           // 5xx
+  final int? statusCode;
+}
+class UnknownError      extends AppError { ... }    // catch-all
 ```
 
-## Navigasyon
+`sealed` keyword'ü exhaustive `switch` sağlar: yeni hata tipi eklenip widget güncellenmezse **derleme hatası** alınır.
 
-`go_router` ile type-safe route tanımları. Tüm route'lar `core/router/` altında merkezi olarak tanımlanır.
-
-## API İstemcisi
-
-`Dio` + interceptor zinciri:
+### Akış
 
 ```
-İstek → DeviceIdInterceptor → AuthInterceptor → ErrorInterceptor → API
+DioException
+    │
+    ▼
+DioErrorMapper.map()   ← HTTP kodu → AppError dönüşümü
+    │
+    ▼
+WhatIfBloc             ← AppError'ı state'e koyar, mesaj üretmez
+    │
+    ├─ ServerError / UnknownError ──► ErrorReporter.report() → Sentry
+    │
+    └─ diğerleri ───────────────────► Sentry'ye gönderilmez (beklenen akış)
+    │
+    ▼
+Widget (BlocConsumer listener)
+    └─ switch(state.error) ──► context.l10n.errorXxx
 ```
 
-- `DeviceIdInterceptor`: Her isteğe `X-Device-ID` header'ı ekler (FlutterSecureStorage'dan UUID)
-- `ErrorInterceptor`: HTTP hata kodlarını domain exception'larına dönüştürür
-- Base URL: environment config'den gelir, hardcode yasak
+### ErrorReporter (Sentry)
 
-## Lokalizasyon
-
-Tüm UI string'leri `l10n/app_tr.arb` dosyasında tanımlanır. `flutter gen-l10n` ile `AppLocalizations` sınıfı üretilir.
+DSN `--dart-define=SENTRY_DSN=<dsn>` ile enjekte edilir. DSN boşsa Sentry sessizce devre dışı kalır.
 
 ```dart
-// Kullanım
-context.l10n.calculate          // "Hesapla"
-context.l10n.loadingResult      // "Sonuç yükleniyor..."
+// Yalnızca beklenmedik hatalar raporlanır
+if (error is UnknownError || error is ServerError) {
+  await _reporter.report(e, st, context: 'calculate_what_if');
+}
 ```
 
-Widget'ta hardcoded Türkçe string kesinlikle yasaktır.
+## Lokalizasyon (L10n)
+
+Kaynak dosya: `lib/l10n/app_tr.arb` — **tüm kullanıcıya görünen string'ler buradadır**.
+
+```bash
+# Kod üretimi (ARB değiştiğinde)
+flutter gen-l10n
+```
+
+```dart
+// Widget içinde kullanım
+final l10n = context.l10n;   // lib/core/l10n/l10n_extensions.dart extension'ı
+Text(l10n.calculate)
+Text(l10n.errorPriceNotFound)
+```
+
+**Kural:** BLoC Türkçe string üretmez. Hata metni widget katmanında `switch (state.error)` ile l10n'dan çözülür.
+
+## Sonuç Gösterimi Kuralları
+
+```dart
+// Para birimi — Türkçe locale
+NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(47010.34)  // ₺47.010,34
+
+// Yüzde
+NumberFormat.decimalPercentPattern(locale: 'tr_TR', decimalDigits: 2).format(3.70) // %370,00
+
+// Tarih
+DateFormat('dd.MM.yyyy', 'tr_TR').format(date)  // 01.03.2020
+
+// Kar/zarar rengi + ikonu (erişilebilirlik: renkle birlikte ikon da gerekli)
+Color: Colors.green.shade700 / Colors.red.shade700
+Icon:  Icons.trending_up / Icons.trending_down
+```
+
+## CI/CD (GitHub Actions)
+
+`.github/workflows/ci.yml` — PR ve `main` push'ta tetiklenir.
+
+| Job | Runner | Adımlar |
+|---|---|---|
+| `analyze-and-test` | ubuntu-latest | flutter pub get → gen-l10n → dart format → flutter analyze --fatal-infos → flutter test --coverage → Codecov |
+| `build-android` | ubuntu-latest | APK debug (yalnızca PR) |
+| `build-ios` | macos-15 | no-codesign build (yalnızca PR) |
+
+Aynı branch için paralel çalışan iş akışı otomatik iptal edilir (`cancel-in-progress: true`).
