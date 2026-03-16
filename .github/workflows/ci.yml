@@ -35,7 +35,7 @@ jobs:
         run: flutter gen-l10n
 
       - name: Dart format check
-        run: dart format --output=none --set-exit-if-changed lib/
+        run: dart format --output=none --set-exit-if-changed lib/ test/
 
       - name: Flutter analyze
         run: flutter analyze --fatal-infos
