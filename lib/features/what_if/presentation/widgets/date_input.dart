@@ -19,11 +19,16 @@ class DateInput extends StatelessWidget {
     required this.onChanged,
   });
 
+  static final _formatter = DateFormat('dd.MM.yyyy', 'tr_TR');
+
   @override
   Widget build(BuildContext context) {
-    final formatter = DateFormat('dd.MM.yyyy', 'tr_TR');
+    final effectiveFirst = firstDate ?? DateTime(2010);
+    final effectiveLast  = lastDate ?? DateTime.now();
+
     return TextFormField(
       readOnly: true,
+      initialValue: value != null ? _formatter.format(value!) : '',
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
@@ -35,19 +40,29 @@ class DateInput extends StatelessWidget {
               )
             : null,
       ),
-      controller: TextEditingController(
-        text: value != null ? formatter.format(value!) : '',
-      ),
       onTap: () async {
+        // initialDate'i [firstDate, lastDate] aralığına sıkıştır — runtime exception önler
+        final initialDate = value != null
+            ? value!.clamp(effectiveFirst, effectiveLast)
+            : effectiveLast;
+
         final picked = await showDatePicker(
           context: context,
-          initialDate: value ?? DateTime(2020),
-          firstDate: firstDate ?? DateTime(2010),
-          lastDate: lastDate ?? DateTime.now(),
+          initialDate: initialDate,
+          firstDate: effectiveFirst,
+          lastDate: effectiveLast,
           locale: const Locale('tr', 'TR'),
         );
         onChanged(picked);
       },
     );
+  }
+}
+
+extension on DateTime {
+  DateTime clamp(DateTime min, DateTime max) {
+    if (isBefore(min)) return min;
+    if (isAfter(max)) return max;
+    return this;
   }
 }

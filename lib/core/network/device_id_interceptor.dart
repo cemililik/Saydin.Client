@@ -8,6 +8,8 @@ class DeviceIdInterceptor extends Interceptor {
 
   DeviceIdInterceptor(this._storage);
 
+  String? _cachedDeviceId;
+
   @override
   Future<void> onRequest(
     RequestOptions options,
@@ -19,11 +21,13 @@ class DeviceIdInterceptor extends Interceptor {
   }
 
   Future<String> _getOrCreateDeviceId() async {
+    if (_cachedDeviceId != null) return _cachedDeviceId!;
     var deviceId = await _storage.read(key: _storageKey);
     if (deviceId == null) {
       deviceId = const Uuid().v4();
       await _storage.write(key: _storageKey, value: deviceId);
     }
+    _cachedDeviceId = deviceId;
     return deviceId;
   }
 }

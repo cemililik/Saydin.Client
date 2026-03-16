@@ -8,12 +8,15 @@ class ResultCard extends StatelessWidget {
 
   const ResultCard({super.key, required this.result});
 
+  static final _tryFormatter =
+      NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 2);
+  static final _pctFormatter =
+      NumberFormat.decimalPercentPattern(locale: 'tr_TR', decimalDigits: 2);
+
   @override
   Widget build(BuildContext context) {
-    final tryFormatter =
-        NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 2);
-    final pctFormatter =
-        NumberFormat.decimalPercentPattern(locale: 'tr_TR', decimalDigits: 2);
+    final tryFormatter = _tryFormatter;
+    final pctFormatter = _pctFormatter;
 
     final color =
         result.isProfit ? AppColors.profit : AppColors.loss;

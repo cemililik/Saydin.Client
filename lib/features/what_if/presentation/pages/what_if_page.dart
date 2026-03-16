@@ -52,8 +52,13 @@ class _WhatIfPageState extends State<WhatIfPage> {
       return;
     }
 
-    final amount =
-        num.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0;
+    final amount = num.tryParse(_amountController.text.replaceAll(',', '.'));
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Geçerli bir tutar giriniz')),
+      );
+      return;
+    }
 
     context.read<WhatIfBloc>().add(WhatIfCalculateRequested(
           assetSymbol: _selectedSymbol!,

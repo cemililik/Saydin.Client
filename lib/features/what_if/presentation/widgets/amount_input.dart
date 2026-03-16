@@ -24,7 +24,7 @@ class AmountInput extends StatelessWidget {
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d+[,.]?\d*')),
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
             ],
             decoration: const InputDecoration(
               labelText: 'Tutar',
