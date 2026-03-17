@@ -197,52 +197,59 @@ jobs:
       - name: Pre-install CMake
         run: yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
 
-      - name: Validate signing secrets
+      - name: Prepare & verify signing
+        env:
+          KEYSTORE_B64:     ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD:   ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS:        ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD:     ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          # ── 1. Secret varlık kontrolü ──────────────────────────────────────
           missing=""
-          [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]  && missing="$missing ANDROID_KEYSTORE_BASE64"
-          [ -z "${{ secrets.ANDROID_STORE_PASSWORD }}" ]   && missing="$missing ANDROID_STORE_PASSWORD"
-          [ -z "${{ secrets.ANDROID_KEY_ALIAS }}" ]        && missing="$missing ANDROID_KEY_ALIAS"
-          [ -z "${{ secrets.ANDROID_KEY_PASSWORD }}" ]     && missing="$missing ANDROID_KEY_PASSWORD"
+          [ -z "$KEYSTORE_B64" ]   && missing="$missing\n  - ANDROID_KEYSTORE_BASE64"
+          [ -z "$STORE_PASSWORD" ] && missing="$missing\n  - ANDROID_STORE_PASSWORD"
+          [ -z "$KEY_ALIAS" ]      && missing="$missing\n  - ANDROID_KEY_ALIAS"
+          [ -z "$KEY_PASSWORD" ]   && missing="$missing\n  - ANDROID_KEY_PASSWORD"
           if [ -n "$missing" ]; then
-            echo "❌ Eksik secret'lar:$missing"
+            printf "❌ Eksik secret'lar:%b\n" "$missing"
             exit 1
           fi
-          echo "✅ Tüm signing secret'ları mevcut"
+          echo "✅ [1/4] Tüm secret'lar mevcut"
 
-      - name: Decode keystore
-        run: |
-          printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode --ignore-garbage \
+          # ── 2. Base64 decode ───────────────────────────────────────────────
+          printf '%s' "$KEYSTORE_B64" | base64 --decode --ignore-garbage \
             > android/saydin-release.jks
           FILESIZE=$(wc -c < android/saydin-release.jks)
-          echo "Keystore boyutu: ${FILESIZE} bytes"
+          echo "    Keystore boyutu: ${FILESIZE} bytes"
           if [ "$FILESIZE" -lt 100 ]; then
-            echo "❌ Dosya çok küçük (${FILESIZE} bytes) — ANDROID_KEYSTORE_BASE64 değeri hatalı"
+            echo "❌ [2/4] Decode başarısız — dosya ${FILESIZE} bytes, ANDROID_KEYSTORE_BASE64 hatalı"
             exit 1
           fi
-          echo "✅ Keystore decode edildi"
+          echo "✅ [2/4] Keystore decode edildi (${FILESIZE} bytes)"
 
-      - name: Verify keystore
-        env:
-          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          keytool -list \
-            -keystore android/saydin-release.jks \
-            -storepass "$STORE_PASSWORD" \
-            -alias "$KEY_ALIAS" \
-            && echo "✅ Store password ve alias doğru" \
-            || { echo "❌ STORE_PASSWORD veya KEY_ALIAS hatalı"; exit 1; }
+          # ── 3. Store password + alias doğrulama ───────────────────────────
+          if ! keytool -list \
+                -keystore android/saydin-release.jks \
+                -storepass "$STORE_PASSWORD" \
+                -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "❌ [3/4] STORE_PASSWORD veya KEY_ALIAS hatalı"
+            exit 1
+          fi
+          echo "✅ [3/4] Store password ve alias doğrulandı"
 
-          keytool -keypasswd \
-            -keystore android/saydin-release.jks \
-            -storepass "$STORE_PASSWORD" \
-            -alias "$KEY_ALIAS" \
-            -keypass "$KEY_PASSWORD" \
-            -new "$KEY_PASSWORD" \
-            && echo "✅ Key password doğru" \
-            || { echo "❌ KEY_PASSWORD hatalı"; exit 1; }
+          # ── 4. Key password doğrulama ──────────────────────────────────────
+          if ! keytool -keypasswd \
+                -keystore android/saydin-release.jks \
+                -storepass "$STORE_PASSWORD" \
+                -alias "$KEY_ALIAS" \
+                -keypass "$KEY_PASSWORD" \
+                -new "$KEY_PASSWORD" > /dev/null 2>&1; then
+            echo "❌ [4/4] KEY_PASSWORD hatalı"
+            exit 1
+          fi
+          echo "✅ [4/4] Key password doğrulandı"
+          echo ""
+          echo "🎉 Signing doğrulaması tamamlandı — build başlıyor"
 
       - name: Set environment variables
         id: env
