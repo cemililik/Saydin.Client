@@ -215,7 +215,7 @@ jobs:
 
       - name: Build AAB (release)
         env:
-          STORE_FILE: saydin-release.jks
+          STORE_FILE: ../saydin-release.jks
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
