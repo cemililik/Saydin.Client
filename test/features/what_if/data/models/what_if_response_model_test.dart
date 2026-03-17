@@ -76,5 +76,98 @@ void main() {
 
       expect(model.priceHistory, isEmpty);
     });
+
+    // ── Enflasyon alanları ─────────────────────────────────────────────────
+
+    test(
+      'cumulativeInflationPercent ve realProfitLossPercent null gelince null döner',
+      () {
+        final model = WhatIfResponseModel.fromJson(_baseJson(priceHistory: []));
+
+        expect(model.cumulativeInflationPercent, isNull);
+        expect(model.realProfitLossPercent, isNull);
+      },
+    );
+
+    test('enflasyon alanları dolu gelince doğru parse edilir', () {
+      final json = {
+        ..._baseJson(priceHistory: []),
+        'cumulativeInflationPercent': 85.4,
+        'realProfitLossPercent': -22.7,
+      };
+
+      final model = WhatIfResponseModel.fromJson(json);
+
+      expect(model.cumulativeInflationPercent, closeTo(85.4, 0.001));
+      expect(model.realProfitLossPercent, closeTo(-22.7, 0.001));
+    });
+
+    test('inflationDataAsOf null gelince null döner', () {
+      final model = WhatIfResponseModel.fromJson(_baseJson(priceHistory: []));
+
+      expect(model.inflationDataAsOf, isNull);
+    });
+
+    test('inflationDataAsOf dolu gelince DateTime parse edilir', () {
+      final json = {
+        ..._baseJson(priceHistory: []),
+        'inflationDataAsOf': '2026-01-01',
+      };
+
+      final model = WhatIfResponseModel.fromJson(json);
+
+      expect(model.inflationDataAsOf, DateTime(2026, 1, 1));
+    });
+
+    // ── Haftasonu / tarih düzeltmesi alanları ────────────────────────────
+
+    test('actualBuyDate ve actualSellDate null gelince null döner', () {
+      final model = WhatIfResponseModel.fromJson(_baseJson(priceHistory: []));
+
+      expect(model.actualBuyDate, isNull);
+      expect(model.actualSellDate, isNull);
+    });
+
+    test('actualBuyDate dolu gelince DateTime parse edilir', () {
+      final json = {
+        ..._baseJson(priceHistory: []),
+        'actualBuyDate': '2020-01-03', // Cuma (Cumartesi seçilmişti)
+      };
+
+      final model = WhatIfResponseModel.fromJson(json);
+
+      expect(model.actualBuyDate, DateTime(2020, 1, 3));
+      expect(model.actualSellDate, isNull);
+    });
+
+    test('actualSellDate dolu gelince DateTime parse edilir', () {
+      final json = {
+        ..._baseJson(priceHistory: []),
+        'actualSellDate': '2021-01-01',
+      };
+
+      final model = WhatIfResponseModel.fromJson(json);
+
+      expect(model.actualSellDate, DateTime(2021, 1, 1));
+    });
+
+    test('tüm nullable alanlar aynı anda dolu parse edilebilir', () {
+      final json = {
+        ..._baseJson(priceHistory: []),
+        'cumulativeInflationPercent': 120.5,
+        'realProfitLossPercent': -15.3,
+        'inflationDataAsOf': '2026-01-01',
+        'actualBuyDate': '2020-01-03',
+        'actualSellDate': '2021-01-01',
+      };
+
+      final model = WhatIfResponseModel.fromJson(json);
+
+      expect(model.cumulativeInflationPercent, closeTo(120.5, 0.001));
+      expect(model.realProfitLossPercent, closeTo(-15.3, 0.001));
+      expect(model.inflationDataAsOf, DateTime(2026, 1, 1));
+      expect(model.actualBuyDate, DateTime(2020, 1, 3));
+      expect(model.actualSellDate, DateTime(2021, 1, 1));
+    });
   });
 }
