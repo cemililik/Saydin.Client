@@ -45,6 +45,10 @@ class ComparisonAmountTypeChanged extends ComparisonEvent {
   List<Object?> get props => [amountType];
 }
 
+class ComparisonInflationToggled extends ComparisonEvent {
+  const ComparisonInflationToggled();
+}
+
 class ComparisonCalculateRequested extends ComparisonEvent {
   const ComparisonCalculateRequested();
 }

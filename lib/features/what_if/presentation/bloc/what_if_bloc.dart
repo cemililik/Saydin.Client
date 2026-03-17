@@ -36,6 +36,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     on<WhatIfBuyDateChanged>(_onBuyDateChanged);
     on<WhatIfSellDateChanged>(_onSellDateChanged);
     on<WhatIfAmountTypeChanged>(_onAmountTypeChanged);
+    on<WhatIfInflationToggled>(_onInflationToggled);
     on<WhatIfReplayRequested>(_onReplayRequested);
     on<WhatIfCalculateRequested>(_onCalculateRequested);
   }
@@ -142,6 +143,16 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     );
   }
 
+  void _onInflationToggled(
+    WhatIfInflationToggled event,
+    Emitter<WhatIfState> emit,
+  ) {
+    _emitWithUpdatedForm(
+      emit,
+      _formInput.copyWith(includeInflation: !_formInput.includeInflation),
+    );
+  }
+
   void _emitWithUpdatedForm(
     Emitter<WhatIfState> emit,
     WhatIfFormInput updated,
@@ -206,6 +217,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
         sellDate: event.sellDate,
         amount: event.amount,
         amountType: event.amountType,
+        includeInflation: event.includeInflation,
       );
       emit(
         WhatIfSuccess(

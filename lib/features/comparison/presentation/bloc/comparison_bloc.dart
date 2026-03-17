@@ -28,11 +28,25 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     on<ComparisonSellDateChanged>(_onSellDateChanged);
     on<ComparisonAmountChanged>(_onAmountChanged);
     on<ComparisonAmountTypeChanged>(_onAmountTypeChanged);
+    on<ComparisonInflationToggled>(_onInflationToggled);
     on<ComparisonCalculateRequested>(_onCalculateRequested);
   }
 
-  ComparisonAssetsLoaded? get _loaded =>
-      state is ComparisonAssetsLoaded ? state as ComparisonAssetsLoaded : null;
+  ComparisonAssetsLoaded? get _loaded {
+    final s = state;
+    if (s is ComparisonInitial || s is ComparisonAssetsLoading) return null;
+    if (s is ComparisonAssetsLoaded) return s;
+    // Success, Failure, Calculating — reconstruct AssetsLoaded so events aren't dropped
+    return ComparisonAssetsLoaded(
+      assets: s.assets,
+      selectedSymbols: s.selectedSymbols,
+      buyDate: s.buyDate,
+      sellDate: s.sellDate,
+      amount: s.amount,
+      amountType: s.amountType,
+      includeInflation: s.includeInflation,
+    );
+  }
 
   Future<void> _onAssetsRequested(
     ComparisonAssetsRequested event,
@@ -118,6 +132,15 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     emit(loaded.copyWith(amountType: event.amountType));
   }
 
+  void _onInflationToggled(
+    ComparisonInflationToggled event,
+    Emitter<ComparisonState> emit,
+  ) {
+    final loaded = _loaded;
+    if (loaded == null) return;
+    emit(loaded.copyWith(includeInflation: !loaded.includeInflation));
+  }
+
   Future<void> _onCalculateRequested(
     ComparisonCalculateRequested event,
     Emitter<ComparisonState> emit,
@@ -133,6 +156,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
         sellDate: loaded.sellDate,
         amount: loaded.amount,
         amountType: loaded.amountType,
+        includeInflation: loaded.includeInflation,
       ),
     );
 
@@ -143,6 +167,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
         sellDate: loaded.sellDate,
         amount: loaded.amount!,
         amountType: loaded.amountType,
+        includeInflation: loaded.includeInflation,
       );
       emit(
         ComparisonSuccess(
@@ -152,6 +177,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
           sellDate: loaded.sellDate,
           amount: loaded.amount,
           amountType: loaded.amountType,
+          includeInflation: loaded.includeInflation,
           result: result,
         ),
       );
@@ -168,6 +194,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
           sellDate: loaded.sellDate,
           amount: loaded.amount,
           amountType: loaded.amountType,
+          includeInflation: loaded.includeInflation,
           message: _errorMessage(error),
         ),
       );
@@ -181,6 +208,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
           sellDate: loaded.sellDate,
           amount: loaded.amount,
           amountType: loaded.amountType,
+          includeInflation: loaded.includeInflation,
           message: e.toString(),
         ),
       );

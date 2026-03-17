@@ -501,6 +501,108 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'{rank}. Sıra'**
   String compareRankLabel(int rank);
+
+  /// No description provided for @compareAddAsset.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık Ekle'**
+  String get compareAddAsset;
+
+  /// No description provided for @compareAllCategories.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tümü'**
+  String get compareAllCategories;
+
+  /// No description provided for @compareNoAssetsFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık bulunamadı'**
+  String get compareNoAssetsFound;
+
+  /// No description provided for @inflationAdjust.
+  ///
+  /// In tr, this message translates to:
+  /// **'Enflasyona Göre Düzelt'**
+  String get inflationAdjust;
+
+  /// No description provided for @inflationAdjustSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'TÜFE bazlı reel getiriyi hesaplar'**
+  String get inflationAdjustSubtitle;
+
+  /// No description provided for @premiumFeature.
+  ///
+  /// In tr, this message translates to:
+  /// **'Premium'**
+  String get premiumFeature;
+
+  /// No description provided for @realReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reel Getiri'**
+  String get realReturn;
+
+  /// No description provided for @realProfitLoss.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reel Kar / Zarar'**
+  String get realProfitLoss;
+
+  /// No description provided for @cumulativeInflation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birikimli Enflasyon'**
+  String get cumulativeInflation;
+
+  /// No description provided for @inflationSectionTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Enflasyon Düzeltmesi'**
+  String get inflationSectionTitle;
+
+  /// No description provided for @dateAdjustedNote.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tarih düzeltmesi uygulandı'**
+  String get dateAdjustedNote;
+
+  /// No description provided for @inflationDataAsOf.
+  ///
+  /// In tr, this message translates to:
+  /// **'Endeks baz tarihi: {date}'**
+  String inflationDataAsOf(String date);
+
+  /// No description provided for @priceDateAdjusted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyat bulunamadı: {requested} ({reason}) — {actual} tarihi kullanıldı.'**
+  String priceDateAdjusted(String requested, String reason, String actual);
+
+  /// No description provided for @reasonWeekend.
+  ///
+  /// In tr, this message translates to:
+  /// **'haftasonu'**
+  String get reasonWeekend;
+
+  /// No description provided for @reasonHoliday.
+  ///
+  /// In tr, this message translates to:
+  /// **'resmi tatil veya fiyat yok'**
+  String get reasonHoliday;
+
+  /// No description provided for @labelBuyDate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alış'**
+  String get labelBuyDate;
+
+  /// No description provided for @labelSellDate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış'**
+  String get labelSellDate;
 }
 
 class _AppLocalizationsDelegate

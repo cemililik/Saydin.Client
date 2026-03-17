@@ -11,11 +11,13 @@ class CompareWhatIf {
     DateTime? sellDate,
     required num amount,
     required String amountType,
+    bool includeInflation = false,
   }) => _repository.compare(
     assetSymbols: assetSymbols,
     buyDate: buyDate,
     sellDate: sellDate,
     amount: amount,
     amountType: amountType,
+    includeInflation: includeInflation,
   );
 }

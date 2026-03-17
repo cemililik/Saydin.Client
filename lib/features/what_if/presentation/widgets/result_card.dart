@@ -30,6 +30,49 @@ class ResultCard extends StatelessWidget {
     return NumberFormat('#,##0.########', 'tr_TR').format(value);
   }
 
+  /// İstenen tarih haftasonuna mı denk geliyor?
+  static bool _isWeekend(DateTime d) =>
+      d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
+
+  /// Tarih farklıysa gösterilecek bilgi notu widget'ı
+  Widget? _buildDateNote(
+    AppLocalizations l10n,
+    BuildContext context, {
+    required DateTime requested,
+    required DateTime actual,
+    required String label,
+  }) {
+    final reason = _isWeekend(requested)
+        ? l10n.reasonWeekend
+        : l10n.reasonHoliday;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              l10n.priceDateAdjusted(
+                '$label ${_dateFormatter.format(requested)}',
+                reason,
+                _dateFormatter.format(actual),
+              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatDuration(AppLocalizations l10n) {
     final end = result.sellDate ?? DateTime.now();
     final days = end.difference(result.buyDate).inDays.abs();
@@ -121,6 +164,87 @@ class ResultCard extends StatelessWidget {
             _Row(l10n.resultSellPrice, _tryFormatter.format(result.sellPrice)),
             _Row(l10n.resultUnitsAcquired, _formatUnits(result.unitsAcquired)),
             _Row(l10n.resultDuration, _formatDuration(l10n)),
+
+            // ── Tarih ayarlama notları (haftasonu / tatil) ───────────────
+            if (result.actualBuyDate != null)
+              _buildDateNote(
+                l10n,
+                context,
+                requested: result.buyDate,
+                actual: result.actualBuyDate!,
+                label: l10n.labelBuyDate,
+              )!,
+            if (result.actualSellDate != null)
+              _buildDateNote(
+                l10n,
+                context,
+                requested: result.sellDate ?? DateTime.now(),
+                actual: result.actualSellDate!,
+                label: l10n.labelSellDate,
+              )!,
+
+            // ── Enflasyon düzeltmesi ───────────────────────────────────
+            if (result.realProfitLossPercent != null) ...[
+              const Divider(height: 24),
+              Text(
+                l10n.inflationSectionTitle,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _Row(
+                l10n.cumulativeInflation,
+                '${result.cumulativeInflationPercent! >= 0 ? '+' : ''}'
+                '${_pctFormatter.format(result.cumulativeInflationPercent! / 100)}',
+              ),
+              _Row(
+                l10n.realReturn,
+                '${result.realProfitLossPercent! >= 0 ? '+' : ''}'
+                '${_pctFormatter.format(result.realProfitLossPercent! / 100)}',
+                valueColor: result.realProfitLossPercent! >= 0
+                    ? AppColors.profit
+                    : AppColors.loss,
+                bold: true,
+              ),
+              _Row(
+                l10n.realProfitLoss,
+                '${result.realProfitLossPercent! >= 0 ? '+' : ''}'
+                '${_tryFormatter.format(result.initialValueTry * result.realProfitLossPercent! / 100)}',
+                valueColor: result.realProfitLossPercent! >= 0
+                    ? AppColors.profit
+                    : AppColors.loss,
+              ),
+              if (result.inflationDataAsOf != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          l10n.inflationDataAsOf(
+                            _dateFormatter.format(result.inflationDataAsOf!),
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ],
         ),
       ),

@@ -15,6 +15,7 @@ class ComparisonRepositoryImpl implements ComparisonRepository {
     DateTime? sellDate,
     required num amount,
     required String amountType,
+    bool includeInflation = false,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       ApiEndpoints.whatIfCompare,
@@ -24,6 +25,7 @@ class ComparisonRepositoryImpl implements ComparisonRepository {
         if (sellDate != null) 'sellDate': _formatDate(sellDate),
         'amount': amount,
         'amountType': amountType,
+        'includeInflation': includeInflation,
       },
     );
     final data = response.data;

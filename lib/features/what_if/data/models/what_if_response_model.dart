@@ -15,6 +15,11 @@ class WhatIfResponseModel extends WhatIfResult {
     required super.profitLossPercent,
     required super.isProfit,
     super.priceHistory,
+    super.cumulativeInflationPercent,
+    super.realProfitLossPercent,
+    super.inflationDataAsOf,
+    super.actualBuyDate,
+    super.actualSellDate,
   });
 
   factory WhatIfResponseModel.fromJson(Map<String, dynamic> json) {
@@ -43,6 +48,19 @@ class WhatIfResponseModel extends WhatIfResult {
       profitLossPercent: (json['profitLossPercent'] as num).toDouble(),
       isProfit: json['isProfit'] as bool,
       priceHistory: priceHistory,
+      cumulativeInflationPercent: (json['cumulativeInflationPercent'] as num?)
+          ?.toDouble(),
+      realProfitLossPercent: (json['realProfitLossPercent'] as num?)
+          ?.toDouble(),
+      inflationDataAsOf: json['inflationDataAsOf'] != null
+          ? DateTime.parse(json['inflationDataAsOf'] as String)
+          : null,
+      actualBuyDate: json['actualBuyDate'] != null
+          ? DateTime.parse(json['actualBuyDate'] as String)
+          : null,
+      actualSellDate: json['actualSellDate'] != null
+          ? DateTime.parse(json['actualSellDate'] as String)
+          : null,
     );
   }
 }

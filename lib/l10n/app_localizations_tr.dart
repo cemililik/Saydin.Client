@@ -223,5 +223,62 @@ class AppLocalizationsTr extends AppLocalizations {
   String get compareResultTitle => 'Karşılaştırma Sonuçları';
 
   @override
-  String compareRankLabel(int rank) => '$rank. Sıra';
+  String compareRankLabel(int rank) {
+    return '$rank. Sıra';
+  }
+
+  @override
+  String get compareAddAsset => 'Varlık Ekle';
+
+  @override
+  String get compareAllCategories => 'Tümü';
+
+  @override
+  String get compareNoAssetsFound => 'Varlık bulunamadı';
+
+  @override
+  String get inflationAdjust => 'Enflasyona Göre Düzelt';
+
+  @override
+  String get inflationAdjustSubtitle => 'TÜFE bazlı reel getiriyi hesaplar';
+
+  @override
+  String get premiumFeature => 'Premium';
+
+  @override
+  String get realReturn => 'Reel Getiri';
+
+  @override
+  String get realProfitLoss => 'Reel Kar / Zarar';
+
+  @override
+  String get cumulativeInflation => 'Birikimli Enflasyon';
+
+  @override
+  String get inflationSectionTitle => 'Enflasyon Düzeltmesi';
+
+  @override
+  String get dateAdjustedNote => 'Tarih düzeltmesi uygulandı';
+
+  @override
+  String inflationDataAsOf(String date) {
+    return 'Endeks baz tarihi: $date';
+  }
+
+  @override
+  String priceDateAdjusted(String requested, String reason, String actual) {
+    return 'Fiyat bulunamadı: $requested ($reason) — $actual tarihi kullanıldı.';
+  }
+
+  @override
+  String get reasonWeekend => 'haftasonu';
+
+  @override
+  String get reasonHoliday => 'resmi tatil veya fiyat yok';
+
+  @override
+  String get labelBuyDate => 'Alış';
+
+  @override
+  String get labelSellDate => 'Satış';
 }

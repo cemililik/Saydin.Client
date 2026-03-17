@@ -9,5 +9,6 @@ abstract class WhatIfRepository {
     DateTime? sellDate,
     required num amount,
     required String amountType,
+    bool includeInflation = false,
   });
 }

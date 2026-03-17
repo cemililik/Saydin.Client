@@ -64,12 +64,17 @@ class WhatIfReplayRequested extends WhatIfEvent {
   ];
 }
 
+class WhatIfInflationToggled extends WhatIfEvent {
+  const WhatIfInflationToggled();
+}
+
 class WhatIfCalculateRequested extends WhatIfEvent {
   final String assetSymbol;
   final DateTime buyDate;
   final DateTime? sellDate;
   final num amount;
   final String amountType;
+  final bool includeInflation;
 
   const WhatIfCalculateRequested({
     required this.assetSymbol,
@@ -77,6 +82,7 @@ class WhatIfCalculateRequested extends WhatIfEvent {
     this.sellDate,
     required this.amount,
     required this.amountType,
+    this.includeInflation = false,
   });
 
   @override
@@ -86,5 +92,6 @@ class WhatIfCalculateRequested extends WhatIfEvent {
     sellDate,
     amount,
     amountType,
+    includeInflation,
   ];
 }

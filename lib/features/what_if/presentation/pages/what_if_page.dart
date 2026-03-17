@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_state.dart';
@@ -27,6 +29,7 @@ class WhatIfPage extends StatefulWidget {
 class _WhatIfPageState extends State<WhatIfPage> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -37,6 +40,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
   @override
   void dispose() {
     _amountController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -77,6 +81,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
         sellDate: formInput.sellDate,
         amount: amount,
         amountType: formInput.amountType,
+        includeInflation: formInput.includeInflation,
       ),
     );
   }
@@ -115,10 +120,22 @@ class _WhatIfPageState extends State<WhatIfPage> {
         },
         child: BlocConsumer<WhatIfBloc, WhatIfState>(
           listenWhen: (prev, curr) =>
+              curr is WhatIfSuccess ||
               curr is WhatIfFailure ||
               prev.formInput.amount != curr.formInput.amount ||
               (!prev.formInput.dateAdjusted && curr.formInput.dateAdjusted),
           listener: (context, state) {
+            if (state is WhatIfSuccess) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _scrollController.hasClients) {
+                  _scrollController.animateTo(
+                    _scrollController.position.maxScrollExtent,
+                    duration: const Duration(milliseconds: 450),
+                    curve: Curves.easeOut,
+                  );
+                }
+              });
+            }
             if (state is WhatIfFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -162,8 +179,21 @@ class _WhatIfPageState extends State<WhatIfPage> {
             final selectedAsset = assets
                 .where((a) => a.symbol == formInput.selectedSymbol)
                 .firstOrNull;
+            final priceHistoryMonths = context
+                .read<AppConfigCubit>()
+                .state
+                .features
+                .priceHistoryMonths;
+            final dateRange = assetDateRange(
+              assetFirstDate: selectedAsset?.firstDate,
+              assetLastDate: selectedAsset?.lastDate,
+              priceHistoryMonths: priceHistoryMonths,
+            );
+
+            final config = context.read<AppConfigCubit>().state;
             return _WhatIfForm(
               formKey: _formKey,
+              scrollController: _scrollController,
               assets: assets,
               selectedSymbol: formInput.selectedSymbol,
               buyDate: formInput.buyDate,
@@ -172,8 +202,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
               amountController: _amountController,
               isCalculating: state is WhatIfCalculating,
               result: successResult,
-              assetFirstDate: selectedAsset?.firstDate,
-              assetLastDate: selectedAsset?.lastDate,
+              assetFirstDate: dateRange.firstDate,
+              assetLastDate: dateRange.lastDate,
+              includeInflation: formInput.includeInflation,
+              inflationEnabled: config.features.inflationAdjustment,
               onAssetChanged: (v) =>
                   context.read<WhatIfBloc>().add(WhatIfSymbolChanged(v)),
               onBuyDateChanged: (v) =>
@@ -182,6 +214,9 @@ class _WhatIfPageState extends State<WhatIfPage> {
                   context.read<WhatIfBloc>().add(WhatIfSellDateChanged(v)),
               onAmountTypeChanged: (v) =>
                   context.read<WhatIfBloc>().add(WhatIfAmountTypeChanged(v)),
+              onInflationToggled: () => context.read<WhatIfBloc>().add(
+                const WhatIfInflationToggled(),
+              ),
               onCalculate: _onCalculate,
               onSave: successResult != null
                   ? () => context.read<ScenariosBloc>().add(
@@ -211,6 +246,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
 class _WhatIfForm extends StatelessWidget {
   const _WhatIfForm({
     required this.formKey,
+    required this.scrollController,
     required this.assets,
     required this.selectedSymbol,
     required this.buyDate,
@@ -224,12 +260,16 @@ class _WhatIfForm extends StatelessWidget {
     required this.onSellDateChanged,
     required this.onAmountTypeChanged,
     required this.onCalculate,
+    required this.includeInflation,
+    required this.inflationEnabled,
+    required this.onInflationToggled,
     this.assetFirstDate,
     this.assetLastDate,
     this.onSave,
   });
 
   final GlobalKey<FormState> formKey;
+  final ScrollController scrollController;
   final List<Asset> assets;
   final String? selectedSymbol;
   final DateTime? buyDate;
@@ -243,6 +283,9 @@ class _WhatIfForm extends StatelessWidget {
   final ValueChanged<DateTime?> onSellDateChanged;
   final ValueChanged<String> onAmountTypeChanged;
   final VoidCallback onCalculate;
+  final bool includeInflation;
+  final bool inflationEnabled;
+  final VoidCallback onInflationToggled;
   final DateTime? assetFirstDate;
   final DateTime? assetLastDate;
   final VoidCallback? onSave;
@@ -254,6 +297,7 @@ class _WhatIfForm extends StatelessWidget {
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.translucent,
       child: SingleChildScrollView(
+        controller: scrollController,
         padding: const EdgeInsets.all(16),
         child: Form(
           key: formKey,
@@ -294,7 +338,13 @@ class _WhatIfForm extends StatelessWidget {
                     const ['try'],
                 onAmountTypeChanged: onAmountTypeChanged,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
+              _InflationToggle(
+                value: includeInflation,
+                enabled: inflationEnabled,
+                onToggle: onInflationToggled,
+              ),
+              const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: isCalculating ? null : onCalculate,
                 icon: isCalculating
@@ -347,6 +397,87 @@ class _WhatIfForm extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Inflation toggle ──────────────────────────────────────────────────────────
+
+class _InflationToggle extends StatelessWidget {
+  final bool value;
+  final bool enabled;
+  final VoidCallback onToggle;
+
+  const _InflationToggle({
+    required this.value,
+    required this.enabled,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return InkWell(
+      onTap: enabled ? onToggle : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Switch(
+              value: enabled ? value : false,
+              onChanged: enabled ? (_) => onToggle() : null,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        l10n.inflationAdjust,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      if (!enabled) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            l10n.premiumFeature,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    l10n.inflationAdjustSubtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

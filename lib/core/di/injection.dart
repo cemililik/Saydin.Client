@@ -6,6 +6,9 @@ import 'package:saydin/features/comparison/data/repositories/comparison_reposito
 import 'package:saydin/features/comparison/domain/repositories/comparison_repository.dart';
 import 'package:saydin/features/comparison/domain/usecases/compare_what_if.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
+import 'package:saydin/features/config/data/repositories/app_config_repository_impl.dart';
+import 'package:saydin/features/config/domain/repositories/app_config_repository.dart';
+import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/data/repositories/scenarios_repository_impl.dart';
 import 'package:saydin/features/scenarios/domain/repositories/scenarios_repository.dart';
 import 'package:saydin/features/scenarios/domain/usecases/delete_scenario.dart';
@@ -41,6 +44,12 @@ void configureDependencies() {
   // Error handling
   sl.registerLazySingleton(() => const DioErrorMapper());
   sl.registerLazySingleton(() => const ErrorReporter());
+
+  // App Config
+  sl.registerLazySingleton<AppConfigRepository>(
+    () => AppConfigRepositoryImpl(sl<ApiClient>().dio),
+  );
+  sl.registerLazySingleton(() => AppConfigCubit(sl()));
 
   // Repositories
   sl.registerLazySingleton<WhatIfRepository>(

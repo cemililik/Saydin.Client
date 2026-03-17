@@ -30,6 +30,12 @@ class ComparisonResultCard extends StatelessWidget {
         ? _dateFormatter.format(calc.sellDate!)
         : l10n.today;
 
+    final hasDateNote =
+        calc.actualBuyDate != null || calc.actualSellDate != null;
+    final realColor = (calc.realProfitLossPercent ?? 0) >= 0
+        ? AppColors.profit
+        : AppColors.loss;
+
     return Card(
       elevation: item.rank == 1 ? 4 : 1,
       shape: RoundedRectangleBorder(
@@ -40,62 +46,100 @@ class ComparisonResultCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Rank badge ───────────────────────────────────
-            _RankBadge(rank: item.rank, color: color),
-            const SizedBox(width: 12),
+            // ── Ana satır: badge + isim/tarih + değerler ─────
+            Row(
+              children: [
+                _RankBadge(rank: item.rank, color: color),
+                const SizedBox(width: 12),
 
-            // ── Info ─────────────────────────────────────────
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(icon, color: color, size: 18),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          calc.assetDisplayName,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Icon(icon, color: color, size: 18),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              calc.assetDisplayName,
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_dateFormatter.format(calc.buyDate)} → $sellLabel',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${_dateFormatter.format(calc.buyDate)} → $sellLabel',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      _tryFormatter.format(calc.finalValueTry),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${calc.profitLossPercent >= 0 ? '+' : ''}'
+                      '${_pctFormatter.format(calc.profitLossPercent / 100)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (calc.realProfitLossPercent != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Reel: ${calc.realProfitLossPercent! >= 0 ? '+' : ''}'
+                        '${_pctFormatter.format(calc.realProfitLossPercent! / 100)}',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: realColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+
+            // ── Tarih düzeltmesi notu (altta, tam genişlik) ──
+            if (hasDateNote) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      context.l10n.dateAdjustedNote,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-
-            // ── Values ───────────────────────────────────────
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  _tryFormatter.format(calc.finalValueTry),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '${calc.profitLossPercent >= 0 ? '+' : ''}'
-                  '${_pctFormatter.format(calc.profitLossPercent / 100)}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+            ],
           ],
         ),
       ),

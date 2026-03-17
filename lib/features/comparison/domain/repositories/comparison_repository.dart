@@ -7,5 +7,6 @@ abstract class ComparisonRepository {
     DateTime? sellDate,
     required num amount,
     required String amountType,
+    bool includeInflation = false,
   });
 }

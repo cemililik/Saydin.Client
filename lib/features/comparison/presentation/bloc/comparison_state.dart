@@ -9,6 +9,7 @@ abstract class ComparisonState extends Equatable {
   final DateTime? sellDate;
   final num? amount;
   final String amountType;
+  final bool includeInflation;
 
   const ComparisonState({
     this.assets = const [],
@@ -17,6 +18,7 @@ abstract class ComparisonState extends Equatable {
     this.sellDate,
     this.amount,
     this.amountType = 'try',
+    this.includeInflation = false,
   });
 
   @override
@@ -27,6 +29,7 @@ abstract class ComparisonState extends Equatable {
     sellDate,
     amount,
     amountType,
+    includeInflation,
   ];
 }
 
@@ -46,6 +49,7 @@ class ComparisonAssetsLoaded extends ComparisonState {
     super.sellDate,
     super.amount,
     super.amountType,
+    super.includeInflation,
   });
 
   ComparisonAssetsLoaded copyWith({
@@ -55,6 +59,7 @@ class ComparisonAssetsLoaded extends ComparisonState {
     Object? sellDate = _sentinel,
     num? amount,
     String? amountType,
+    bool? includeInflation,
   }) {
     return ComparisonAssetsLoaded(
       assets: assets ?? this.assets,
@@ -63,6 +68,7 @@ class ComparisonAssetsLoaded extends ComparisonState {
       sellDate: sellDate == _sentinel ? this.sellDate : sellDate as DateTime?,
       amount: amount ?? this.amount,
       amountType: amountType ?? this.amountType,
+      includeInflation: includeInflation ?? this.includeInflation,
     );
   }
 }
@@ -75,6 +81,7 @@ class ComparisonCalculating extends ComparisonState {
     super.sellDate,
     super.amount,
     super.amountType,
+    super.includeInflation,
   });
 }
 
@@ -88,6 +95,7 @@ class ComparisonSuccess extends ComparisonState {
     super.sellDate,
     super.amount,
     super.amountType,
+    super.includeInflation,
     required this.result,
   });
 
@@ -105,6 +113,7 @@ class ComparisonFailure extends ComparisonState {
     super.sellDate,
     super.amount,
     super.amountType,
+    super.includeInflation,
     required this.message,
   });
 

@@ -4,6 +4,7 @@ import 'package:saydin/core/di/injection.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
 import 'package:saydin/features/comparison/presentation/pages/comparison_page.dart';
+import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/pages/scenarios_page.dart';
@@ -35,6 +36,7 @@ class SaydinApp extends StatelessWidget {
       ),
       home: MultiBlocProvider(
         providers: [
+          BlocProvider(create: (_) => sl<AppConfigCubit>()..load()),
           BlocProvider(create: (_) => sl<WhatIfBloc>()),
           BlocProvider(create: (_) => sl<ScenariosBloc>()),
           BlocProvider(create: (_) => sl<ComparisonBloc>()),
