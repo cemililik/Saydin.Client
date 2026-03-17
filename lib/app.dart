@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/di/injection.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
+import 'package:saydin/features/comparison/presentation/pages/comparison_page.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/pages/scenarios_page.dart';
@@ -35,6 +37,7 @@ class SaydinApp extends StatelessWidget {
         providers: [
           BlocProvider(create: (_) => sl<WhatIfBloc>()),
           BlocProvider(create: (_) => sl<ScenariosBloc>()),
+          BlocProvider(create: (_) => sl<ComparisonBloc>()),
         ],
         child: const MainShell(),
       ),
@@ -74,6 +77,7 @@ class _MainShellState extends State<MainShell> {
         children: [
           const WhatIfPage(),
           ScenariosPage(onScenarioTap: _onScenarioTap),
+          const ComparisonPage(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -89,6 +93,11 @@ class _MainShellState extends State<MainShell> {
             icon: const Icon(Icons.bookmark_border),
             activeIcon: const Icon(Icons.bookmark),
             label: l10n.tabScenarios,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.compare_arrows_outlined),
+            activeIcon: const Icon(Icons.compare_arrows),
+            label: l10n.tabCompare,
           ),
         ],
       ),

@@ -200,4 +200,28 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get priceDisclaimer =>
       'Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir.';
+
+  @override
+  String get tabCompare => 'Karşılaştır';
+
+  @override
+  String get compareTitle => 'Varlık Karşılaştırma';
+
+  @override
+  String get compareSelectAssets => 'Varlık Seçin (2-5 adet)';
+
+  @override
+  String get compareMinAssets => 'En az 2 varlık seçiniz.';
+
+  @override
+  String get compareButton => 'Karşılaştır';
+
+  @override
+  String get comparing => 'Karşılaştırılıyor...';
+
+  @override
+  String get compareResultTitle => 'Karşılaştırma Sonuçları';
+
+  @override
+  String compareRankLabel(int rank) => '$rank. Sıra';
 }

@@ -453,6 +453,54 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir.'**
   String get priceDisclaimer;
+
+  /// No description provided for @tabCompare.
+  ///
+  /// In tr, this message translates to:
+  /// **'Karşılaştır'**
+  String get tabCompare;
+
+  /// No description provided for @compareTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık Karşılaştırma'**
+  String get compareTitle;
+
+  /// No description provided for @compareSelectAssets.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık Seçin (2-5 adet)'**
+  String get compareSelectAssets;
+
+  /// No description provided for @compareMinAssets.
+  ///
+  /// In tr, this message translates to:
+  /// **'En az 2 varlık seçiniz.'**
+  String get compareMinAssets;
+
+  /// No description provided for @compareButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'Karşılaştır'**
+  String get compareButton;
+
+  /// No description provided for @comparing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Karşılaştırılıyor...'**
+  String get comparing;
+
+  /// No description provided for @compareResultTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Karşılaştırma Sonuçları'**
+  String get compareResultTitle;
+
+  /// No description provided for @compareRankLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'{rank}. Sıra'**
+  String compareRankLabel(int rank);
 }
 
 class _AppLocalizationsDelegate
