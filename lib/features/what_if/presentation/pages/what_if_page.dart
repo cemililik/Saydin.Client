@@ -18,6 +18,7 @@ import 'package:saydin/features/what_if/presentation/widgets/amount_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/asset_selector.dart';
 import 'package:saydin/features/what_if/presentation/widgets/date_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/result_card.dart';
+import 'package:saydin/features/what_if/presentation/widgets/share_card_preview_sheet.dart';
 
 class WhatIfPage extends StatefulWidget {
   const WhatIfPage({super.key});
@@ -218,6 +219,14 @@ class _WhatIfPageState extends State<WhatIfPage> {
                 const WhatIfInflationToggled(),
               ),
               onCalculate: _onCalculate,
+              onShare: successResult != null
+                  ? () => showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) =>
+                          ShareCardPreviewSheet(result: successResult),
+                    )
+                  : null,
               onSave: successResult != null
                   ? () => context.read<ScenariosBloc>().add(
                       ScenarioSaveRequested(
@@ -266,6 +275,7 @@ class _WhatIfForm extends StatelessWidget {
     this.assetFirstDate,
     this.assetLastDate,
     this.onSave,
+    this.onShare,
   });
 
   final GlobalKey<FormState> formKey;
@@ -289,6 +299,7 @@ class _WhatIfForm extends StatelessWidget {
   final DateTime? assetFirstDate;
   final DateTime? assetLastDate;
   final VoidCallback? onSave;
+  final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -366,13 +377,30 @@ class _WhatIfForm extends StatelessWidget {
                 const SizedBox(height: 24),
                 ResultCard(result: result),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: onSave,
-                  icon: const Icon(Icons.bookmark_border),
-                  label: Text(l10n.saveScenario),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onSave,
+                        icon: const Icon(Icons.bookmark_border),
+                        label: Text(l10n.saveScenario),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onShare,
+                        icon: const Icon(Icons.share_outlined),
+                        label: Text(l10n.shareResult),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
               const SizedBox(height: 24),

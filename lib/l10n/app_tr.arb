@@ -122,5 +122,9 @@
   "reasonWeekend": "haftasonu",
   "reasonHoliday": "resmi tatil veya fiyat yok",
   "labelBuyDate":  "Alış",
-  "labelSellDate": "Satış"
+  "labelSellDate": "Satış",
+
+  "shareResult": "Paylaş",
+  "sharePreviewTitle": "Paylaşım Önizlemesi",
+  "sharingInProgress": "Hazırlanıyor..."
 }
