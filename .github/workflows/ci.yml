@@ -289,7 +289,10 @@ jobs:
             --build-number=${{ needs.version.outputs.build_number }} \
             --dart-define=API_BASE_URL=${{ steps.env.outputs.api_url }} \
             --dart-define=APP_ENV=${{ steps.env.outputs.app_env }} \
-            --export-options-plist=ios/ExportOptions.plist
+            --export-options-plist=ios/ExportOptions.plist \
+            -- CODE_SIGN_STYLE=Manual \
+               CODE_SIGN_IDENTITY="Apple Distribution" \
+               PROVISIONING_PROFILE_SPECIFIER="Saydin App Store"
 
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v1

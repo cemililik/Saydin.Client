@@ -6,13 +6,14 @@
     <string>app-store</string>
     <key>teamID</key>
     <string>MR66M75885</string>
-    <key>uploadBitcode</key>
-    <false/>
-    <key>compileBitcode</key>
-    <false/>
     <key>uploadSymbols</key>
     <true/>
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.saydin.saydin</key>
+        <string>Saydin App Store</string>
+    </dict>
 </dict>
 </plist>
