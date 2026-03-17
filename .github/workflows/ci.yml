@@ -2,7 +2,7 @@ name: CI/CD
 
 on:
   push:
-    branches: [development, test, main]
+    branches: [test, main]
   pull_request:
     branches: [development, test, main]
 
@@ -199,7 +199,7 @@ jobs:
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode \
+          printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode --ignore-garbage \
             > android/saydin-release.jks
 
       - name: Set environment variables
