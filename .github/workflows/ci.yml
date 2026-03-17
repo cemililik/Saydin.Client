@@ -282,6 +282,15 @@ jobs:
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
 
+      - name: Upload to Play Store
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.saydin.saydin
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: ${{ github.ref == 'refs/heads/main' && 'production' || 'internal' }}
+          status: completed
+
   # ── iOS Release IPA + TestFlight (test + main push) ───────────────────────
   release-ios:
     name: Release iOS + TestFlight
