@@ -2,7 +2,7 @@ name: CI/CD
 
 on:
   push:
-    branches: [development, test, main]
+    branches: [test, main]
   pull_request:
     branches: [development, test, main]
 
