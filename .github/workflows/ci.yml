@@ -226,13 +226,23 @@ jobs:
         env:
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           keytool -list \
             -keystore android/saydin-release.jks \
             -storepass "$STORE_PASSWORD" \
             -alias "$KEY_ALIAS" \
-            && echo "✅ Keystore doğrulandı — alias ve şifre doğru" \
-            || { echo "❌ keytool doğrulaması başarısız — STORE_PASSWORD veya KEY_ALIAS hatalı"; exit 1; }
+            && echo "✅ Store password ve alias doğru" \
+            || { echo "❌ STORE_PASSWORD veya KEY_ALIAS hatalı"; exit 1; }
+
+          keytool -keypasswd \
+            -keystore android/saydin-release.jks \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            -keypass "$KEY_PASSWORD" \
+            -new "$KEY_PASSWORD" \
+            && echo "✅ Key password doğru" \
+            || { echo "❌ KEY_PASSWORD hatalı"; exit 1; }
 
       - name: Set environment variables
         id: env
