@@ -1,10 +1,10 @@
-name: CI
+name: CI/CD
 
 on:
-  pull_request:
-    branches: [main]
   push:
-    branches: [main]
+    branches: [development, test, main]
+  pull_request:
+    branches: [development, test, main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,11 +13,42 @@ concurrency:
 env:
   FLUTTER_VERSION: "3.41.0"
 
+# ── Versiyon Yönetimi ─────────────────────────────────────────────────────────
+#
+# Semantic version (X.Y.Z) → pubspec.yaml içinde developer tarafından yönetilir.
+# Build number            → github.run_number (otomatik, her zaman artan).
+#
+# Örnek: pubspec.yaml → version: 1.2.0+1
+#        CI           → --build-name=1.2.0 --build-number=42
+#
+# Branch → ortam eşleşmesi:
+#   development / PR  → APP_ENV=development
+#   test              → APP_ENV=staging   (TestFlight iç test grubu)
+#   main              → APP_ENV=production (TestFlight → App Store, Play Store)
+# ─────────────────────────────────────────────────────────────────────────────
+
 jobs:
+  # ── Sürüm bilgisini çıkar ──────────────────────────────────────────────────
+  version:
+    name: Extract Version
+    runs-on: ubuntu-latest
+    outputs:
+      version_name: ${{ steps.ver.outputs.version_name }}
+      build_number: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract version from pubspec.yaml
+        id: ver
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d '[:space:]')
+          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION, Build: ${{ github.run_number }}"
+
   # ── Analyze + Test ─────────────────────────────────────────────────────────
   analyze-and-test:
     name: Analyze & Test
     runs-on: ubuntu-latest
+    needs: version
 
     steps:
       - uses: actions/checkout@v4
@@ -49,12 +80,12 @@ jobs:
           files: coverage/lcov.info
           fail_ci_if_error: false
 
-  # ── Android Build ───────────────────────────────────────────────────────────
+  # ── Android Debug Build (development push + tüm PR'lar) ───────────────────
   build-android:
-    name: Build Android APK
+    name: Build Android APK (Debug)
     runs-on: ubuntu-latest
-    needs: analyze-and-test
-    if: github.event_name == 'pull_request'
+    needs: [version, analyze-and-test]
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/development'
 
     steps:
       - uses: actions/checkout@v4
@@ -77,9 +108,16 @@ jobs:
       - name: Generate l10n
         run: flutter gen-l10n
 
+      - name: Pre-install CMake
+        run: yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
+
       - name: Build APK (debug)
-        run: flutter build apk --debug
-          --dart-define=API_BASE_URL=https://api.saydin.app
+        run: |
+          flutter build apk --debug \
+            --build-name=${{ needs.version.outputs.version_name }} \
+            --build-number=${{ needs.version.outputs.build_number }} \
+            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=APP_ENV=development
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -88,12 +126,12 @@ jobs:
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
 
-  # ── iOS Build ───────────────────────────────────────────────────────────────
+  # ── iOS Debug Build (development push + tüm PR'lar) ──────────────────────
   build-ios:
     name: Build iOS (no codesign)
     runs-on: macos-15
-    needs: analyze-and-test
-    if: github.event_name == 'pull_request'
+    needs: [version, analyze-and-test]
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/development'
 
     steps:
       - uses: actions/checkout@v4
@@ -111,5 +149,160 @@ jobs:
         run: flutter gen-l10n
 
       - name: Build iOS (no codesign)
-        run: flutter build ios --debug --no-codesign
-          --dart-define=API_BASE_URL=https://api.saydin.app
+        run: |
+          flutter build ios --debug --no-codesign \
+            --build-name=${{ needs.version.outputs.version_name }} \
+            --build-number=${{ needs.version.outputs.build_number }} \
+            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=APP_ENV=development
+
+  # ── Android Release AAB (test + main push) ────────────────────────────────
+  release-android:
+    name: Release Android AAB
+    runs-on: ubuntu-latest
+    needs: [version, analyze-and-test]
+    if: >
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/test' || github.ref == 'refs/heads/main')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate l10n
+        run: flutter gen-l10n
+
+      - name: Pre-install CMake
+        run: yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode \
+            > android/saydin-release.jks
+
+      - name: Set APP_ENV
+        id: env
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "app_env=production" >> $GITHUB_OUTPUT
+          else
+            echo "app_env=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build AAB (release)
+        env:
+          STORE_FILE: saydin-release.jks
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          flutter build appbundle --release \
+            --build-name=${{ needs.version.outputs.version_name }} \
+            --build-number=${{ needs.version.outputs.build_number }} \
+            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=APP_ENV=${{ steps.env.outputs.app_env }}
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saydin-${{ github.ref_name }}-${{ needs.version.outputs.version_name }}+${{ needs.version.outputs.build_number }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+  # ── iOS Release IPA + TestFlight (test + main push) ───────────────────────
+  release-ios:
+    name: Release iOS + TestFlight
+    runs-on: macos-15
+    needs: [version, analyze-and-test]
+    if: >
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/test' || github.ref == 'refs/heads/main')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate l10n
+        run: flutter gen-l10n
+
+      - name: Import code signing certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+          p12-password: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+
+      - name: Download provisioning profile
+        uses: apple-actions/download-provisioning-profiles@v3
+        with:
+          bundle-id: com.saydin.saydin
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+
+      - name: Set APP_ENV
+        id: env
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "app_env=production" >> $GITHUB_OUTPUT
+          else
+            echo "app_env=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build IPA (release)
+        run: |
+          flutter build ipa --release \
+            --build-name=${{ needs.version.outputs.version_name }} \
+            --build-number=${{ needs.version.outputs.build_number }} \
+            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=APP_ENV=${{ steps.env.outputs.app_env }} \
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: build/ios/ipa/saydin.ipa
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+
+  # ── Git Tag (sadece main push, release'ler başarıyla tamamlandıktan sonra) ─
+  tag-release:
+    name: Tag Release
+    runs-on: ubuntu-latest
+    needs: [version, release-android, release-ios]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create and push release tag
+        run: |
+          TAG="v${{ needs.version.outputs.version_name }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f "$TAG" -m "Release $TAG (build ${{ needs.version.outputs.build_number }})"
+          git push origin "$TAG" --force

@@ -5,6 +5,8 @@ class AssetModel extends Asset {
     required super.symbol,
     required super.displayName,
     required super.category,
+    super.firstDate,
+    super.lastDate,
   });
 
   factory AssetModel.fromJson(Map<String, dynamic> json) {
@@ -21,6 +23,17 @@ class AssetModel extends Asset {
       symbol: symbol,
       displayName: displayName,
       category: categoryRaw.toString(),
+      firstDate: _tryParseDate(json['firstPriceDate']),
+      lastDate: _tryParseDate(json['lastPriceDate']),
     );
+  }
+
+  static DateTime? _tryParseDate(Object? value) {
+    if (value is! String) return null;
+    try {
+      return DateTime.parse(value);
+    } on FormatException {
+      return null;
+    }
   }
 }

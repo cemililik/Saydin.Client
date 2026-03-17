@@ -30,7 +30,56 @@
   "errorGeneric": "Bir hata oluştu. Lütfen tekrar deneyin.",
   "errorPriceNotFound": "Bu tarih için fiyat bilgisi bulunamadı.",
   "errorDailyLimit": "Günlük hesaplama limitine ulaştınız.",
+  "errorScenarioLimit": "Ücretsiz planda en fazla {limit} senaryo kaydedebilirsiniz.",
+  "@errorScenarioLimit": {
+    "placeholders": {
+      "limit": { "type": "int" }
+    }
+  },
   "errorNoInternet": "İnternet bağlantısı yok.",
   "retry": "Tekrar Dene",
-  "tryAgain": "Tekrar Hesapla"
+  "tryAgain": "Tekrar Hesapla",
+  "scenariosTitle": "Senaryolarım",
+  "scenariosEmpty": "Henüz kaydedilen senaryo yok",
+  "scenariosEmptyHint": "Hesaplama yaptıktan sonra senaryolarınızı kaydedebilirsiniz.",
+  "saveScenario": "Kaydet",
+  "scenarioSaved": "Senaryo kaydedildi.",
+  "scenarioDeleted": "Senaryo silindi.",
+  "deleteScenario": "Sil",
+  "undo": "Geri Al",
+  "tabCalculate": "Hesapla",
+  "tabScenarios": "Senaryolarım",
+
+  "searchAsset": "Varlık ara...",
+  "categoryCurrency": "Döviz",
+  "categoryPreciousMetal": "Kıymetli Maden",
+  "categoryCrypto": "Kripto Para",
+  "categoryStock": "Hisse Senedi",
+
+  "resultBuyPrice": "Alış Fiyatı",
+  "resultSellPrice": "Satış/Güncel Fiyatı",
+  "resultUnitsAcquired": "Edinilen Miktar",
+  "resultDuration": "Süre",
+  "durationDays": "{count} gün",
+  "@durationDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "durationMonths": "{count} ay",
+  "@durationMonths": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "durationYearsMonths": "{years} yıl {months} ay",
+  "@durationYearsMonths": {
+    "placeholders": {
+      "years": { "type": "int" },
+      "months": { "type": "int" }
+    }
+  },
+  "durationYears": "{count} yıl",
+  "@durationYears": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "dateAdjustedWarning": "Seçilen tarih bu varlık için uygun değil, en yakın geçerli tarihe ayarlandı.",
+  "scenarioDuplicate": "Bu senaryo zaten kaydedilmiş.",
+  "priceDisclaimer": "Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir."
 }

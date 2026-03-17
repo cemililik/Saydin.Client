@@ -5,18 +5,42 @@ import 'package:saydin/core/l10n/l10n_extensions.dart';
 class AmountInput extends StatelessWidget {
   final TextEditingController controller;
   final String amountType;
+  final List<String> allowedTypes;
   final ValueChanged<String> onAmountTypeChanged;
 
   const AmountInput({
     super.key,
     required this.controller,
     required this.amountType,
+    required this.allowedTypes,
     required this.onAmountTypeChanged,
   });
+
+  Widget _prefixIcon(String type) => switch (type) {
+    'grams' => const Icon(Icons.scale_outlined),
+    'units' => const Icon(Icons.tag),
+    _ => const Icon(Icons.currency_lira),
+  };
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+
+    final allItems = {
+      'try': l10n.amountTypeTry,
+      'units': l10n.amountTypeUnits,
+      'grams': l10n.amountTypeGrams,
+    };
+
+    final items = allowedTypes
+        .where(allItems.containsKey)
+        .map((t) => DropdownMenuItem(value: t, child: Text(allItems[t]!)))
+        .toList();
+
+    final effectiveType = allowedTypes.contains(amountType)
+        ? amountType
+        : allowedTypes.first;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -31,7 +55,7 @@ class AmountInput extends StatelessWidget {
             decoration: InputDecoration(
               labelText: l10n.amount,
               border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.attach_money),
+              prefixIcon: _prefixIcon(effectiveType),
             ),
             validator: (v) =>
                 (v == null || v.isEmpty) ? l10n.enterAmount : null,
@@ -41,20 +65,10 @@ class AmountInput extends StatelessWidget {
         Expanded(
           flex: 2,
           child: DropdownButtonFormField<String>(
-            key: ValueKey(amountType),
-            initialValue: amountType,
+            key: ValueKey('$effectiveType-${allowedTypes.join()}'),
+            initialValue: effectiveType,
             decoration: const InputDecoration(border: OutlineInputBorder()),
-            items: [
-              DropdownMenuItem(value: 'try', child: Text(l10n.amountTypeTry)),
-              DropdownMenuItem(
-                value: 'units',
-                child: Text(l10n.amountTypeUnits),
-              ),
-              DropdownMenuItem(
-                value: 'grams',
-                child: Text(l10n.amountTypeGrams),
-              ),
-            ],
+            items: items,
             onChanged: (v) => v != null ? onAmountTypeChanged(v) : null,
           ),
         ),

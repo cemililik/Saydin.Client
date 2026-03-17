@@ -15,6 +15,12 @@ class DailyLimitError extends AppError {
   const DailyLimitError({required this.resetAt});
 }
 
+/// Ücretsiz senaryo kaydetme limiti doldu.
+class ScenarioLimitError extends AppError {
+  final int limit;
+  const ScenarioLimitError({required this.limit});
+}
+
 /// Cihazın internet bağlantısı yok.
 class NoInternetError extends AppError {
   const NoInternetError();

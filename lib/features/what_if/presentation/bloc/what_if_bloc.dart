@@ -9,6 +9,14 @@ import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'what_if_event.dart';
 import 'what_if_state.dart';
 
+extension on DateTime {
+  DateTime clamp(DateTime min, DateTime max) {
+    if (isBefore(min)) return min;
+    if (isAfter(max)) return max;
+    return this;
+  }
+}
+
 class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   final GetAssets _getAssets;
   final CalculateWhatIf _calculateWhatIf;
@@ -28,6 +36,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     on<WhatIfBuyDateChanged>(_onBuyDateChanged);
     on<WhatIfSellDateChanged>(_onSellDateChanged);
     on<WhatIfAmountTypeChanged>(_onAmountTypeChanged);
+    on<WhatIfReplayRequested>(_onReplayRequested);
     on<WhatIfCalculateRequested>(_onCalculateRequested);
   }
 
@@ -60,9 +69,52 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   }
 
   void _onSymbolChanged(WhatIfSymbolChanged event, Emitter<WhatIfState> emit) {
+    final assets = switch (state) {
+      WhatIfAssetsLoaded(:final assets) => assets,
+      WhatIfSuccess(:final assets) => assets,
+      WhatIfFailure(:final assets) => assets,
+      WhatIfCalculating(:final assets) => assets,
+      _ => <Asset>[],
+    };
+    final asset = assets.where((a) => a.symbol == event.symbol).firstOrNull;
+    final allowed = asset?.allowedAmountTypes ?? ['try'];
+    final newAmountType = allowed.contains(_formInput.amountType)
+        ? _formInput.amountType
+        : 'try';
+
+    // Seçili tarihler yeni asset'in veri aralığı dışındaysa en yakın geçerli tarihe sıkıştır.
+    final firstDate = asset?.firstDate;
+    final lastDate = asset?.lastDate;
+    var newBuyDate = _formInput.buyDate;
+    var newSellDate = _formInput.sellDate;
+    var dateAdjusted = false;
+
+    if (firstDate != null && lastDate != null) {
+      if (newBuyDate != null) {
+        final clamped = newBuyDate.clamp(firstDate, lastDate);
+        if (clamped != newBuyDate) {
+          newBuyDate = clamped;
+          dateAdjusted = true;
+        }
+      }
+      if (newSellDate != null) {
+        final clamped = newSellDate.clamp(firstDate, lastDate);
+        if (clamped != newSellDate) {
+          newSellDate = clamped;
+          dateAdjusted = true;
+        }
+      }
+    }
+
     _emitWithUpdatedForm(
       emit,
-      _formInput.copyWith(selectedSymbol: event.symbol),
+      _formInput.copyWith(
+        selectedSymbol: event.symbol,
+        amountType: newAmountType,
+        buyDate: newBuyDate,
+        sellDate: newSellDate,
+        dateAdjusted: dateAdjusted,
+      ),
     );
   }
 
@@ -103,6 +155,30 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       emit(current.copyWith(formInput: updated));
     }
     // WhatIfCalculating: form değişikliği hesaplama süresince yoksayılır
+  }
+
+  Future<void> _onReplayRequested(
+    WhatIfReplayRequested event,
+    Emitter<WhatIfState> emit,
+  ) async {
+    final filled = _formInput.copyWith(
+      selectedSymbol: event.assetSymbol,
+      buyDate: event.buyDate,
+      sellDate: event.sellDate,
+      amountType: event.amountType,
+      amount: event.amount,
+    );
+    _emitWithUpdatedForm(emit, filled);
+    await _onCalculateRequested(
+      WhatIfCalculateRequested(
+        assetSymbol: event.assetSymbol,
+        buyDate: event.buyDate,
+        sellDate: event.sellDate,
+        amount: event.amount,
+        amountType: event.amountType,
+      ),
+      emit,
+    );
   }
 
   Future<void> _onCalculateRequested(

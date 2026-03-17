@@ -16,6 +16,15 @@ class DioErrorMapper {
 
     if (status == 404) return const PriceNotFoundError();
 
+    if (status == 422) {
+      final type = e.response?.data?['type'] as String?;
+      if (type == 'https://saydin.app/errors/scenario-limit-exceeded') {
+        final limit =
+            (e.response?.data?['extensions']?['limit'] as num?)?.toInt() ?? 5;
+        return ScenarioLimitError(limit: limit);
+      }
+    }
+
     if (status == 429) {
       final resetAtRaw = e.response?.data?['extensions']?['resetAt'] as String?;
       final resetAt = resetAtRaw != null

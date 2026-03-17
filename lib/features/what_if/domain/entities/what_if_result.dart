@@ -1,5 +1,15 @@
 import 'package:equatable/equatable.dart';
 
+class ChartPoint extends Equatable {
+  final DateTime date;
+  final double price;
+
+  const ChartPoint({required this.date, required this.price});
+
+  @override
+  List<Object?> get props => [date, price];
+}
+
 class WhatIfResult extends Equatable {
   final String assetSymbol;
   final String assetDisplayName;
@@ -13,6 +23,7 @@ class WhatIfResult extends Equatable {
   final double profitLossTry;
   final double profitLossPercent;
   final bool isProfit;
+  final List<ChartPoint> priceHistory;
 
   const WhatIfResult({
     required this.assetSymbol,
@@ -27,6 +38,7 @@ class WhatIfResult extends Equatable {
     required this.profitLossTry,
     required this.profitLossPercent,
     required this.isProfit,
+    this.priceHistory = const [],
   });
 
   @override
@@ -43,5 +55,6 @@ class WhatIfResult extends Equatable {
     profitLossTry,
     profitLossPercent,
     isProfit,
+    priceHistory,
   ];
 }

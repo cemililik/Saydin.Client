@@ -99,6 +99,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get errorDailyLimit => 'Günlük hesaplama limitine ulaştınız.';
 
   @override
+  String errorScenarioLimit(int limit) {
+    return 'Ücretsiz planda en fazla $limit senaryo kaydedebilirsiniz.';
+  }
+
+  @override
   String get errorNoInternet => 'İnternet bağlantısı yok.';
 
   @override
@@ -106,4 +111,93 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tryAgain => 'Tekrar Hesapla';
+
+  @override
+  String get scenariosTitle => 'Senaryolarım';
+
+  @override
+  String get scenariosEmpty => 'Henüz kaydedilen senaryo yok';
+
+  @override
+  String get scenariosEmptyHint =>
+      'Hesaplama yaptıktan sonra senaryolarınızı kaydedebilirsiniz.';
+
+  @override
+  String get saveScenario => 'Kaydet';
+
+  @override
+  String get scenarioSaved => 'Senaryo kaydedildi.';
+
+  @override
+  String get scenarioDeleted => 'Senaryo silindi.';
+
+  @override
+  String get deleteScenario => 'Sil';
+
+  @override
+  String get undo => 'Geri Al';
+
+  @override
+  String get tabCalculate => 'Hesapla';
+
+  @override
+  String get tabScenarios => 'Senaryolarım';
+
+  @override
+  String get searchAsset => 'Varlık ara...';
+
+  @override
+  String get categoryCurrency => 'Döviz';
+
+  @override
+  String get categoryPreciousMetal => 'Kıymetli Maden';
+
+  @override
+  String get categoryCrypto => 'Kripto Para';
+
+  @override
+  String get categoryStock => 'Hisse Senedi';
+
+  @override
+  String get resultBuyPrice => 'Alış Fiyatı';
+
+  @override
+  String get resultSellPrice => 'Satış/Güncel Fiyatı';
+
+  @override
+  String get resultUnitsAcquired => 'Edinilen Miktar';
+
+  @override
+  String get resultDuration => 'Süre';
+
+  @override
+  String durationDays(int count) {
+    return '$count gün';
+  }
+
+  @override
+  String durationMonths(int count) {
+    return '$count ay';
+  }
+
+  @override
+  String durationYearsMonths(int years, int months) {
+    return '$years yıl $months ay';
+  }
+
+  @override
+  String durationYears(int count) {
+    return '$count yıl';
+  }
+
+  @override
+  String get dateAdjustedWarning =>
+      'Seçilen tarih bu varlık için uygun değil, en yakın geçerli tarihe ayarlandı.';
+
+  @override
+  String get scenarioDuplicate => 'Bu senaryo zaten kaydedilmiş.';
+
+  @override
+  String get priceDisclaimer =>
+      'Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir.';
 }

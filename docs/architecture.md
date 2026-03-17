@@ -13,18 +13,31 @@ lib/
 │   ├── l10n/                      ← L10nContext extension (context.l10n)
 │   └── network/                   ← ApiClient, DeviceIdInterceptor, RetryInterceptor
 ├── features/
-│   └── what_if/                   ← Ana özellik: "ya alsaydım" hesaplama
+│   ├── what_if/                   ← Ana özellik: "ya alsaydım" hesaplama
+│   │   ├── data/
+│   │   │   ├── models/            ← AssetModel, WhatIfResultModel (fromJson)
+│   │   │   └── repositories/     ← WhatIfRepositoryImpl (Dio çağrıları burada)
+│   │   ├── domain/
+│   │   │   ├── entities/          ← Asset (allowedAmountTypes getter dahil), WhatIfResult
+│   │   │   ├── repositories/     ← WhatIfRepository (abstract interface)
+│   │   │   └── usecases/         ← GetAssets, CalculateWhatIf
+│   │   └── presentation/
+│   │       ├── bloc/              ← WhatIfBloc, WhatIfEvent, WhatIfState, WhatIfFormInput
+│   │       ├── pages/             ← WhatIfPage
+│   │       └── widgets/           ← AssetSelector (bottom sheet + arama), DateInput (asset tarih aralığı),
+│   │                                 AmountInput (dinamik tip/ikon), ResultCard, ResultChart (fl_chart)
+│   └── scenarios/                 ← Kaydedilen senaryolar
 │       ├── data/
-│       │   ├── models/            ← JSON ↔ Dart dönüşümü (fromJson/toJson)
-│       │   └── repositories/     ← WhatIfRepositoryImpl (Dio çağrıları burada)
+│       │   ├── models/            ← SavedScenarioModel (fromJson)
+│       │   └── repositories/     ← ScenariosRepositoryImpl
 │       ├── domain/
-│       │   ├── entities/          ← Saf Dart: Asset, WhatIfResult (Flutter import yok)
-│       │   ├── repositories/     ← WhatIfRepository (abstract interface)
-│       │   └── usecases/         ← GetAssets, CalculateWhatIf
+│       │   ├── entities/          ← SavedScenario
+│       │   ├── repositories/     ← ScenariosRepository (abstract interface)
+│       │   └── usecases/         ← GetScenarios, SaveScenario, DeleteScenario
 │       └── presentation/
-│           ├── bloc/              ← WhatIfBloc, WhatIfEvent, WhatIfState
-│           ├── pages/             ← WhatIfPage (tam sayfa widget)
-│           └── widgets/           ← AssetSelector, DateInput, AmountInput, ResultCard
+│           ├── bloc/              ← ScenariosBloc, ScenariosEvent, ScenariosState
+│           ├── pages/             ← ScenariosPage (swipe-to-delete, refresh)
+│           └── widgets/           ← ScenarioCard (avatar, Dismissible)
 └── l10n/                          ← flutter gen-l10n çıktısı (commit'lenir)
     ├── app_localizations.dart
     ├── app_localizations_tr.dart
@@ -59,7 +72,11 @@ BlocProvider(
 )
 ```
 
-## BLoC State Makinesi
+## BLoC State Makineleri
+
+### WhatIfBloc
+
+Form alanları `WhatIfFormInput` veri sınıfında taşınır ve tüm state'lere gömülüdür. Bu sayede hesaplama başarısız olsa bile form değerleri kaybolmaz.
 
 ```
 WhatIfInitial
@@ -67,22 +84,105 @@ WhatIfInitial
     │ WhatIfAssetsRequested
     ▼
 WhatIfAssetsLoading
-    ├─ başarı ──► WhatIfAssetsLoaded(assets)
-    └─ hata ───► WhatIfFailure(assets: [], error: AppError)
+    ├─ başarı ──► WhatIfAssetsLoaded(assets, formInput)
+    └─ hata ───► WhatIfFailure(assets: [], error, formInput)
 
 WhatIfAssetsLoaded / WhatIfSuccess / WhatIfFailure
     │
+    │ WhatIfSymbolChanged
+    ▼
+    Aynı state, formInput güncellenerek yeniden emit edilir.
+    • amountType yeni asset için geçersizse → 'try'e sıfırlanır
+    • buyDate/sellDate asset'in [firstDate, lastDate] dışındaysa → sıkıştırılır,
+      formInput.dateAdjusted = true (tek seferlik flag — UI snackbar gösterir, sonra false olur)
+
+    │ WhatIfBuyDateChanged / WhatIfSellDateChanged / WhatIfAmountTypeChanged
+    ▼
+    Aynı state, formInput güncellenerek yeniden emit edilir
+
     │ WhatIfCalculateRequested
     ▼
-WhatIfCalculating(assets)
-    ├─ başarı ──► WhatIfSuccess(assets, result)
-    └─ hata ───► WhatIfFailure(assets, error: AppError)
+WhatIfCalculating(assets, formInput)
+    ├─ başarı ──► WhatIfSuccess(assets, result, formInput)
+    └─ hata ───► WhatIfFailure(assets, error, formInput)
 ```
+
+**`WhatIfFormInput` alanları:**
+
+| Alan | Tip | Açıklama |
+|---|---|---|
+| `selectedSymbol` | `String?` | Seçili asset sembolü |
+| `buyDate` | `DateTime?` | Alış tarihi |
+| `sellDate` | `DateTime?` | Satış tarihi (opsiyonel) |
+| `amountType` | `String` | `try` \| `units` \| `grams` |
+| `amount` | `num?` | Tutar (replay/senaryo yüklemede doldurulur) |
+| `dateAdjusted` | `bool` | Sembol değişince tarih sıkıştırıldıysa `true` — bir kez UI'a iletildikten sonra `copyWith` ile otomatik `false`'a döner (one-shot flag) |
 
 **State kuralları:**
 - Tüm state'ler `Equatable` implement eder → gereksiz widget rebuild önlenir
 - `List<Asset>` alanları `List.unmodifiable()` ile sarılır — dış mutasyon engellenir
-- **`WhatIfFailure` hata mesajı taşımaz** — yalnızca `AppError` tipi taşır (bkz. ADR-006)
+- **Hata mesajı BLoC üretmez** — yalnızca `AppError` tipi taşır (bkz. ADR-006)
+
+### ScenariosBloc
+
+Silme işlemi **optimistic** yapılır: API çağrısından önce öğe UI'dan kaldırılır, hata durumunda liste eski haline döndürülür.
+
+```
+ScenariosInitial
+    │ ScenariosRequested
+    ▼
+ScenariosLoading
+    ├─ başarı ──► ScenariosLoaded(scenarios)
+    └─ hata ───► ScenariosFailure(scenarios: [], error)
+
+ScenariosLoaded
+    │ ScenarioDeleteRequested
+    ▼
+    ScenariosLoaded(scenarios - silinen)   ← hemen (optimistic)
+    └─ API hata ──► ScenariosFailure(scenarios orijinal, error)
+
+    │ ScenarioSaveRequested
+    ├─ duplicate ──► ScenariosDuplicate(scenarios)  ← API'ye gidilmez, UI snackbar gösterir
+    ▼
+ScenariosSaving(scenarios)
+    ├─ başarı ──► ScenariosLoaded([yeni, ...scenarios])
+    └─ hata ───► ScenariosFailure(scenarios, error)
+```
+
+**Duplicate kontrolü:** Kaydetmeden önce mevcut liste; `assetSymbol` + `buyDate` + `sellDate` + `amount` + `amountType` bileşimine göre taranır. Aynı kombinasyon zaten varsa `ScenariosDuplicate` emit edilir — API çağrısı yapılmaz.
+
+## Domain Mantığı — Asset
+
+`Asset` entity'si saf Dart olmasına karşın tutar tipi kısıtlarını ve veri aralığını da taşır:
+
+```dart
+class Asset {
+  final String symbol;
+  final String displayName;
+  final String category;
+  final DateTime? firstDate;   // Veritabanındaki en eski fiyat tarihi
+  final DateTime? lastDate;    // Veritabanındaki en yeni fiyat tarihi
+
+  // Tutar tipi kısıtı:
+  // 'precious_metal' → ['try', 'grams']
+  // diğerleri        → ['try', 'units']
+  List<String> get allowedAmountTypes { ... }
+}
+```
+
+`firstDate`/`lastDate` alanları `GET /assets` yanıtından (`firstPriceDate`/`lastPriceDate`) parse edilir ve `DateInput` widget'larına geçirilerek takvim aralığı kısıtlanır.
+
+Asset değiştiğinde `WhatIfBloc._onSymbolChanged`:
+1. Mevcut `amountType` yeni asset için geçersizse → `'try'`'a sıfırlar
+2. `buyDate`/`sellDate` yeni asset'in `[firstDate, lastDate]` dışındaysa → sıkıştırır (`dateAdjusted = true`)
+
+`AmountInput` widget'ı da `allowedAmountTypes` listesini kullanarak dropdown seçeneklerini ve prefix ikonu dinamik olarak gösterir:
+
+| amountType | Prefix ikon |
+|---|---|
+| `try` | `Icons.currency_lira` |
+| `units` | `Icons.tag` |
+| `grams` | `Icons.scale_outlined` |
 
 ## Ağ Katmanı
 
@@ -180,6 +280,25 @@ Text(l10n.errorPriceNotFound)
 ```
 
 **Kural:** BLoC Türkçe string üretmez. Hata metni widget katmanında `switch (state.error)` ile l10n'dan çözülür.
+
+## Grafik (ResultChart)
+
+`ResultCard` içinde `ResultChart` widget'ı (`fl_chart ^0.70.2`) ile alış-satış aralığındaki fiyat geçmişi çizilir.
+
+### Veri Akışı
+
+`WhatIfResult.priceHistory: List<ChartPoint>` — API'nin `priceHistory` alanından parse edilir (max 60 nokta).
+
+### Etkileşim Modları
+
+| Mod | Tetikleyici | Davranış |
+|---|---|---|
+| Tooltip | Tek dokunuş | O noktadaki tarih ve fiyatı gösterir (2 ondalık) |
+| Range seçimi | Uzun basış + sürükleme | İki nokta arası dolgu + dikey çizgiler; alt çubukta tarih aralığı ve % değişim |
+
+Range modunda tooltip devre dışı kalır (`handleBuiltInTouches: !_isRangeMode`). Dışarı tıklamak range'i temizler.
+
+---
 
 ## Sonuç Gösterimi Kuralları
 

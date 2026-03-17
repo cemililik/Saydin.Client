@@ -274,6 +274,12 @@ abstract class AppLocalizations {
   /// **'Günlük hesaplama limitine ulaştınız.'**
   String get errorDailyLimit;
 
+  /// No description provided for @errorScenarioLimit.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücretsiz planda en fazla {limit} senaryo kaydedebilirsiniz.'**
+  String errorScenarioLimit(int limit);
+
   /// No description provided for @errorNoInternet.
   ///
   /// In tr, this message translates to:
@@ -291,6 +297,162 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Tekrar Hesapla'**
   String get tryAgain;
+
+  /// No description provided for @scenariosTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senaryolarım'**
+  String get scenariosTitle;
+
+  /// No description provided for @scenariosEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz kaydedilen senaryo yok'**
+  String get scenariosEmpty;
+
+  /// No description provided for @scenariosEmptyHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesaplama yaptıktan sonra senaryolarınızı kaydedebilirsiniz.'**
+  String get scenariosEmptyHint;
+
+  /// No description provided for @saveScenario.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kaydet'**
+  String get saveScenario;
+
+  /// No description provided for @scenarioSaved.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senaryo kaydedildi.'**
+  String get scenarioSaved;
+
+  /// No description provided for @scenarioDeleted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senaryo silindi.'**
+  String get scenarioDeleted;
+
+  /// No description provided for @deleteScenario.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sil'**
+  String get deleteScenario;
+
+  /// No description provided for @undo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geri Al'**
+  String get undo;
+
+  /// No description provided for @tabCalculate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesapla'**
+  String get tabCalculate;
+
+  /// No description provided for @tabScenarios.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senaryolarım'**
+  String get tabScenarios;
+
+  /// No description provided for @searchAsset.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık ara...'**
+  String get searchAsset;
+
+  /// No description provided for @categoryCurrency.
+  ///
+  /// In tr, this message translates to:
+  /// **'Döviz'**
+  String get categoryCurrency;
+
+  /// No description provided for @categoryPreciousMetal.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kıymetli Maden'**
+  String get categoryPreciousMetal;
+
+  /// No description provided for @categoryCrypto.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kripto Para'**
+  String get categoryCrypto;
+
+  /// No description provided for @categoryStock.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hisse Senedi'**
+  String get categoryStock;
+
+  /// No description provided for @resultBuyPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alış Fiyatı'**
+  String get resultBuyPrice;
+
+  /// No description provided for @resultSellPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış/Güncel Fiyatı'**
+  String get resultSellPrice;
+
+  /// No description provided for @resultUnitsAcquired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Edinilen Miktar'**
+  String get resultUnitsAcquired;
+
+  /// No description provided for @resultDuration.
+  ///
+  /// In tr, this message translates to:
+  /// **'Süre'**
+  String get resultDuration;
+
+  /// No description provided for @durationDays.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} gün'**
+  String durationDays(int count);
+
+  /// No description provided for @durationMonths.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} ay'**
+  String durationMonths(int count);
+
+  /// No description provided for @durationYearsMonths.
+  ///
+  /// In tr, this message translates to:
+  /// **'{years} yıl {months} ay'**
+  String durationYearsMonths(int years, int months);
+
+  /// No description provided for @durationYears.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} yıl'**
+  String durationYears(int count);
+
+  /// No description provided for @dateAdjustedWarning.
+  ///
+  /// In tr, this message translates to:
+  /// **'Seçilen tarih bu varlık için uygun değil, en yakın geçerli tarihe ayarlandı.'**
+  String get dateAdjustedWarning;
+
+  /// No description provided for @scenarioDuplicate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu senaryo zaten kaydedilmiş.'**
+  String get scenarioDuplicate;
+
+  /// No description provided for @priceDisclaimer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir.'**
+  String get priceDisclaimer;
 }
 
 class _AppLocalizationsDelegate
