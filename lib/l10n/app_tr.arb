@@ -126,5 +126,27 @@
 
   "shareResult": "Paylaş",
   "sharePreviewTitle": "Paylaşım Önizlemesi",
-  "sharingInProgress": "Hazırlanıyor..."
+  "sharingInProgress": "Hazırlanıyor...",
+
+  "tabPortfolio": "Portföy",
+  "portfolioTitle": "Portföy Oluşturucu",
+  "portfolioDateSection": "Yatırım Dönemi",
+  "portfolioAssetsSection": "Varlıklar",
+  "portfolioAddAsset": "Varlık Ekle",
+  "portfolioAddAssetTitle": "Portföye Varlık Ekle",
+  "portfolioCalculate": "Portföyü Hesapla",
+  "portfolioCalculating": "Hesaplanıyor...",
+  "portfolioReset": "Sıfırla",
+  "portfolioEmpty": "Henüz varlık eklenmedi.",
+  "portfolioEmptyHint": "Varlık ekleyerek portföyünüzün tarihsel getirisini hesaplayın.",
+  "portfolioQuotaInfo": "Bu hesaplama {count} hesaplama hakkı kullanacak.",
+  "@portfolioQuotaInfo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "portfolioTotalInitial": "Toplam Yatırım",
+  "portfolioTotalFinal": "Toplam Son Değer",
+  "portfolioTotalReturn": "Toplam Getiri",
+  "portfolioChartTitle": "Son Değer Dağılımı",
+  "portfolioBuyDateRequired": "Başlangıç tarihi giriniz",
+  "portfolioMinItems": "En az 1 varlık ekleyin."
 }

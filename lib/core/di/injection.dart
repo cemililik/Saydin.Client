@@ -17,6 +17,8 @@ import 'package:saydin/features/scenarios/domain/usecases/save_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/what_if/data/repositories/what_if_repository_impl.dart';
 import 'package:saydin/features/what_if/domain/repositories/what_if_repository.dart';
+import 'package:saydin/features/portfolio/domain/usecases/calculate_portfolio.dart';
+import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
@@ -59,6 +61,7 @@ void configureDependencies() {
   // Use cases
   sl.registerLazySingleton(() => CalculateWhatIf(sl()));
   sl.registerLazySingleton(() => GetAssets(sl()));
+  sl.registerLazySingleton(() => CalculatePortfolio(sl()));
 
   // Comparison
   sl.registerLazySingleton<ComparisonRepository>(
@@ -72,6 +75,9 @@ void configureDependencies() {
   );
   sl.registerFactory(
     () => ComparisonBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
+  );
+  sl.registerFactory(
+    () => PortfolioBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
   );
 
   // Scenarios

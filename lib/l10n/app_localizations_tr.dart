@@ -281,4 +281,70 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get labelSellDate => 'Satış';
+
+  @override
+  String get shareResult => 'Paylaş';
+
+  @override
+  String get sharePreviewTitle => 'Paylaşım Önizlemesi';
+
+  @override
+  String get sharingInProgress => 'Hazırlanıyor...';
+
+  @override
+  String get tabPortfolio => 'Portföy';
+
+  @override
+  String get portfolioTitle => 'Portföy Oluşturucu';
+
+  @override
+  String get portfolioDateSection => 'Yatırım Dönemi';
+
+  @override
+  String get portfolioAssetsSection => 'Varlıklar';
+
+  @override
+  String get portfolioAddAsset => 'Varlık Ekle';
+
+  @override
+  String get portfolioAddAssetTitle => 'Portföye Varlık Ekle';
+
+  @override
+  String get portfolioCalculate => 'Portföyü Hesapla';
+
+  @override
+  String get portfolioCalculating => 'Hesaplanıyor...';
+
+  @override
+  String get portfolioReset => 'Sıfırla';
+
+  @override
+  String get portfolioEmpty => 'Henüz varlık eklenmedi.';
+
+  @override
+  String get portfolioEmptyHint =>
+      'Varlık ekleyerek portföyünüzün tarihsel getirisini hesaplayın.';
+
+  @override
+  String portfolioQuotaInfo(int count) {
+    return 'Bu hesaplama $count hesaplama hakkı kullanacak.';
+  }
+
+  @override
+  String get portfolioTotalInitial => 'Toplam Yatırım';
+
+  @override
+  String get portfolioTotalFinal => 'Toplam Son Değer';
+
+  @override
+  String get portfolioTotalReturn => 'Toplam Getiri';
+
+  @override
+  String get portfolioChartTitle => 'Son Değer Dağılımı';
+
+  @override
+  String get portfolioBuyDateRequired => 'Başlangıç tarihi giriniz';
+
+  @override
+  String get portfolioMinItems => 'En az 1 varlık ekleyin.';
 }

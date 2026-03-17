@@ -603,6 +603,132 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Satış'**
   String get labelSellDate;
+
+  /// No description provided for @shareResult.
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaş'**
+  String get shareResult;
+
+  /// No description provided for @sharePreviewTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaşım Önizlemesi'**
+  String get sharePreviewTitle;
+
+  /// No description provided for @sharingInProgress.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hazırlanıyor...'**
+  String get sharingInProgress;
+
+  /// No description provided for @tabPortfolio.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföy'**
+  String get tabPortfolio;
+
+  /// No description provided for @portfolioTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföy Oluşturucu'**
+  String get portfolioTitle;
+
+  /// No description provided for @portfolioDateSection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yatırım Dönemi'**
+  String get portfolioDateSection;
+
+  /// No description provided for @portfolioAssetsSection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlıklar'**
+  String get portfolioAssetsSection;
+
+  /// No description provided for @portfolioAddAsset.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık Ekle'**
+  String get portfolioAddAsset;
+
+  /// No description provided for @portfolioAddAssetTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföye Varlık Ekle'**
+  String get portfolioAddAssetTitle;
+
+  /// No description provided for @portfolioCalculate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföyü Hesapla'**
+  String get portfolioCalculate;
+
+  /// No description provided for @portfolioCalculating.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesaplanıyor...'**
+  String get portfolioCalculating;
+
+  /// No description provided for @portfolioReset.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sıfırla'**
+  String get portfolioReset;
+
+  /// No description provided for @portfolioEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz varlık eklenmedi.'**
+  String get portfolioEmpty;
+
+  /// No description provided for @portfolioEmptyHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık ekleyerek portföyünüzün tarihsel getirisini hesaplayın.'**
+  String get portfolioEmptyHint;
+
+  /// No description provided for @portfolioQuotaInfo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu hesaplama {count} hesaplama hakkı kullanacak.'**
+  String portfolioQuotaInfo(int count);
+
+  /// No description provided for @portfolioTotalInitial.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Yatırım'**
+  String get portfolioTotalInitial;
+
+  /// No description provided for @portfolioTotalFinal.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Son Değer'**
+  String get portfolioTotalFinal;
+
+  /// No description provided for @portfolioTotalReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Getiri'**
+  String get portfolioTotalReturn;
+
+  /// No description provided for @portfolioChartTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son Değer Dağılımı'**
+  String get portfolioChartTitle;
+
+  /// No description provided for @portfolioBuyDateRequired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç tarihi giriniz'**
+  String get portfolioBuyDateRequired;
+
+  /// No description provided for @portfolioMinItems.
+  ///
+  /// In tr, this message translates to:
+  /// **'En az 1 varlık ekleyin.'**
+  String get portfolioMinItems;
 }
 
 class _AppLocalizationsDelegate

@@ -5,6 +5,8 @@ import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
 import 'package:saydin/features/comparison/presentation/pages/comparison_page.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
+import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
+import 'package:saydin/features/portfolio/presentation/pages/portfolio_page.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/pages/scenarios_page.dart';
@@ -40,6 +42,7 @@ class SaydinApp extends StatelessWidget {
           BlocProvider(create: (_) => sl<WhatIfBloc>()),
           BlocProvider(create: (_) => sl<ScenariosBloc>()),
           BlocProvider(create: (_) => sl<ComparisonBloc>()),
+          BlocProvider(create: (_) => sl<PortfolioBloc>()),
         ],
         child: const MainShell(),
       ),
@@ -77,9 +80,10 @@ class _MainShellState extends State<MainShell> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          const WhatIfPage(),
-          ScenariosPage(onScenarioTap: _onScenarioTap),
-          const ComparisonPage(),
+          const WhatIfPage(), // 0 — Hesaplama
+          const ComparisonPage(), // 1 — Karşılaştırma
+          const PortfolioPage(), // 2 — Portföy
+          ScenariosPage(onScenarioTap: _onScenarioTap), // 3 — Senaryolar
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -92,14 +96,19 @@ class _MainShellState extends State<MainShell> {
             label: l10n.tabCalculate,
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.bookmark_border),
-            activeIcon: const Icon(Icons.bookmark),
-            label: l10n.tabScenarios,
-          ),
-          BottomNavigationBarItem(
             icon: const Icon(Icons.compare_arrows_outlined),
             activeIcon: const Icon(Icons.compare_arrows),
             label: l10n.tabCompare,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            activeIcon: const Icon(Icons.account_balance_wallet),
+            label: l10n.tabPortfolio,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.bookmark_border),
+            activeIcon: const Icon(Icons.bookmark),
+            label: l10n.tabScenarios,
           ),
         ],
       ),
