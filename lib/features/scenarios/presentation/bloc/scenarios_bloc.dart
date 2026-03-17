@@ -84,7 +84,7 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
         amount: event.amount,
         amountType: event.amountType,
       );
-      emit(ScenariosLoaded([saved, ...current]));
+      emit(ScenariosSaved([saved, ...current]));
     } on DioException catch (e, st) {
       final error = _errorMapper.map(e);
       if (error is UnknownError || error is ServerError) {

@@ -65,6 +65,17 @@ class ScenariosFailure extends ScenariosState {
   List<Object?> get props => [scenarios, error];
 }
 
+class ScenariosSaved extends ScenariosState {
+  @override
+  final List<SavedScenario> scenarios;
+
+  ScenariosSaved(List<SavedScenario> scenarios)
+    : scenarios = List.unmodifiable(scenarios);
+
+  @override
+  List<Object?> get props => [scenarios];
+}
+
 class ScenariosDuplicate extends ScenariosState {
   @override
   final List<SavedScenario> scenarios;

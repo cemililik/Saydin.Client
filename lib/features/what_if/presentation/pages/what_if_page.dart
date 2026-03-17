@@ -8,6 +8,7 @@ import 'package:saydin/features/scenarios/presentation/bloc/scenarios_state.dart
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/l10n/app_localizations.dart';
+import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_event.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
@@ -40,6 +41,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
   }
 
   void _onCalculate() {
+    FocusScope.of(context).unfocus();
     final l10n = context.l10n;
     if (_formKey.currentState?.validate() != true) return;
 
@@ -95,11 +97,21 @@ class _WhatIfPageState extends State<WhatIfPage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.whatIfTitle), centerTitle: true),
       body: BlocListener<ScenariosBloc, ScenariosState>(
-        listenWhen: (prev, curr) => curr is ScenariosDuplicate,
+        listenWhen: (prev, curr) =>
+            curr is ScenariosSaved || curr is ScenariosDuplicate,
         listener: (context, state) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.scenarioDuplicate)),
-          );
+          if (state is ScenariosSaved) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.l10n.scenarioSaved),
+                backgroundColor: AppColors.profit,
+              ),
+            );
+          } else if (state is ScenariosDuplicate) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(context.l10n.scenarioDuplicate)),
+            );
+          }
         },
         child: BlocConsumer<WhatIfBloc, WhatIfState>(
           listenWhen: (prev, curr) =>
@@ -238,99 +250,103 @@ class _WhatIfForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AssetSelector(
-              assets: assets,
-              selectedSymbol: selectedSymbol,
-              onChanged: onAssetChanged,
-            ),
-            const SizedBox(height: 16),
-            DateInput(
-              label: l10n.buyDate,
-              value: buyDate,
-              firstDate: assetFirstDate,
-              lastDate: assetLastDate ?? DateTime.now(),
-              onChanged: onBuyDateChanged,
-            ),
-            const SizedBox(height: 16),
-            DateInput(
-              label: l10n.sellDate,
-              value: sellDate,
-              firstDate: buyDate ?? assetFirstDate,
-              lastDate: assetLastDate ?? DateTime.now(),
-              required: false,
-              onChanged: onSellDateChanged,
-            ),
-            const SizedBox(height: 16),
-            AmountInput(
-              controller: amountController,
-              amountType: amountType,
-              allowedTypes:
-                  assets
-                      .where((a) => a.symbol == selectedSymbol)
-                      .map((a) => a.allowedAmountTypes)
-                      .firstOrNull ??
-                  const ['try'],
-              onAmountTypeChanged: onAmountTypeChanged,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: isCalculating ? null : onCalculate,
-              icon: isCalculating
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.calculate),
-              label: Text(isCalculating ? l10n.calculating : l10n.calculate),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AssetSelector(
+                assets: assets,
+                selectedSymbol: selectedSymbol,
+                onChanged: onAssetChanged,
               ),
-            ),
-            if (result case final result?) ...[
+              const SizedBox(height: 16),
+              DateInput(
+                label: l10n.buyDate,
+                value: buyDate,
+                firstDate: assetFirstDate,
+                lastDate: assetLastDate ?? DateTime.now(),
+                onChanged: onBuyDateChanged,
+              ),
+              const SizedBox(height: 16),
+              DateInput(
+                label: l10n.sellDate,
+                value: sellDate,
+                firstDate: buyDate ?? assetFirstDate,
+                lastDate: assetLastDate ?? DateTime.now(),
+                required: false,
+                onChanged: onSellDateChanged,
+              ),
+              const SizedBox(height: 16),
+              AmountInput(
+                controller: amountController,
+                amountType: amountType,
+                allowedTypes:
+                    assets
+                        .where((a) => a.symbol == selectedSymbol)
+                        .map((a) => a.allowedAmountTypes)
+                        .firstOrNull ??
+                    const ['try'],
+                onAmountTypeChanged: onAmountTypeChanged,
+              ),
               const SizedBox(height: 24),
-              ResultCard(result: result),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onSave,
-                icon: const Icon(Icons.bookmark_border),
-                label: Text(l10n.saveScenario),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+              FilledButton.icon(
+                onPressed: isCalculating ? null : onCalculate,
+                icon: isCalculating
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.calculate),
+                label: Text(isCalculating ? l10n.calculating : l10n.calculate),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
-            ],
-            const SizedBox(height: 24),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 14,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    l10n.priceDisclaimer,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
+              if (result case final result?) ...[
+                const SizedBox(height: 24),
+                ResultCard(result: result),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: onSave,
+                  icon: const Icon(Icons.bookmark_border),
+                  label: Text(l10n.saveScenario),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
               ],
-            ),
-          ],
+              const SizedBox(height: 24),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      l10n.priceDisclaimer,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

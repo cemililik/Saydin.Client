@@ -119,6 +119,19 @@ final value = result?.price ?? 0;
 
 ---
 
+## Commit Kuralı (KRİTİK)
+
+**Kod değişikliklerini commit etmeden önce mutlaka analiz ve testleri çalıştır.**
+
+```bash
+/Users/dev/development/flutter/bin/flutter analyze --fatal-infos
+/Users/dev/development/flutter/bin/flutter test
+```
+
+Analiz veya test başarısız olursa commit atma, önce hatayı düzelt.
+
+---
+
 ## Lokalizasyon Kuralları (KRİTİK)
 
 **Tüm kullanıcıya görünen string'ler `l10n/app_tr.arb` dosyasında olmalıdır.**
