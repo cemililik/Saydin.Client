@@ -197,10 +197,42 @@ jobs:
       - name: Pre-install CMake
         run: yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
 
+      - name: Validate signing secrets
+        run: |
+          missing=""
+          [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]  && missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -z "${{ secrets.ANDROID_STORE_PASSWORD }}" ]   && missing="$missing ANDROID_STORE_PASSWORD"
+          [ -z "${{ secrets.ANDROID_KEY_ALIAS }}" ]        && missing="$missing ANDROID_KEY_ALIAS"
+          [ -z "${{ secrets.ANDROID_KEY_PASSWORD }}" ]     && missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "❌ Eksik secret'lar:$missing"
+            exit 1
+          fi
+          echo "✅ Tüm signing secret'ları mevcut"
+
       - name: Decode keystore
         run: |
           printf '%s' "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode --ignore-garbage \
             > android/saydin-release.jks
+          FILESIZE=$(wc -c < android/saydin-release.jks)
+          echo "Keystore boyutu: ${FILESIZE} bytes"
+          if [ "$FILESIZE" -lt 100 ]; then
+            echo "❌ Dosya çok küçük (${FILESIZE} bytes) — ANDROID_KEYSTORE_BASE64 değeri hatalı"
+            exit 1
+          fi
+          echo "✅ Keystore decode edildi"
+
+      - name: Verify keystore
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          keytool -list \
+            -keystore android/saydin-release.jks \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            && echo "✅ Keystore doğrulandı — alias ve şifre doğru" \
+            || { echo "❌ keytool doğrulaması başarısız — STORE_PASSWORD veya KEY_ALIAS hatalı"; exit 1; }
 
       - name: Set environment variables
         id: env
