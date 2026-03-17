@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION: "3.41.0"
+  FLUTTER_VERSION: "3.41.4"
 
 # ── Versiyon Yönetimi ─────────────────────────────────────────────────────────
 #
@@ -22,9 +22,13 @@ env:
 #        CI           → --build-name=1.2.0 --build-number=42
 #
 # Branch → ortam eşleşmesi:
-#   development / PR  → APP_ENV=development
-#   test              → APP_ENV=staging   (TestFlight iç test grubu)
-#   main              → APP_ENV=production (TestFlight → App Store, Play Store)
+#   development / PR  → APP_ENV=development, API_URL=vars.API_URL_STAGING
+#   test              → APP_ENV=staging,     API_URL=vars.API_URL_STAGING
+#   main              → APP_ENV=production,  API_URL=vars.API_URL_PRODUCTION
+#
+# GitHub Repository Variables (Settings → Secrets and variables → Variables):
+#   API_URL_STAGING    = https://api-staging.saydin.app
+#   API_URL_PRODUCTION = https://api.saydin.app
 # ─────────────────────────────────────────────────────────────────────────────
 
 jobs:
@@ -85,7 +89,9 @@ jobs:
     name: Build Android APK (Debug)
     runs-on: ubuntu-latest
     needs: [version, analyze-and-test]
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/development'
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/development')
 
     steps:
       - uses: actions/checkout@v4
@@ -116,7 +122,7 @@ jobs:
           flutter build apk --debug \
             --build-name=${{ needs.version.outputs.version_name }} \
             --build-number=${{ needs.version.outputs.build_number }} \
-            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=API_BASE_URL=${{ vars.API_URL_STAGING }} \
             --dart-define=APP_ENV=development
 
       - name: Upload APK artifact
@@ -131,7 +137,9 @@ jobs:
     name: Build iOS (no codesign)
     runs-on: macos-15
     needs: [version, analyze-and-test]
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/development'
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/development')
 
     steps:
       - uses: actions/checkout@v4
@@ -153,7 +161,7 @@ jobs:
           flutter build ios --debug --no-codesign \
             --build-name=${{ needs.version.outputs.version_name }} \
             --build-number=${{ needs.version.outputs.build_number }} \
-            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=API_BASE_URL=${{ vars.API_URL_STAGING }} \
             --dart-define=APP_ENV=development
 
   # ── Android Release AAB (test + main push) ────────────────────────────────
@@ -194,13 +202,15 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode \
             > android/saydin-release.jks
 
-      - name: Set APP_ENV
+      - name: Set environment variables
         id: env
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "app_env=production" >> $GITHUB_OUTPUT
+            echo "api_url=${{ vars.API_URL_PRODUCTION }}" >> $GITHUB_OUTPUT
           else
             echo "app_env=staging" >> $GITHUB_OUTPUT
+            echo "api_url=${{ vars.API_URL_STAGING }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build AAB (release)
@@ -213,7 +223,7 @@ jobs:
           flutter build appbundle --release \
             --build-name=${{ needs.version.outputs.version_name }} \
             --build-number=${{ needs.version.outputs.build_number }} \
-            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=API_BASE_URL=${{ steps.env.outputs.api_url }} \
             --dart-define=APP_ENV=${{ steps.env.outputs.app_env }}
 
       - name: Upload AAB artifact
@@ -261,13 +271,15 @@ jobs:
           api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
-      - name: Set APP_ENV
+      - name: Set environment variables
         id: env
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "app_env=production" >> $GITHUB_OUTPUT
+            echo "api_url=${{ vars.API_URL_PRODUCTION }}" >> $GITHUB_OUTPUT
           else
             echo "app_env=staging" >> $GITHUB_OUTPUT
+            echo "api_url=${{ vars.API_URL_STAGING }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build IPA (release)
@@ -275,24 +287,28 @@ jobs:
           flutter build ipa --release \
             --build-name=${{ needs.version.outputs.version_name }} \
             --build-number=${{ needs.version.outputs.build_number }} \
-            --dart-define=API_BASE_URL=https://api.saydin.app \
+            --dart-define=API_BASE_URL=${{ steps.env.outputs.api_url }} \
             --dart-define=APP_ENV=${{ steps.env.outputs.app_env }} \
             --export-options-plist=ios/ExportOptions.plist
 
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v1
         with:
-          app-path: build/ios/ipa/saydin.ipa
+          app-path: build/ios/ipa/*.ipa
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
-  # ── Git Tag (sadece main push, release'ler başarıyla tamamlandıktan sonra) ─
+  # ── Git Tag (test + main push, release'ler başarıyla tamamlandıktan sonra) ─
+  # test  → v1.0.0-rc.42   (release candidate)
+  # main  → v1.0.0         (production release)
   tag-release:
     name: Tag Release
     runs-on: ubuntu-latest
     needs: [version, release-android, release-ios]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/test' || github.ref == 'refs/heads/main')
     permissions:
       contents: write
 
@@ -301,7 +317,11 @@ jobs:
 
       - name: Create and push release tag
         run: |
-          TAG="v${{ needs.version.outputs.version_name }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            TAG="v${{ needs.version.outputs.version_name }}"
+          else
+            TAG="v${{ needs.version.outputs.version_name }}-rc.${{ needs.version.outputs.build_number }}"
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -f "$TAG" -m "Release $TAG (build ${{ needs.version.outputs.build_number }})"
