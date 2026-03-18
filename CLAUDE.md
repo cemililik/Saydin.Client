@@ -121,6 +121,32 @@ final value = result?.price ?? 0;
 
 ## Commit Kuralı (KRİTİK)
 
+### Conventional Commits (ZORUNLU)
+
+Commit mesajları **Conventional Commits** formatında olmalıdır. CI versiyon numarasını bu mesajlardan otomatik hesaplar.
+
+```
+<tip>(<kapsam>): <açıklama>
+```
+
+| Prefix | Versiyon etkisi | Örnek |
+|--------|----------------|-------|
+| `feat:` | MINOR (0.1.0 → 0.2.0) | `feat: portföy ekranı eklendi` |
+| `fix:` | PATCH (0.1.0 → 0.1.1) | `fix: grafik render hatası düzeltildi` |
+| `perf:` | PATCH | `perf: liste scroll performansı iyileştirildi` |
+| `revert:` | PATCH | `revert: son değişiklik geri alındı` |
+| `feat!:` / `fix!:` | MAJOR (0.1.0 → 1.0.0) | `feat!: API v2'ye geçildi` |
+| `chore:` | yok | `chore: bağımlılık güncellendi` |
+| `docs:` | yok | `docs: README güncellendi` |
+| `ci:` | yok | `ci: workflow düzeltildi` |
+| `style:` | yok | `style: format düzeltmesi` |
+| `refactor:` | yok | `refactor: widget yapısı sadeleştirildi` |
+| `test:` | yok | `test: bloc testi eklendi` |
+
+Kapsam isteğe bağlıdır: `feat(portfolio):`, `fix(auth):` gibi.
+
+### Build Öncesi Kontrol
+
 **Kod değişikliklerini commit etmeden önce mutlaka analiz ve testleri çalıştır.**
 
 ```bash

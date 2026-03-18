@@ -1,6 +1,8 @@
 name: saydin
 description: "Saydın - Ya Alsaydım? finansal hesaplama uygulaması."
 publish_to: 'none'
+# CI bu versiyonu override eder (conventional commits'ten hesaplar).
+# Lokal geliştirme için referans değer.
 version: 0.1.1+1
 
 environment:

@@ -15,11 +15,17 @@ env:
 
 # ── Versiyon Yönetimi ─────────────────────────────────────────────────────────
 #
-# Semantic version (X.Y.Z) → pubspec.yaml içinde developer tarafından yönetilir.
-# Build number            → github.run_number (otomatik, her zaman artan).
+# Semantic version (X.Y.Z) → git tag'lerinden + conventional commits'ten otomatik hesaplanır.
+# Build number             → github.run_number (otomatik, her zaman artan).
 #
-# Örnek: pubspec.yaml → version: 1.2.0+1
-#        CI           → --build-name=1.2.0 --build-number=42
+# Conventional Commit kuralları:
+#   feat:             → MINOR artışı (0.1.0 → 0.2.0)
+#   fix:, perf:, vb.  → PATCH artışı (0.1.0 → 0.1.1)
+#   feat!:, fix!:     → MAJOR artışı (0.1.0 → 1.0.0)
+#   BREAKING CHANGE:  → MAJOR artışı (commit body/footer'da)
+#   chore:, docs:, ci:, style:, refactor:, test: → versiyon artışı YOK
+#
+# Tag yoksa fallback: pubspec.yaml'daki versiyon kullanılır.
 #
 # Branch → ortam eşleşmesi:
 #   development / PR  → APP_ENV=development, API_URL=vars.API_URL_STAGING
@@ -32,21 +38,75 @@ env:
 # ─────────────────────────────────────────────────────────────────────────────
 
 jobs:
-  # ── Sürüm bilgisini çıkar ──────────────────────────────────────────────────
+  # ── Sürüm bilgisini hesapla (conventional commits) ─────────────────────────
   version:
-    name: Extract Version
+    name: Calculate Version
     runs-on: ubuntu-latest
     outputs:
       version_name: ${{ steps.ver.outputs.version_name }}
       build_number: ${{ github.run_number }}
+      bumped: ${{ steps.ver.outputs.bumped }}
     steps:
       - uses: actions/checkout@v4
-      - name: Extract version from pubspec.yaml
+        with:
+          fetch-depth: 0  # tüm geçmiş ve tag'ler için
+
+      - name: Calculate version from conventional commits
         id: ver
         run: |
-          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d '[:space:]')
-          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION, Build: ${{ github.run_number }}"
+          # ── Son versiyon tag'ini bul ──────────────────────────────────────
+          LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            # Tag yoksa pubspec.yaml'dan oku (fallback)
+            CURRENT=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d '[:space:]')
+            echo "ℹ️  Tag bulunamadı, pubspec.yaml'dan fallback: $CURRENT"
+            echo "version_name=$CURRENT" >> $GITHUB_OUTPUT
+            echo "bumped=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Tag'den versiyon çıkar (v0.1.1 → 0.1.1)
+          CURRENT="${LATEST_TAG#v}"
+          # rc suffix varsa kaldır (v0.1.1-rc.42 → 0.1.1)
+          CURRENT="${CURRENT%%-rc.*}"
+          echo "📌 Son tag: $LATEST_TAG → versiyon: $CURRENT"
+
+          # ── Commit'leri analiz et ─────────────────────────────────────────
+          MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT" | cut -d. -f2)
+          PATCH=$(echo "$CURRENT" | cut -d. -f3)
+
+          BUMP="none"
+          while IFS= read -r MSG; do
+            # BREAKING CHANGE → major
+            if echo "$MSG" | grep -qE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE'; then
+              BUMP="major"
+              break
+            fi
+            # feat → minor (major'dan küçük, override etme)
+            if echo "$MSG" | grep -qE '^feat(\(.+\))?:'; then
+              [ "$BUMP" != "major" ] && BUMP="minor"
+            fi
+            # fix, perf, revert → patch
+            if echo "$MSG" | grep -qE '^(fix|perf|revert)(\(.+\))?:'; then
+              [ "$BUMP" = "none" ] && BUMP="patch"
+            fi
+          done < <(git log "$LATEST_TAG"..HEAD --pretty=format:"%s" 2>/dev/null)
+
+          # ── Versiyon artır ────────────────────────────────────────────────
+          if [ "$BUMP" = "major" ]; then
+            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
+          elif [ "$BUMP" = "minor" ]; then
+            MINOR=$((MINOR + 1)); PATCH=0
+          elif [ "$BUMP" = "patch" ]; then
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "🔄 Bump: $BUMP → $CURRENT → $NEW_VERSION"
+          echo "version_name=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "bumped=$( [ "$BUMP" != "none" ] && echo true || echo false )" >> $GITHUB_OUTPUT
 
   # ── Analyze + Test ─────────────────────────────────────────────────────────
   analyze-and-test:
@@ -352,6 +412,13 @@ jobs:
         id: ipa
         run: echo "path=$(find build/ios/ipa -name '*.ipa' | head -1)" >> $GITHUB_OUTPUT
 
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saydin-ios-${{ github.ref_name }}-${{ needs.version.outputs.version_name }}+${{ needs.version.outputs.build_number }}
+          path: ${{ steps.ipa.outputs.path }}
+          retention-days: 30
+
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v1
         with:
@@ -360,11 +427,12 @@ jobs:
           api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
-  # ── Git Tag (test + main push, release'ler başarıyla tamamlandıktan sonra) ─
-  # test  → v1.0.0-rc.42   (release candidate)
+  # ── GitHub Release (test + main push, release'ler başarıyla tamamlandıktan sonra)
+  # test  → v1.0.0-rc.42   (pre-release)
   # main  → v1.0.0         (production release)
-  tag-release:
-    name: Tag Release
+  # Source code otomatik eklenir, AAB ve IPA artifact olarak indirilip eklenir.
+  github-release:
+    name: GitHub Release
     runs-on: ubuntu-latest
     needs: [version, release-android, release-ios]
     if: >
@@ -376,14 +444,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create and push release tag
+      - name: Determine tag
+        id: tag
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            TAG="v${{ needs.version.outputs.version_name }}"
+            echo "tag=v${{ needs.version.outputs.version_name }}" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
           else
-            TAG="v${{ needs.version.outputs.version_name }}-rc.${{ needs.version.outputs.build_number }}"
+            echo "tag=v${{ needs.version.outputs.version_name }}-rc.${{ needs.version.outputs.build_number }}" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f "$TAG" -m "Release $TAG (build ${{ needs.version.outputs.build_number }})"
-          git push origin "$TAG" --force
+
+      - name: Download Android AAB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: saydin-${{ github.ref_name }}-${{ needs.version.outputs.version_name }}+${{ needs.version.outputs.build_number }}
+          path: release-assets/
+
+      - name: Download iOS IPA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: saydin-ios-${{ github.ref_name }}-${{ needs.version.outputs.version_name }}+${{ needs.version.outputs.build_number }}
+          path: release-assets/
+
+      - name: Rename artifacts
+        run: |
+          mv release-assets/app-release.aab "release-assets/saydin-${{ steps.tag.outputs.tag }}.aab"
+          mv release-assets/*.ipa "release-assets/saydin-${{ steps.tag.outputs.tag }}.ipa"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          prerelease: ${{ steps.tag.outputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            release-assets/saydin-${{ steps.tag.outputs.tag }}.aab
+            release-assets/saydin-${{ steps.tag.outputs.tag }}.ipa
