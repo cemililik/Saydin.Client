@@ -39,9 +39,19 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     on<WhatIfInflationToggled>(_onInflationToggled);
     on<WhatIfReplayRequested>(_onReplayRequested);
     on<WhatIfCalculateRequested>(_onCalculateRequested);
+    on<WhatIfLanguageChanged>(_onLanguageChanged);
   }
 
   WhatIfFormInput get _formInput => state.formInput;
+
+  /// Mevcut assets listesinden sembol listesi çıkarır.
+  List<Asset> _currentAssets() => switch (state) {
+    WhatIfAssetsLoaded(:final assets) => assets,
+    WhatIfSuccess(:final assets) => assets,
+    WhatIfFailure(:final assets) => assets,
+    WhatIfCalculating(:final assets) => assets,
+    _ => <Asset>[],
+  };
 
   Future<void> _onAssetsRequested(
     WhatIfAssetsRequested event,
@@ -70,13 +80,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   }
 
   void _onSymbolChanged(WhatIfSymbolChanged event, Emitter<WhatIfState> emit) {
-    final assets = switch (state) {
-      WhatIfAssetsLoaded(:final assets) => assets,
-      WhatIfSuccess(:final assets) => assets,
-      WhatIfFailure(:final assets) => assets,
-      WhatIfCalculating(:final assets) => assets,
-      _ => <Asset>[],
-    };
+    final assets = _currentAssets();
     final asset = assets.where((a) => a.symbol == event.symbol).firstOrNull;
     final allowed = asset?.allowedAmountTypes ?? ['try'];
     final newAmountType = allowed.contains(_formInput.amountType)
@@ -198,13 +202,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     WhatIfCalculateRequested event,
     Emitter<WhatIfState> emit,
   ) async {
-    final currentAssets = switch (state) {
-      WhatIfAssetsLoaded(:final assets) => assets,
-      WhatIfSuccess(:final assets) => assets,
-      WhatIfFailure(:final assets) => assets,
-      WhatIfCalculating(:final assets) => assets,
-      _ => <Asset>[],
-    };
+    final currentAssets = _currentAssets();
 
     await _reporter.addBreadcrumb(
       'WhatIf calculated: ${event.assetSymbol} ${event.buyDate.toIso8601String()}',
@@ -249,6 +247,48 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
           formInput: _formInput,
         ),
       );
+    }
+  }
+
+  Future<void> _onLanguageChanged(
+    WhatIfLanguageChanged event,
+    Emitter<WhatIfState> emit,
+  ) async {
+    // Form state'i ve önceki hesaplama sonucunu kaydet
+    final savedForm = _formInput;
+    final hadResult = state is WhatIfSuccess;
+    final prevAssets = _currentAssets();
+
+    try {
+      final assets = await _getAssets();
+
+      if (hadResult) {
+        // Önceki hesaplama sonucu vardı — yeni asset'lerle yeniden hesapla
+        emit(WhatIfCalculating(assets, formInput: savedForm));
+        try {
+          final result = await _calculateWhatIf(
+            assetSymbol: savedForm.selectedSymbol!,
+            buyDate: savedForm.buyDate!,
+            sellDate: savedForm.sellDate,
+            amount: savedForm.amount!,
+            amountType: savedForm.amountType,
+            includeInflation: savedForm.includeInflation,
+          );
+          emit(
+            WhatIfSuccess(assets: assets, result: result, formInput: savedForm),
+          );
+        } catch (e) {
+          // Hesaplama başarısız olursa en azından yeni asset'lerle form korunsun
+          emit(WhatIfAssetsLoaded(assets, formInput: savedForm));
+        }
+      } else {
+        emit(WhatIfAssetsLoaded(assets, formInput: savedForm));
+      }
+    } catch (_) {
+      // Asset fetch başarısız — mevcut state'i koru
+      if (hadResult) {
+        emit(WhatIfAssetsLoaded(prevAssets, formInput: savedForm));
+      }
     }
   }
 }

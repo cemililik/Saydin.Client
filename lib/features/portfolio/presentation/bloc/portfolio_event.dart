@@ -96,6 +96,12 @@ class PortfolioReset extends PortfolioEvent {
   const PortfolioReset();
 }
 
+/// Dil değiştiğinde asset listesini yeniler, form state'i korur,
+/// eğer önceden hesaplama yapılmışsa otomatik yeniden hesaplar.
+class PortfolioLanguageChanged extends PortfolioEvent {
+  const PortfolioLanguageChanged();
+}
+
 class PortfolioReplayRequested extends PortfolioEvent {
   final DateTime buyDate;
   final DateTime? sellDate;

@@ -71,6 +71,12 @@ class WhatIfInflationToggled extends WhatIfEvent {
   const WhatIfInflationToggled();
 }
 
+/// Dil değiştiğinde asset listesini yeniler, form state'i korur,
+/// eğer önceden hesaplama yapılmışsa otomatik yeniden hesaplar.
+class WhatIfLanguageChanged extends WhatIfEvent {
+  const WhatIfLanguageChanged();
+}
+
 class WhatIfCalculateRequested extends WhatIfEvent {
   final String assetSymbol;
   final DateTime buyDate;

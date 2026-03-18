@@ -7,6 +7,8 @@ import 'package:saydin/core/theme/theme_mode_mapper.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_event.dart';
 import 'package:saydin/features/comparison/presentation/pages/comparison_page.dart';
+import 'package:saydin/features/onboarding/domain/repositories/onboarding_repository.dart';
+import 'package:saydin/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_event.dart';
 import 'package:uuid/uuid.dart';
@@ -71,12 +73,52 @@ class SaydinApp extends StatelessWidget {
                 BlocProvider(create: (_) => sl<ComparisonBloc>()),
                 BlocProvider(create: (_) => sl<PortfolioBloc>()),
               ],
-              child: const MainShell(),
+              child: const _AppHome(),
             ),
           );
         },
       ),
     );
+  }
+}
+
+class _AppHome extends StatefulWidget {
+  const _AppHome();
+
+  @override
+  State<_AppHome> createState() => _AppHomeState();
+}
+
+class _AppHomeState extends State<_AppHome> {
+  bool? _onboardingCompleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboarding();
+  }
+
+  Future<void> _checkOnboarding() async {
+    final repo = sl<OnboardingRepository>();
+    final completed = await repo.isOnboardingCompleted();
+    if (mounted) setState(() => _onboardingCompleted = completed);
+  }
+
+  Future<void> _completeOnboarding() async {
+    await sl<OnboardingRepository>().completeOnboarding();
+    if (mounted) setState(() => _onboardingCompleted = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_onboardingCompleted == null) {
+      // Henüz yükleniyor
+      return const Scaffold(body: SizedBox.shrink());
+    }
+    if (_onboardingCompleted == false) {
+      return OnboardingPage(onComplete: _completeOnboarding);
+    }
+    return const MainShell();
   }
 }
 
@@ -89,6 +131,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
+  AppLanguage? _previousLanguage;
 
   void _onScenarioTap(SavedScenario scenario) {
     switch (scenario.type) {
@@ -147,27 +190,45 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return BlocListener<ScenariosBloc, ScenariosState>(
-      listenWhen: (_, curr) =>
-          curr is ScenariosSaved || curr is ScenariosDuplicate,
-      listener: (ctx, state) {
-        if (state is ScenariosSaved) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(
-              content: Text(ctx.l10n.scenarioSaved),
-              backgroundColor: AppColors.profit,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        } else if (state is ScenariosDuplicate) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(
-              content: Text(ctx.l10n.scenarioDuplicate),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<SettingsCubit, AppSettings>(
+          listenWhen: (prev, curr) {
+            final changed =
+                _previousLanguage != null && _previousLanguage != curr.language;
+            _previousLanguage = curr.language;
+            return changed;
+          },
+          listener: (ctx, _) {
+            // Dil değişti — form state'i koruyarak asset listesini yenile.
+            ctx.read<WhatIfBloc>().add(const WhatIfLanguageChanged());
+            ctx.read<ComparisonBloc>().add(const ComparisonLanguageChanged());
+            ctx.read<PortfolioBloc>().add(const PortfolioLanguageChanged());
+          },
+        ),
+        BlocListener<ScenariosBloc, ScenariosState>(
+          listenWhen: (_, curr) =>
+              curr is ScenariosSaved || curr is ScenariosDuplicate,
+          listener: (ctx, state) {
+            if (state is ScenariosSaved) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(
+                  content: Text(ctx.l10n.scenarioSaved),
+                  backgroundColor: AppColors.profit,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            } else if (state is ScenariosDuplicate) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(
+                  content: Text(ctx.l10n.scenarioDuplicate),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         body: IndexedStack(
           index: _selectedIndex,
