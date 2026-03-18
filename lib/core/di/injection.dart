@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/network/api_client.dart';
@@ -15,6 +16,9 @@ import 'package:saydin/features/scenarios/domain/usecases/delete_scenario.dart';
 import 'package:saydin/features/scenarios/domain/usecases/get_scenarios.dart';
 import 'package:saydin/features/scenarios/domain/usecases/save_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
+import 'package:saydin/features/settings/data/repositories/settings_repository_impl.dart';
+import 'package:saydin/features/settings/domain/repositories/settings_repository.dart';
+import 'package:saydin/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:saydin/features/what_if/data/repositories/what_if_repository_impl.dart';
 import 'package:saydin/features/what_if/domain/repositories/what_if_repository.dart';
 import 'package:saydin/features/portfolio/domain/usecases/calculate_portfolio.dart';
@@ -46,6 +50,12 @@ void configureDependencies() {
   // Error handling
   sl.registerLazySingleton(() => const DioErrorMapper());
   sl.registerLazySingleton(() => const ErrorReporter());
+
+  // Settings
+  sl.registerLazySingleton<SettingsRepository>(
+    () => SettingsRepositoryImpl(SharedPreferencesAsync()),
+  );
+  sl.registerLazySingleton(() => SettingsCubit(sl()));
 
   // App Config
   sl.registerLazySingleton<AppConfigRepository>(

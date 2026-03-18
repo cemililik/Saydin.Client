@@ -166,5 +166,13 @@
   "scenarioTypePortfolio": "Portföy",
 
   "brandedTitlePrefix": "al/sat ",
-  "brandedTitleSuffix": "saydın"
+  "brandedTitleSuffix": "saydın",
+
+  "settings": "Ayarlar",
+  "settingsTheme": "Tema",
+  "settingsThemeSubtitle": "Uygulamanın görünümünü seçin",
+  "themeLight": "Açık",
+  "themeDark": "Koyu",
+  "themeSystem": "Sistem",
+  "settingsVersion": "Versiyon"
 }

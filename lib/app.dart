@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/di/injection.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/app_theme.dart';
+import 'package:saydin/core/theme/theme_mode_mapper.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_event.dart';
 import 'package:saydin/features/comparison/presentation/pages/comparison_page.dart';
@@ -16,6 +18,8 @@ import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart'
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_state.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/pages/scenarios_page.dart';
+import 'package:saydin/features/settings/domain/entities/app_settings.dart';
+import 'package:saydin/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_event.dart';
 import 'package:saydin/features/what_if/presentation/pages/what_if_page.dart';
@@ -27,30 +31,36 @@ class SaydinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Saydın',
-      debugShowCheckedModeBanner: false,
-      locale: const Locale('tr', 'TR'),
-      supportedLocales: const [Locale('tr', 'TR')],
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
-        useMaterial3: true,
-      ),
-      home: MultiBlocProvider(
-        providers: [
-          BlocProvider(create: (_) => sl<AppConfigCubit>()..load()),
-          BlocProvider(create: (_) => sl<WhatIfBloc>()),
-          BlocProvider(create: (_) => sl<ScenariosBloc>()),
-          BlocProvider(create: (_) => sl<ComparisonBloc>()),
-          BlocProvider(create: (_) => sl<PortfolioBloc>()),
-        ],
-        child: const MainShell(),
+    return BlocProvider(
+      create: (_) => sl<SettingsCubit>()..load(),
+      child: BlocBuilder<SettingsCubit, AppSettings>(
+        builder: (context, settings) {
+          return MaterialApp(
+            title: 'Saydın',
+            debugShowCheckedModeBanner: false,
+            locale: const Locale('tr', 'TR'),
+            supportedLocales: const [Locale('tr', 'TR')],
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: toFlutterThemeMode(settings.themeMode),
+            home: MultiBlocProvider(
+              providers: [
+                BlocProvider(create: (_) => sl<AppConfigCubit>()..load()),
+                BlocProvider(create: (_) => sl<WhatIfBloc>()),
+                BlocProvider(create: (_) => sl<ScenariosBloc>()),
+                BlocProvider(create: (_) => sl<ComparisonBloc>()),
+                BlocProvider(create: (_) => sl<PortfolioBloc>()),
+              ],
+              child: const MainShell(),
+            ),
+          );
+        },
       ),
     );
   }
@@ -157,12 +167,8 @@ class _MainShellState extends State<MainShell> {
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: (index) => setState(() => _selectedIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
           selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: const Color(0xFF757575),
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-          elevation: 8,
+          unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
           items: [
             BottomNavigationBarItem(
               icon: const Icon(Icons.calculate_outlined),

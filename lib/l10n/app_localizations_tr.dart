@@ -382,4 +382,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get brandedTitleSuffix => 'saydın';
+
+  @override
+  String get settings => 'Ayarlar';
+
+  @override
+  String get settingsTheme => 'Tema';
+
+  @override
+  String get settingsThemeSubtitle => 'Uygulamanın görünümünü seçin';
+
+  @override
+  String get themeLight => 'Açık';
+
+  @override
+  String get themeDark => 'Koyu';
+
+  @override
+  String get themeSystem => 'Sistem';
+
+  @override
+  String get settingsVersion => 'Versiyon';
 }

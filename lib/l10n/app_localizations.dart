@@ -795,6 +795,48 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'saydın'**
   String get brandedTitleSuffix;
+
+  /// No description provided for @settings.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ayarlar'**
+  String get settings;
+
+  /// No description provided for @settingsTheme.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tema'**
+  String get settingsTheme;
+
+  /// No description provided for @settingsThemeSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulamanın görünümünü seçin'**
+  String get settingsThemeSubtitle;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In tr, this message translates to:
+  /// **'Açık'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In tr, this message translates to:
+  /// **'Koyu'**
+  String get themeDark;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sistem'**
+  String get themeSystem;
+
+  /// No description provided for @settingsVersion.
+  ///
+  /// In tr, this message translates to:
+  /// **'Versiyon'**
+  String get settingsVersion;
 }
 
 class _AppLocalizationsDelegate

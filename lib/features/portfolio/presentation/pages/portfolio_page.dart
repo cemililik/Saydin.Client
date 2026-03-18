@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
@@ -173,6 +174,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
       appBar: AppBar(
         title: Text(context.l10n.portfolioTitle),
         centerTitle: true,
+        actions: const [SettingsIconButton()],
       ),
       body: BlocConsumer<PortfolioBloc, PortfolioState>(
         listenWhen: (_, curr) =>

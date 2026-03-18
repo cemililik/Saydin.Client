@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
@@ -100,7 +101,11 @@ class _WhatIfPageState extends State<WhatIfPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const _BrandedTitle(), centerTitle: true),
+      appBar: AppBar(
+        title: const _BrandedTitle(),
+        centerTitle: true,
+        actions: const [SettingsIconButton()],
+      ),
       body: BlocConsumer<WhatIfBloc, WhatIfState>(
         listenWhen: (prev, curr) =>
             curr is WhatIfSuccess ||

@@ -11,7 +11,9 @@ lib/
 │   ├── di/                        ← injection.dart (get_it servis locator)
 │   ├── error/                     ← AppError, DioErrorMapper, ErrorReporter
 │   ├── l10n/                      ← L10nContext extension (context.l10n)
-│   └── network/                   ← ApiClient, DeviceIdInterceptor, RetryInterceptor
+│   ├── network/                   ← ApiClient, DeviceIdInterceptor, RetryInterceptor
+│   ├── theme/                     ← AppTheme (light/dark ThemeData), ThemeModeMapper
+│   └── widgets/                   ← InflationToggle, SharePreviewSheet, SettingsIconButton
 ├── features/
 │   ├── what_if/                   ← Ana özellik: "ya alsaydım" hesaplama
 │   │   ├── data/
@@ -26,18 +28,28 @@ lib/
 │   │       ├── pages/             ← WhatIfPage
 │   │       └── widgets/           ← AssetSelector (bottom sheet + arama), DateInput (asset tarih aralığı),
 │   │                                 AmountInput (dinamik tip/ikon), ResultCard, ResultChart (fl_chart)
-│   └── scenarios/                 ← Kaydedilen senaryolar
+│   ├── scenarios/                 ← Kaydedilen senaryolar
+│   │   ├── data/
+│   │   │   ├── models/            ← SavedScenarioModel (fromJson)
+│   │   │   └── repositories/     ← ScenariosRepositoryImpl
+│   │   ├── domain/
+│   │   │   ├── entities/          ← SavedScenario
+│   │   │   ├── repositories/     ← ScenariosRepository (abstract interface)
+│   │   │   └── usecases/         ← GetScenarios, SaveScenario, DeleteScenario
+│   │   └── presentation/
+│   │       ├── bloc/              ← ScenariosBloc, ScenariosEvent, ScenariosState
+│   │       ├── pages/             ← ScenariosPage (swipe-to-delete, refresh)
+│   │       └── widgets/           ← ScenarioCard (avatar, Dismissible)
+│   └── settings/                  ← Kullanıcı ayarları (tema, gelecek tercihler)
 │       ├── data/
-│       │   ├── models/            ← SavedScenarioModel (fromJson)
-│       │   └── repositories/     ← ScenariosRepositoryImpl
+│       │   └── repositories/     ← SettingsRepositoryImpl (SharedPreferences)
 │       ├── domain/
-│       │   ├── entities/          ← SavedScenario
-│       │   ├── repositories/     ← ScenariosRepository (abstract interface)
-│       │   └── usecases/         ← GetScenarios, SaveScenario, DeleteScenario
+│       │   ├── entities/          ← AppSettings (themeMode + copyWith)
+│       │   └── repositories/     ← SettingsRepository (abstract interface)
 │       └── presentation/
-│           ├── bloc/              ← ScenariosBloc, ScenariosEvent, ScenariosState
-│           ├── pages/             ← ScenariosPage (swipe-to-delete, refresh)
-│           └── widgets/           ← ScenarioCard (avatar, Dismissible)
+│           ├── cubit/             ← SettingsCubit (LazySingleton)
+│           ├── pages/             ← SettingsPage
+│           └── widgets/           ← ThemeSelectorTile (SegmentedButton)
 └── l10n/                          ← flutter gen-l10n çıktısı (commit'lenir)
     ├── app_localizations.dart
     ├── app_localizations_tr.dart
@@ -61,8 +73,8 @@ presentation → domain ← data
 
 | Kayıt Tipi | Kullanıldığı Yer | Gerekçe |
 |---|---|---|
-| `registerLazySingleton` | ApiClient, Repository, UseCase, DioErrorMapper, ErrorReporter | Bir kez oluşturulur, tüm uygulama boyunca paylaşılır |
-| `registerFactory` | WhatIfBloc | Her sayfa açılışında yeni instance — eski state sızmaz |
+| `registerLazySingleton` | ApiClient, Repository, UseCase, DioErrorMapper, ErrorReporter, SettingsCubit | Bir kez oluşturulur, tüm uygulama boyunca paylaşılır |
+| `registerFactory` | WhatIfBloc, ComparisonBloc, PortfolioBloc, ScenariosBloc | Her sayfa açılışında yeni instance — eski state sızmaz |
 
 ```dart
 // Sayfa açılırken BLoC sağlanır
@@ -316,6 +328,91 @@ DateFormat('dd.MM.yyyy', 'tr_TR').format(date)  // 01.03.2020
 Color: Colors.green.shade700 / Colors.red.shade700
 Icon:  Icons.trending_up / Icons.trending_down
 ```
+
+## Tema Sistemi
+
+> ADR: [ADR-012](../../../docs/decisions/ADR-012-client-settings-architecture.md)
+
+### ThemeData Yapısı
+
+`core/theme/app_theme.dart` içinde `AppTheme.light` ve `AppTheme.dark` olmak üzere iki statik `ThemeData` tanımlıdır. Her ikisi de aynı seed rengi (`AppColors.primary`) ile `ColorScheme.fromSeed` kullanır.
+
+```dart
+// MaterialApp entegrasyonu (app.dart)
+MaterialApp(
+  theme: AppTheme.light,
+  darkTheme: AppTheme.dark,
+  themeMode: toFlutterThemeMode(settings.themeMode),  // SettingsCubit'ten
+)
+```
+
+`SettingsCubit` `MaterialApp`'in **üstünde** `BlocProvider` ile sağlanır. Tema değiştiğinde `BlocBuilder` tüm MaterialApp'i rebuild eder — bu Flutter'ın önerdiği tema değiştirme yöntemidir.
+
+### AppColors ve Dark Mode
+
+`AppColors` profit/loss renkleri için iki set sunar:
+
+| Renk | Light | Dark |
+|------|-------|------|
+| Kar (profit) | `#2E7D32` (koyu yeşil) | `#66BB6A` (açık yeşil) |
+| Zarar (loss) | `#C62828` (koyu kırmızı) | `#EF5350` (açık kırmızı) |
+
+Helper methodlar:
+```dart
+AppColors.profitColor(Theme.of(context).brightness)
+AppColors.lossColor(Theme.of(context).brightness)
+```
+
+### BottomNavigationBar
+
+Tema renkleri `BottomNavigationBarThemeData` üzerinden `AppTheme.light` ve `AppTheme.dark` içinde tanımlanır. Hardcoded `Colors.white` / `Color(0xFF757575)` **kullanılmaz** — `colorScheme.primary` ve `colorScheme.onSurfaceVariant` kullanılır.
+
+---
+
+## Ayarlar Altyapısı (Settings)
+
+### Depolama
+
+`SharedPreferences` (cihaz lokali). Platform bazında:
+- iOS: `NSUserDefaults`
+- Android: XML shared_prefs
+
+Sunucu senkronizasyonu **yok** — tema gibi tercihler cihaza özeldir.
+
+### SettingsCubit
+
+```
+SettingsCubit (LazySingleton)
+    │
+    │ load()  ← uygulama başlangıcında çağrılır
+    ▼
+AppSettings(themeMode: system)  ← SharedPreferences'tan okunur
+    │
+    │ setThemeMode(dark)
+    ▼
+AppSettings(themeMode: dark)    ← emit + SharedPreferences'a yaz
+```
+
+**Neden Cubit, BLoC değil?** Ayar değiştirme basit bir setter — event/handler deseni gereksiz.
+
+**Neden LazySingleton, Factory değil?** Tema `MaterialApp` seviyesinde tüketilir, uygulama boyunca tek instance yeterli.
+
+### Genişletme
+
+Yeni ayar eklemek:
+1. `AppSettings` entity'sine field ekle (`copyWith`'i güncelle)
+2. `SettingsRepositoryImpl`'e okuma/yazma ekle (yeni SharedPreferences key)
+3. `SettingsCubit`'e setter ekle
+4. `SettingsPage`'e yeni widget ekle
+5. `app_tr.arb`'a l10n string'leri ekle
+
+### Navigasyon
+
+Settings sayfasına erişim: `SettingsIconButton` (gear icon) → tüm ana sayfa AppBar'larının `actions`'ında bulunur. `Navigator.push` ile `SettingsPage`'e gider.
+
+`SettingsCubit` `MaterialApp` üstünde olduğu için push edilen route'tan erişilemez — `SettingsIconButton` `BlocProvider.value` ile `sl<SettingsCubit>()` singleton'ını route'a geçirir.
+
+---
 
 ## CI/CD (GitHub Actions)
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
@@ -143,7 +144,11 @@ class _ComparisonPageState extends State<ComparisonPage> {
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.compareTitle), centerTitle: true),
+        appBar: AppBar(
+          title: Text(l10n.compareTitle),
+          centerTitle: true,
+          actions: const [SettingsIconButton()],
+        ),
         body: BlocConsumer<ComparisonBloc, ComparisonState>(
           listenWhen: (_, curr) => curr is ComparisonSuccess,
           listener: (context, state) {
