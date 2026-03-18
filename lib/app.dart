@@ -18,6 +18,7 @@ import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart'
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_state.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/pages/scenarios_page.dart';
+import 'package:saydin/features/favorites/presentation/cubit/favorites_cubit.dart';
 import 'package:saydin/features/settings/domain/entities/app_settings.dart';
 import 'package:saydin/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
@@ -31,8 +32,11 @@ class SaydinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<SettingsCubit>()..load(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => sl<SettingsCubit>()..load()),
+        BlocProvider(create: (_) => sl<FavoritesCubit>()..load()),
+      ],
       child: BlocBuilder<SettingsCubit, AppSettings>(
         builder: (context, settings) {
           return MaterialApp(

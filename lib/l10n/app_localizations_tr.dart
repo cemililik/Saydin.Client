@@ -403,4 +403,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settingsVersion => 'Versiyon';
+
+  @override
+  String get categoryFavorites => 'Favoriler';
+
+  @override
+  String favoritesMaxReached(int max) {
+    return 'En fazla $max favori ekleyebilirsiniz.';
+  }
 }

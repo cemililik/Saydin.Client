@@ -16,6 +16,9 @@ import 'package:saydin/features/scenarios/domain/usecases/delete_scenario.dart';
 import 'package:saydin/features/scenarios/domain/usecases/get_scenarios.dart';
 import 'package:saydin/features/scenarios/domain/usecases/save_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
+import 'package:saydin/features/favorites/data/repositories/favorites_repository_impl.dart';
+import 'package:saydin/features/favorites/domain/repositories/favorites_repository.dart';
+import 'package:saydin/features/favorites/presentation/cubit/favorites_cubit.dart';
 import 'package:saydin/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:saydin/features/settings/domain/repositories/settings_repository.dart';
 import 'package:saydin/features/settings/presentation/cubit/settings_cubit.dart';
@@ -56,6 +59,12 @@ void configureDependencies() {
     () => SettingsRepositoryImpl(SharedPreferencesAsync()),
   );
   sl.registerLazySingleton(() => SettingsCubit(sl()));
+
+  // Favorites
+  sl.registerLazySingleton<FavoritesRepository>(
+    () => FavoritesRepositoryImpl(SharedPreferencesAsync()),
+  );
+  sl.registerLazySingleton(() => FavoritesCubit(sl()));
 
   // App Config
   sl.registerLazySingleton<AppConfigRepository>(

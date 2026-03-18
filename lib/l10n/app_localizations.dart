@@ -837,6 +837,18 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Versiyon'**
   String get settingsVersion;
+
+  /// No description provided for @categoryFavorites.
+  ///
+  /// In tr, this message translates to:
+  /// **'Favoriler'**
+  String get categoryFavorites;
+
+  /// No description provided for @favoritesMaxReached.
+  ///
+  /// In tr, this message translates to:
+  /// **'En fazla {max} favori ekleyebilirsiniz.'**
+  String favoritesMaxReached(int max);
 }
 
 class _AppLocalizationsDelegate

@@ -174,5 +174,13 @@
   "themeLight": "Açık",
   "themeDark": "Koyu",
   "themeSystem": "Sistem",
-  "settingsVersion": "Versiyon"
+  "settingsVersion": "Versiyon",
+
+  "categoryFavorites": "Favoriler",
+  "favoritesMaxReached": "En fazla {max} favori ekleyebilirsiniz.",
+  "@favoritesMaxReached": {
+    "placeholders": {
+      "max": { "type": "int" }
+    }
+  }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/features/favorites/presentation/cubit/favorites_cubit.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
@@ -39,9 +41,12 @@ class AssetSelector extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => _AssetSearchSheet(
-        assets: visibleAssets,
-        selectedSymbol: selectedSymbol,
+      builder: (_) => BlocProvider.value(
+        value: context.read<FavoritesCubit>(),
+        child: _AssetSearchSheet(
+          assets: visibleAssets,
+          selectedSymbol: selectedSymbol,
+        ),
       ),
     );
     if (selected != null) onChanged(selected);
@@ -104,6 +109,7 @@ class _AssetSearchSheetState extends State<_AssetSearchSheet> {
 
   String _categoryLabel(String category, AppLocalizations l10n) =>
       switch (category) {
+        'favorites' => l10n.categoryFavorites,
         'currency' => l10n.categoryCurrency,
         'precious_metal' => l10n.categoryPreciousMetal,
         'crypto' => l10n.categoryCrypto,
@@ -123,11 +129,9 @@ class _AssetSearchSheetState extends State<_AssetSearchSheet> {
         .toList();
   }
 
-  /// Arama yoksa kategorilere göre gruplandırılmış liste döner.
-  /// Her eleman ya bir Asset ya da String (kategori başlığı).
-  List<Object> get _groupedItems {
+  List<Object> _groupedItems(Set<String> favorites) {
     final filtered = _filtered;
-    if (_query.isNotEmpty) return filtered; // arama modunda düz liste
+    if (_query.isNotEmpty) return filtered;
 
     final grouped = <String, List<Asset>>{};
     for (final a in filtered) {
@@ -135,10 +139,23 @@ class _AssetSearchSheetState extends State<_AssetSearchSheet> {
     }
 
     final items = <Object>[];
+
+    // Favoriler bölümü (en üstte)
+    if (favorites.isNotEmpty) {
+      final favoriteAssets = filtered
+          .where((a) => favorites.contains(a.symbol))
+          .toList();
+      if (favoriteAssets.isNotEmpty) {
+        items.add('favorites');
+        items.addAll(favoriteAssets);
+      }
+    }
+
+    // Kategoriler
     for (final cat in _categoryOrder) {
       final list = grouped[cat];
       if (list == null || list.isEmpty) continue;
-      items.add(cat); // başlık sentinel
+      items.add(cat);
       items.addAll(list);
     }
     // Sıralamada olmayan kategoriler
@@ -154,95 +171,128 @@ class _AssetSearchSheetState extends State<_AssetSearchSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final items = _groupedItems;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.75,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) => Column(
-        children: [
-          // Tutaç
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.outlineVariant,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // Arama kutusu
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              autofocus: false,
-              decoration: InputDecoration(
-                hintText: l10n.searchAsset,
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
-                isDense: true,
-                suffixIcon: _query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                        },
-                      )
-                    : null,
+    return BlocBuilder<FavoritesCubit, Set<String>>(
+      builder: (context, favorites) {
+        final items = _groupedItems(favorites);
+
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.75,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) => Column(
+            children: [
+              // Tutaç
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-              onChanged: (v) => setState(() => _query = v),
-            ),
-          ),
-          // Liste
-          Expanded(
-            child: ListView.builder(
-              controller: scrollController,
-              itemCount: items.length,
-              itemBuilder: (context, i) {
-                final item = items[i];
-
-                // Kategori başlığı
-                if (item is String) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Text(
-                      _categoryLabel(item, l10n).toUpperCase(),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  );
-                }
-
-                // Asset satırı
-                final asset = item as Asset;
-                final isSelected = asset.symbol == widget.selectedSymbol;
-
-                return ListTile(
-                  title: Text(asset.displayName),
-                  subtitle: Text(
-                    asset.symbol,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+              // Arama kutusu
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: false,
+                  decoration: InputDecoration(
+                    hintText: l10n.searchAsset,
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                            },
+                          )
+                        : null,
                   ),
-                  trailing: isSelected
-                      ? Icon(Icons.check, color: theme.colorScheme.primary)
-                      : null,
-                  selected: isSelected,
-                  onTap: () => Navigator.of(context).pop(asset.symbol),
-                );
-              },
-            ),
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+              ),
+              // Liste
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: items.length,
+                  itemBuilder: (context, i) {
+                    final item = items[i];
+
+                    // Kategori başlığı
+                    if (item is String) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Text(
+                          _categoryLabel(item, l10n).toUpperCase(),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      );
+                    }
+
+                    // Asset satırı
+                    final asset = item as Asset;
+                    final isSelected = asset.symbol == widget.selectedSymbol;
+                    final isFav = favorites.contains(asset.symbol);
+                    final cubit = context.read<FavoritesCubit>();
+
+                    return ListTile(
+                      title: Text(asset.displayName),
+                      subtitle: Text(
+                        asset.symbol,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      leading: IconButton(
+                        icon: Icon(
+                          isFav ? Icons.star : Icons.star_border,
+                          color: isFav
+                              ? Colors.amber
+                              : theme.colorScheme.outlineVariant,
+                        ),
+                        onPressed: () {
+                          if (!isFav && cubit.isFull) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  l10n.favoritesMaxReached(
+                                    FavoritesCubit.maxFavorites,
+                                  ),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          cubit.toggle(asset.symbol);
+                        },
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      trailing: isSelected
+                          ? Icon(Icons.check, color: theme.colorScheme.primary)
+                          : null,
+                      selected: isSelected,
+                      onTap: () => Navigator.of(context).pop(asset.symbol),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
