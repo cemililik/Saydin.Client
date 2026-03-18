@@ -81,5 +81,90 @@
   },
   "dateAdjustedWarning": "Seçilen tarih bu varlık için uygun değil, en yakın geçerli tarihe ayarlandı.",
   "scenarioDuplicate": "Bu senaryo zaten kaydedilmiş.",
-  "priceDisclaimer": "Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir."
+  "priceDisclaimer": "Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir.",
+  "tabCompare": "Karşılaştır",
+  "compareTitle": "Varlık Karşılaştırma",
+  "compareSelectAssets": "Varlık Seçin (2-5 adet)",
+  "compareMinAssets": "En az 2 varlık seçiniz.",
+  "compareButton": "Karşılaştır",
+  "comparing": "Karşılaştırılıyor...",
+  "compareResultTitle": "Karşılaştırma Sonuçları",
+  "compareRankLabel": "{rank}. Sıra",
+  "@compareRankLabel": {
+    "placeholders": { "rank": { "type": "int" } }
+  },
+  "compareAddAsset": "Varlık Ekle",
+  "compareAllCategories": "Tümü",
+  "compareNoAssetsFound": "Varlık bulunamadı",
+
+  "inflationAdjust": "Enflasyona Göre Düzelt",
+  "inflationAdjustSubtitle": "TÜFE bazlı reel getiriyi hesaplar",
+  "premiumFeature": "Premium",
+  "realReturn": "Reel Getiri",
+  "realProfitLoss": "Reel Kar / Zarar",
+  "cumulativeInflation": "Birikimli Enflasyon",
+  "inflationSectionTitle": "Enflasyon Düzeltmesi",
+  "dateAdjustedNote": "Tarih düzeltmesi uygulandı",
+  "inflationDataAsOf": "Endeks baz tarihi: {date}",
+  "@inflationDataAsOf": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "priceDateAdjusted": "Fiyat bulunamadı: {requested} ({reason}) — {actual} tarihi kullanıldı.",
+  "@priceDateAdjusted": {
+    "placeholders": {
+      "requested": { "type": "String" },
+      "reason":    { "type": "String" },
+      "actual":    { "type": "String" }
+    }
+  },
+  "reasonWeekend": "haftasonu",
+  "reasonHoliday": "resmi tatil veya fiyat yok",
+  "labelBuyDate":  "Alış",
+  "labelSellDate": "Satış",
+
+  "shareResult": "Paylaş",
+  "sharePreviewTitle": "Paylaşım Önizlemesi",
+  "sharingInProgress": "Hazırlanıyor...",
+
+  "tabPortfolio": "Portföy",
+  "portfolioTitle": "Portföy Oluşturucu",
+  "portfolioDateSection": "Yatırım Dönemi",
+  "portfolioAssetsSection": "Varlıklar",
+  "portfolioAddAsset": "Varlık Ekle",
+  "portfolioAddAssetTitle": "Portföye Varlık Ekle",
+  "portfolioCalculate": "Portföyü Hesapla",
+  "portfolioCalculating": "Hesaplanıyor...",
+  "portfolioReset": "Sıfırla",
+  "portfolioEmpty": "Henüz varlık eklenmedi.",
+  "portfolioEmptyHint": "Varlık ekleyerek portföyünüzün tarihsel getirisini hesaplayın.",
+  "portfolioQuotaInfo": "Bu hesaplama {count} hesaplama hakkı kullanacak.",
+  "@portfolioQuotaInfo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "portfolioTotalInitial": "Toplam Yatırım",
+  "portfolioTotalFinal": "Toplam Son Değer",
+  "portfolioTotalReturn": "Toplam Getiri",
+  "portfolioChartTitle": "Son Değer Dağılımı",
+  "portfolioBuyDateRequired": "Başlangıç tarihi giriniz",
+  "portfolioMinItems": "En az 1 varlık ekleyin.",
+  "portfolioHistoryLimit": "Ücretsiz planda son {months} aya ait tarih seçilebilir.",
+  "@portfolioHistoryLimit": {
+    "placeholders": {
+      "months": { "type": "int" }
+    }
+  },
+  "portfolioEditAssetTitle": "Varlığı Düzenle",
+  "portfolioSaveAsset": "Kaydet",
+  "portfolioInflationLabel": "Enflasyona Göre Düzelt",
+  "portfolioRealReturn": "Reel Toplam Getiri",
+  "portfolioRealProfitLoss": "Reel Kar / Zarar",
+
+  "scenarioTypeWhatIf": "Hesaplama",
+  "scenarioTypeComparison": "Karşılaştırma",
+  "scenarioTypePortfolio": "Portföy",
+
+  "brandedTitlePrefix": "al/sat ",
+  "brandedTitleSuffix": "saydın"
 }

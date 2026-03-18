@@ -36,7 +36,7 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
   ) async {
     emit(ScenariosLoading(scenarios: state.scenarios));
     try {
-      final scenarios = await _getScenarios();
+      final scenarios = await _getScenarios(plan: event.plan);
       emit(ScenariosLoaded(scenarios));
     } on DioException catch (e, st) {
       final error = _errorMapper.map(e);
@@ -63,6 +63,7 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
 
     final isDuplicate = current.any(
       (s) =>
+          s.type == event.type &&
           s.assetSymbol == event.assetSymbol &&
           _isSameDay(s.buyDate, event.buyDate) &&
           _isSameDay(s.sellDate, event.sellDate) &&
@@ -83,8 +84,10 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
         sellDate: event.sellDate,
         amount: event.amount,
         amountType: event.amountType,
+        type: event.type,
+        extraData: event.extraData,
       );
-      emit(ScenariosLoaded([saved, ...current]));
+      emit(ScenariosSaved([saved, ...current]));
     } on DioException catch (e, st) {
       final error = _errorMapper.map(e);
       if (error is UnknownError || error is ServerError) {

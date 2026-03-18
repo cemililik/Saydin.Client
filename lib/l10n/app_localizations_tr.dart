@@ -200,4 +200,186 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get priceDisclaimer =>
       'Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir.';
+
+  @override
+  String get tabCompare => 'Karşılaştır';
+
+  @override
+  String get compareTitle => 'Varlık Karşılaştırma';
+
+  @override
+  String get compareSelectAssets => 'Varlık Seçin (2-5 adet)';
+
+  @override
+  String get compareMinAssets => 'En az 2 varlık seçiniz.';
+
+  @override
+  String get compareButton => 'Karşılaştır';
+
+  @override
+  String get comparing => 'Karşılaştırılıyor...';
+
+  @override
+  String get compareResultTitle => 'Karşılaştırma Sonuçları';
+
+  @override
+  String compareRankLabel(int rank) {
+    return '$rank. Sıra';
+  }
+
+  @override
+  String get compareAddAsset => 'Varlık Ekle';
+
+  @override
+  String get compareAllCategories => 'Tümü';
+
+  @override
+  String get compareNoAssetsFound => 'Varlık bulunamadı';
+
+  @override
+  String get inflationAdjust => 'Enflasyona Göre Düzelt';
+
+  @override
+  String get inflationAdjustSubtitle => 'TÜFE bazlı reel getiriyi hesaplar';
+
+  @override
+  String get premiumFeature => 'Premium';
+
+  @override
+  String get realReturn => 'Reel Getiri';
+
+  @override
+  String get realProfitLoss => 'Reel Kar / Zarar';
+
+  @override
+  String get cumulativeInflation => 'Birikimli Enflasyon';
+
+  @override
+  String get inflationSectionTitle => 'Enflasyon Düzeltmesi';
+
+  @override
+  String get dateAdjustedNote => 'Tarih düzeltmesi uygulandı';
+
+  @override
+  String inflationDataAsOf(String date) {
+    return 'Endeks baz tarihi: $date';
+  }
+
+  @override
+  String priceDateAdjusted(String requested, String reason, String actual) {
+    return 'Fiyat bulunamadı: $requested ($reason) — $actual tarihi kullanıldı.';
+  }
+
+  @override
+  String get reasonWeekend => 'haftasonu';
+
+  @override
+  String get reasonHoliday => 'resmi tatil veya fiyat yok';
+
+  @override
+  String get labelBuyDate => 'Alış';
+
+  @override
+  String get labelSellDate => 'Satış';
+
+  @override
+  String get shareResult => 'Paylaş';
+
+  @override
+  String get sharePreviewTitle => 'Paylaşım Önizlemesi';
+
+  @override
+  String get sharingInProgress => 'Hazırlanıyor...';
+
+  @override
+  String get tabPortfolio => 'Portföy';
+
+  @override
+  String get portfolioTitle => 'Portföy Oluşturucu';
+
+  @override
+  String get portfolioDateSection => 'Yatırım Dönemi';
+
+  @override
+  String get portfolioAssetsSection => 'Varlıklar';
+
+  @override
+  String get portfolioAddAsset => 'Varlık Ekle';
+
+  @override
+  String get portfolioAddAssetTitle => 'Portföye Varlık Ekle';
+
+  @override
+  String get portfolioCalculate => 'Portföyü Hesapla';
+
+  @override
+  String get portfolioCalculating => 'Hesaplanıyor...';
+
+  @override
+  String get portfolioReset => 'Sıfırla';
+
+  @override
+  String get portfolioEmpty => 'Henüz varlık eklenmedi.';
+
+  @override
+  String get portfolioEmptyHint =>
+      'Varlık ekleyerek portföyünüzün tarihsel getirisini hesaplayın.';
+
+  @override
+  String portfolioQuotaInfo(int count) {
+    return 'Bu hesaplama $count hesaplama hakkı kullanacak.';
+  }
+
+  @override
+  String get portfolioTotalInitial => 'Toplam Yatırım';
+
+  @override
+  String get portfolioTotalFinal => 'Toplam Son Değer';
+
+  @override
+  String get portfolioTotalReturn => 'Toplam Getiri';
+
+  @override
+  String get portfolioChartTitle => 'Son Değer Dağılımı';
+
+  @override
+  String get portfolioBuyDateRequired => 'Başlangıç tarihi giriniz';
+
+  @override
+  String get portfolioMinItems => 'En az 1 varlık ekleyin.';
+
+  @override
+  String portfolioHistoryLimit(int months) {
+    return 'Ücretsiz planda son $months aya ait tarih seçilebilir.';
+  }
+
+  @override
+  String get portfolioEditAssetTitle => 'Varlığı Düzenle';
+
+  @override
+  String get portfolioSaveAsset => 'Kaydet';
+
+  @override
+  String get portfolioInflationLabel => 'Enflasyona Göre Düzelt';
+
+  @override
+  String get portfolioRealReturn => 'Reel Toplam Getiri';
+
+  @override
+  String get portfolioRealProfitLoss => 'Reel Kar / Zarar';
+
+  @override
+  String get scenarioTypeWhatIf => 'Hesaplama';
+
+  @override
+  String get scenarioTypeComparison => 'Karşılaştırma';
+
+  @override
+  String get scenarioTypePortfolio => 'Portföy';
+
+  @override
+  String get brandedTitlePrefix => 'al/sat ';
+
+  @override
+  String get brandedTitleSuffix => 'saydın';
 }

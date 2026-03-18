@@ -26,6 +26,7 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
     DateTime? sellDate,
     required num amount,
     required String amountType,
+    bool includeInflation = false,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       ApiEndpoints.whatIfCalculate,
@@ -35,6 +36,7 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
         if (sellDate != null) 'sellDate': _formatDate(sellDate),
         'amount': amount,
         'amountType': amountType,
+        'includeInflation': includeInflation,
       },
     );
     final data = response.data;

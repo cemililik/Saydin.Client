@@ -30,6 +30,10 @@ dependencies:
   # Charts
   fl_chart: ^0.70.2
 
+  # Sharing
+  share_plus: ^10.1.4
+  path_provider: ^2.1.5
+
   # Observability
   sentry_flutter: ^8.14.2
 

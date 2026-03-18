@@ -119,6 +119,19 @@ final value = result?.price ?? 0;
 
 ---
 
+## Commit Kuralı (KRİTİK)
+
+**Kod değişikliklerini commit etmeden önce mutlaka analiz ve testleri çalıştır.**
+
+```bash
+/Users/dev/development/flutter/bin/flutter analyze --fatal-infos
+/Users/dev/development/flutter/bin/flutter test
+```
+
+Analiz veya test başarısız olursa commit atma, önce hatayı düzelt.
+
+---
+
 ## Lokalizasyon Kuralları (KRİTİK)
 
 **Tüm kullanıcıya görünen string'ler `l10n/app_tr.arb` dosyasında olmalıdır.**
@@ -192,7 +205,9 @@ Color myColor = Color(0xFF2E7D32);  // magic number
 
 ## API İstemcisi
 
-- Base URL environment config'den gelir — hardcode YASAK
+- Base URL dart-define ile geçilir — hardcode YASAK
+- Aktif backend URL: `https://fumed-cleverishly-moses.ngrok-free.dev/`
+- Deploy komutu: `flutter run --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ --device-id <device-id> --release`
 - `X-Device-ID` header her istekte otomatik eklenir (interceptor)
 - `FlutterSecureStorage` ile UUID oluşturulur ve saklanır
 

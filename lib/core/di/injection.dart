@@ -2,6 +2,13 @@ import 'package:get_it/get_it.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/network/api_client.dart';
+import 'package:saydin/features/comparison/data/repositories/comparison_repository_impl.dart';
+import 'package:saydin/features/comparison/domain/repositories/comparison_repository.dart';
+import 'package:saydin/features/comparison/domain/usecases/compare_what_if.dart';
+import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
+import 'package:saydin/features/config/data/repositories/app_config_repository_impl.dart';
+import 'package:saydin/features/config/domain/repositories/app_config_repository.dart';
+import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/data/repositories/scenarios_repository_impl.dart';
 import 'package:saydin/features/scenarios/domain/repositories/scenarios_repository.dart';
 import 'package:saydin/features/scenarios/domain/usecases/delete_scenario.dart';
@@ -10,6 +17,8 @@ import 'package:saydin/features/scenarios/domain/usecases/save_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/what_if/data/repositories/what_if_repository_impl.dart';
 import 'package:saydin/features/what_if/domain/repositories/what_if_repository.dart';
+import 'package:saydin/features/portfolio/domain/usecases/calculate_portfolio.dart';
+import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
@@ -38,6 +47,12 @@ void configureDependencies() {
   sl.registerLazySingleton(() => const DioErrorMapper());
   sl.registerLazySingleton(() => const ErrorReporter());
 
+  // App Config
+  sl.registerLazySingleton<AppConfigRepository>(
+    () => AppConfigRepositoryImpl(sl<ApiClient>().dio),
+  );
+  sl.registerLazySingleton(() => AppConfigCubit(sl()));
+
   // Repositories
   sl.registerLazySingleton<WhatIfRepository>(
     () => WhatIfRepositoryImpl(sl<ApiClient>().dio),
@@ -46,10 +61,23 @@ void configureDependencies() {
   // Use cases
   sl.registerLazySingleton(() => CalculateWhatIf(sl()));
   sl.registerLazySingleton(() => GetAssets(sl()));
+  sl.registerLazySingleton(() => CalculatePortfolio(sl()));
+
+  // Comparison
+  sl.registerLazySingleton<ComparisonRepository>(
+    () => ComparisonRepositoryImpl(sl<ApiClient>().dio),
+  );
+  sl.registerLazySingleton(() => CompareWhatIf(sl()));
 
   // BLoC (factory — her sayfa açılışında yeni instance)
   sl.registerFactory(
     () => WhatIfBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
+  );
+  sl.registerFactory(
+    () => ComparisonBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
+  );
+  sl.registerFactory(
+    () => PortfolioBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
   );
 
   // Scenarios

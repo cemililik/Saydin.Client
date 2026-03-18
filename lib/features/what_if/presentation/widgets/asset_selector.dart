@@ -169,7 +169,7 @@ class _AssetSearchSheetState extends State<_AssetSearchSheet> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: TextField(
               controller: _searchController,
-              autofocus: true,
+              autofocus: false,
               decoration: InputDecoration(
                 hintText: l10n.searchAsset,
                 prefixIcon: const Icon(Icons.search),
