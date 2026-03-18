@@ -1,14 +1,17 @@
 import 'package:equatable/equatable.dart';
+import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 
 abstract class ScenariosEvent extends Equatable {
   const ScenariosEvent();
 }
 
 class ScenariosRequested extends ScenariosEvent {
-  const ScenariosRequested();
+  final String plan;
+
+  const ScenariosRequested({this.plan = 'free'});
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [plan];
 }
 
 class ScenarioSaveRequested extends ScenariosEvent {
@@ -18,6 +21,8 @@ class ScenarioSaveRequested extends ScenariosEvent {
   final DateTime? sellDate;
   final num amount;
   final String amountType;
+  final ScenarioType type;
+  final Map<String, dynamic>? extraData;
 
   const ScenarioSaveRequested({
     required this.assetSymbol,
@@ -26,6 +31,8 @@ class ScenarioSaveRequested extends ScenariosEvent {
     this.sellDate,
     required this.amount,
     required this.amountType,
+    this.type = ScenarioType.whatIf,
+    this.extraData,
   });
 
   @override
@@ -36,6 +43,7 @@ class ScenarioSaveRequested extends ScenariosEvent {
     sellDate,
     amount,
     amountType,
+    type,
   ];
 }
 

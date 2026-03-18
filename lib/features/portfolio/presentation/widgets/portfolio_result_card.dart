@@ -73,6 +73,42 @@ class PortfolioResultCard extends StatelessWidget {
               bold: true,
             ),
 
+            // Enflasyon bölümü
+            if (result.hasInflation) ...[
+              const Divider(height: 24),
+              Text(
+                l10n.inflationSectionTitle,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _Row(
+                l10n.cumulativeInflation,
+                '${(result.totalCumulativeInflationPercent ?? 0) >= 0 ? '+' : ''}'
+                '${_pctFormatter.format((result.totalCumulativeInflationPercent ?? 0) / 100)}',
+              ),
+              _Row(
+                l10n.portfolioRealReturn,
+                '${(result.totalRealProfitLossPercent ?? 0) >= 0 ? '+' : ''}'
+                '${_pctFormatter.format((result.totalRealProfitLossPercent ?? 0) / 100)}',
+                valueColor: (result.totalRealProfitLossPercent ?? 0) >= 0
+                    ? AppColors.profit
+                    : AppColors.loss,
+                bold: true,
+              ),
+              if (result.totalRealProfitLossTry != null)
+                _Row(
+                  l10n.portfolioRealProfitLoss,
+                  '${(result.totalRealProfitLossTry ?? 0) >= 0 ? '+' : ''}'
+                  '${_tryFormatter.format(result.totalRealProfitLossTry ?? 0)}',
+                  valueColor: (result.totalRealProfitLossTry ?? 0) >= 0
+                      ? AppColors.profit
+                      : AppColors.loss,
+                ),
+            ],
+
             const Divider(height: 24),
 
             // ── Pasta grafik ──────────────────────────────────────────

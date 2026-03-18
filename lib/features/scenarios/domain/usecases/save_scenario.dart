@@ -13,6 +13,8 @@ class SaveScenario {
     DateTime? sellDate,
     required num amount,
     required String amountType,
+    ScenarioType type = ScenarioType.whatIf,
+    Map<String, dynamic>? extraData,
   }) => _repository.saveScenario(
     assetSymbol: assetSymbol,
     assetDisplayName: assetDisplayName,
@@ -20,5 +22,7 @@ class SaveScenario {
     sellDate: sellDate,
     amount: amount,
     amountType: amountType,
+    type: type,
+    extraData: extraData,
   );
 }

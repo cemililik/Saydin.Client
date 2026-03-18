@@ -9,12 +9,14 @@ sealed class PortfolioState extends Equatable {
   final List<PortfolioItem> items;
   final DateTime? buyDate;
   final DateTime? sellDate;
+  final bool includeInflation;
 
   const PortfolioState({
     this.assets = const [],
     this.items = const [],
     this.buyDate,
     this.sellDate,
+    this.includeInflation = false,
   });
 
   PortfolioState copyWith({
@@ -22,15 +24,23 @@ sealed class PortfolioState extends Equatable {
     List<PortfolioItem>? items,
     DateTime? buyDate,
     Object? sellDate = _sentinel,
+    bool? includeInflation,
   }) => _PortfolioEditing(
     assets: assets ?? this.assets,
     items: items ?? this.items,
     buyDate: buyDate ?? this.buyDate,
     sellDate: sellDate == _sentinel ? this.sellDate : sellDate as DateTime?,
+    includeInflation: includeInflation ?? this.includeInflation,
   );
 
   @override
-  List<Object?> get props => [assets, items, buyDate, sellDate];
+  List<Object?> get props => [
+    assets,
+    items,
+    buyDate,
+    sellDate,
+    includeInflation,
+  ];
 }
 
 // Sentinel object to allow passing null for sellDate in copyWith
@@ -43,6 +53,7 @@ final class _PortfolioEditing extends PortfolioState {
     super.items,
     super.buyDate,
     super.sellDate,
+    super.includeInflation,
   });
 }
 
@@ -56,6 +67,7 @@ final class PortfolioAssetsLoading extends PortfolioState {
     super.items,
     super.buyDate,
     super.sellDate,
+    super.includeInflation,
   });
 }
 
@@ -65,6 +77,7 @@ final class PortfolioEditing extends PortfolioState {
     super.items,
     super.buyDate,
     super.sellDate,
+    super.includeInflation,
   });
 }
 
@@ -74,6 +87,7 @@ final class PortfolioCalculating extends PortfolioState {
     required super.items,
     super.buyDate,
     super.sellDate,
+    super.includeInflation,
   });
 }
 
@@ -85,6 +99,7 @@ final class PortfolioSuccess extends PortfolioState {
     required super.items,
     super.buyDate,
     super.sellDate,
+    super.includeInflation,
     required this.result,
   });
 
@@ -100,6 +115,7 @@ final class PortfolioFailure extends PortfolioState {
     required super.items,
     super.buyDate,
     super.sellDate,
+    super.includeInflation,
     required this.error,
   });
 

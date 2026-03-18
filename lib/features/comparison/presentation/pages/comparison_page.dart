@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
+import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_event.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_state.dart';
 import 'package:saydin/features/comparison/presentation/widgets/comparison_result_card.dart';
+import 'package:saydin/features/comparison/presentation/widgets/comparison_share_card_widget.dart';
+import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
+import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
+import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/widgets/amount_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/date_input.dart';
@@ -53,6 +59,56 @@ class _ComparisonPageState extends State<ComparisonPage> {
       ..add(const ComparisonCalculateRequested());
   }
 
+  void _saveComparisonScenario(BuildContext ctx, ComparisonSuccess state) {
+    if (state.buyDate == null) return;
+    final winner = state.result.results.firstOrNull;
+    final symbols = state.selectedSymbols.join(',');
+    ctx.read<ScenariosBloc>().add(
+      ScenarioSaveRequested(
+        assetSymbol: symbols,
+        assetDisplayName:
+            '${state.result.results.length} Varlık Karşılaştırması',
+        buyDate: state.buyDate!,
+        sellDate: state.sellDate,
+        amount: state.amount ?? 0,
+        amountType: 'try',
+        type: ScenarioType.comparison,
+        extraData: {
+          'winnerName': winner?.calculation.assetDisplayName ?? '',
+          'winnerReturn': winner?.calculation.profitLossPercent ?? 0.0,
+          'includeInflation': state.includeInflation,
+        },
+      ),
+    );
+  }
+
+  void _showComparisonShare(
+    BuildContext ctx,
+    CompareResult result,
+    DateTime? buyDate,
+    DateTime? sellDate,
+  ) {
+    if (buyDate == null) return;
+    final winner = result.results.firstOrNull;
+    final winnerName = winner?.calculation.assetDisplayName ?? '';
+    final winnerPct = winner?.calculation.profitLossPercent ?? 0;
+    final sign = winnerPct >= 0 ? '+' : '';
+    final shareText =
+        'Hangi yatırım daha kazandırdı? 🏆 $winnerName: $sign${winnerPct.toStringAsFixed(2).replaceAll('.', ',')}% 📊 #saydın';
+    showModalBottomSheet<void>(
+      context: ctx,
+      isScrollControlled: true,
+      builder: (_) => SharePreviewSheet(
+        shareText: shareText,
+        cardWidget: ComparisonShareCardWidget(
+          result: result,
+          buyDate: buyDate,
+          sellDate: sellDate,
+        ),
+      ),
+    );
+  }
+
   void _showAssetPicker(BuildContext pageContext) {
     final bloc = pageContext.read<ComparisonBloc>();
     showModalBottomSheet<void>(
@@ -74,10 +130,21 @@ class _ComparisonPageState extends State<ComparisonPage> {
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.compareTitle), centerTitle: false),
+        appBar: AppBar(title: Text(l10n.compareTitle), centerTitle: true),
         body: BlocConsumer<ComparisonBloc, ComparisonState>(
           listenWhen: (_, curr) => curr is ComparisonSuccess,
           listener: (context, state) {
+            if (state is ComparisonSuccess && state.amount != null) {
+              final controllerAmount = num.tryParse(
+                _amountController.text.replaceAll(',', '.'),
+              );
+              if (controllerAmount != state.amount) {
+                _amountController.text = state.amount.toString().replaceAll(
+                  '.',
+                  ',',
+                );
+              }
+            }
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && _scrollController.hasClients) {
                 _scrollController.animateTo(
@@ -260,6 +327,38 @@ class _ComparisonPageState extends State<ComparisonPage> {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: ComparisonResultCard(item: item),
                       ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                _saveComparisonScenario(context, state),
+                            icon: const Icon(Icons.bookmark_outline),
+                            label: Text(l10n.saveScenario),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showComparisonShare(
+                              context,
+                              state.result,
+                              state.buyDate,
+                              state.sellDate,
+                            ),
+                            icon: const Icon(Icons.share_outlined),
+                            label: Text(l10n.shareResult),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ],

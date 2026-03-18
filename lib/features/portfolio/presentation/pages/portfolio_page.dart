@@ -3,11 +3,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/widgets/share_preview_sheet.dart';
+import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
+import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_event.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_state.dart';
 import 'package:saydin/features/portfolio/presentation/widgets/portfolio_add_item_sheet.dart';
 import 'package:saydin/features/portfolio/presentation/widgets/portfolio_result_card.dart';
+import 'package:saydin/features/portfolio/presentation/widgets/portfolio_share_card_widget.dart';
+import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
+import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
+import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
 import 'package:saydin/features/what_if/presentation/widgets/date_input.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
@@ -39,7 +46,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
       isScrollControlled: true,
       builder: (_) => PortfolioAddItemSheet(
         assets: state.assets,
-        onAdd:
+        onSave:
             ({
               required assetSymbol,
               required assetDisplayName,
@@ -53,6 +60,82 @@ class _PortfolioPageState extends State<PortfolioPage> {
                 amountType: amountType,
               ),
             ),
+      ),
+    );
+  }
+
+  void _showEditSheet(PortfolioState state, PortfolioItem item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => PortfolioAddItemSheet(
+        assets: state.assets,
+        editItem: item,
+        onSave:
+            ({
+              required assetSymbol,
+              required assetDisplayName,
+              required amount,
+              required amountType,
+            }) => context.read<PortfolioBloc>().add(
+              PortfolioItemUpdated(
+                id: item.id,
+                assetSymbol: assetSymbol,
+                assetDisplayName: assetDisplayName,
+                amount: amount,
+                amountType: amountType,
+              ),
+            ),
+      ),
+    );
+  }
+
+  void _savePortfolioScenario(PortfolioSuccess state) {
+    if (state.buyDate == null) return;
+    context.read<ScenariosBloc>().add(
+      ScenarioSaveRequested(
+        assetSymbol: 'PORTFOLIO',
+        assetDisplayName: 'Portföy (${state.items.length} varlık)',
+        buyDate: state.buyDate!,
+        sellDate: state.sellDate,
+        amount: state.result.totalInitialValueTry,
+        amountType: 'try',
+        type: ScenarioType.portfolio,
+        extraData: {
+          'totalReturn': state.result.totalProfitLossPercent,
+          'includeInflation': state.includeInflation,
+          'items': state.items
+              .map(
+                (item) => {
+                  'assetSymbol': item.assetSymbol,
+                  'assetDisplayName': item.assetDisplayName,
+                  'amount': item.amount,
+                  'amountType': item.amountType,
+                },
+              )
+              .toList(),
+        },
+      ),
+    );
+  }
+
+  void _showPortfolioShare(PortfolioSuccess state) {
+    final sign = state.result.totalProfitLossPercent >= 0 ? '+' : '';
+    final pct = state.result.totalProfitLossPercent
+        .toStringAsFixed(2)
+        .replaceAll('.', ',');
+    final shareText =
+        'Portföyüm ${state.result.items.length} varlıkla $sign$pct% getiri sağladı! 📊 #saydın';
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => SharePreviewSheet(
+        shareText: shareText,
+        cardWidget: PortfolioShareCardWidget(
+          result: state.result,
+          buyDate: state.buyDate!,
+          sellDate: state.sellDate,
+        ),
       ),
     );
   }
@@ -122,6 +205,15 @@ class _PortfolioPageState extends State<PortfolioPage> {
           final l10n = context.l10n;
           final isCalculating = state is PortfolioCalculating;
 
+          final config = context.read<AppConfigCubit>().state;
+          final priceHistoryMonths = config.features.priceHistoryMonths;
+          final now = DateTime.now();
+          final buyFirstDate = priceHistoryMonths > 0
+              ? DateTime(now.year, now.month - priceHistoryMonths, now.day)
+              : null;
+          final hasDateLimit = priceHistoryMonths > 0 && !config.isPremium;
+          final inflationEnabled = config.features.inflationAdjustment;
+
           return SingleChildScrollView(
             controller: _scrollController,
             padding: const EdgeInsets.all(16),
@@ -140,24 +232,54 @@ class _PortfolioPageState extends State<PortfolioPage> {
                 DateInput(
                   label: l10n.buyDate,
                   value: state.buyDate,
-                  lastDate: DateTime.now(),
+                  firstDate: buyFirstDate,
+                  lastDate: now,
                   onChanged: (v) => context.read<PortfolioBloc>().add(
                     PortfolioBuyDateChanged(v),
                   ),
                 ),
+                if (hasDateLimit) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.lock_outline,
+                        size: 13,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        l10n.portfolioHistoryLimit(priceHistoryMonths),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 8),
                 DateInput(
                   label: l10n.sellDate,
                   value: state.sellDate,
                   firstDate: state.buyDate,
-                  lastDate: DateTime.now(),
+                  lastDate: now,
                   required: false,
                   onChanged: (v) => context.read<PortfolioBloc>().add(
                     PortfolioSellDateChanged(v),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                // Enflasyon toggle
+                const SizedBox(height: 4),
+                _InflationToggle(
+                  value: state.includeInflation,
+                  enabled: inflationEnabled,
+                  onToggle: () => context.read<PortfolioBloc>().add(
+                    const PortfolioInflationToggled(),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
 
                 // ── Varlıklar bölümü ─────────────────────────────────
                 Row(
@@ -188,6 +310,9 @@ class _PortfolioPageState extends State<PortfolioPage> {
                       displayName: item.assetDisplayName,
                       amount: item.amount,
                       amountType: item.amountType,
+                      onEdit: isCalculating
+                          ? null
+                          : () => _showEditSheet(state, item),
                       onRemove: isCalculating
                           ? null
                           : () => context.read<PortfolioBloc>().add(
@@ -272,6 +397,36 @@ class _PortfolioPageState extends State<PortfolioPage> {
                 if (state is PortfolioSuccess) ...[
                   const SizedBox(height: 24),
                   PortfolioResultCard(result: state.result),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: state.buyDate != null
+                              ? () => _savePortfolioScenario(state)
+                              : null,
+                          icon: const Icon(Icons.bookmark_outline),
+                          label: Text(l10n.saveScenario),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: state.buyDate != null
+                              ? () => _showPortfolioShare(state)
+                              : null,
+                          icon: const Icon(Icons.share_outlined),
+                          label: Text(l10n.shareResult),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
 
                 const SizedBox(height: 24),
@@ -279,6 +434,87 @@ class _PortfolioPageState extends State<PortfolioPage> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ── Enflasyon toggle ──────────────────────────────────────────────────────────
+
+class _InflationToggle extends StatelessWidget {
+  final bool value;
+  final bool enabled;
+  final VoidCallback onToggle;
+
+  const _InflationToggle({
+    required this.value,
+    required this.enabled,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return InkWell(
+      onTap: enabled ? onToggle : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Switch(
+              value: enabled ? value : false,
+              onChanged: enabled ? (_) => onToggle() : null,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        l10n.portfolioInflationLabel,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      if (!enabled) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            l10n.premiumFeature,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    l10n.inflationAdjustSubtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -326,12 +562,14 @@ class _PortfolioItemTile extends StatelessWidget {
   final String displayName;
   final num amount;
   final String amountType;
+  final VoidCallback? onEdit;
   final VoidCallback? onRemove;
 
   const _PortfolioItemTile({
     required this.displayName,
     required this.amount,
     required this.amountType,
+    this.onEdit,
     this.onRemove,
   });
 
@@ -357,13 +595,25 @@ class _PortfolioItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListTile(
-        leading: const Icon(Icons.bar_chart),
-        title: Text(displayName),
-        subtitle: Text(_formatAmount(context)),
-        trailing: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: onRemove,
+      child: InkWell(
+        onTap: onEdit,
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
+          leading: const Icon(Icons.bar_chart),
+          title: Text(displayName),
+          subtitle: Text(_formatAmount(context)),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (onEdit != null)
+                Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              IconButton(icon: const Icon(Icons.close), onPressed: onRemove),
+            ],
+          ),
         ),
       ),
     );

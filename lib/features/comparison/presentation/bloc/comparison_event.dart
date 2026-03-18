@@ -52,3 +52,28 @@ class ComparisonInflationToggled extends ComparisonEvent {
 class ComparisonCalculateRequested extends ComparisonEvent {
   const ComparisonCalculateRequested();
 }
+
+class ComparisonReplayRequested extends ComparisonEvent {
+  final List<String> symbols;
+  final DateTime buyDate;
+  final DateTime? sellDate;
+  final num amount;
+  final bool includeInflation;
+
+  const ComparisonReplayRequested({
+    required this.symbols,
+    required this.buyDate,
+    this.sellDate,
+    required this.amount,
+    this.includeInflation = false,
+  });
+
+  @override
+  List<Object?> get props => [
+    symbols,
+    buyDate,
+    sellDate,
+    amount,
+    includeInflation,
+  ];
+}

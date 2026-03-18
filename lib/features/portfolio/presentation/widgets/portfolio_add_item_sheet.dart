@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/widgets/amount_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/asset_selector.dart';
 
+/// Portföye varlık ekleme veya düzenleme sayfası.
+/// [editItem] verilirse düzenleme modunda açılır.
 class PortfolioAddItemSheet extends StatefulWidget {
   final List<Asset> assets;
+
+  /// Düzenleme modunda pre-fill için mevcut kalem; null ise ekleme modu.
+  final PortfolioItem? editItem;
+
   final void Function({
     required String assetSymbol,
     required String assetDisplayName,
     required num amount,
     required String amountType,
   })
-  onAdd;
+  onSave;
 
   const PortfolioAddItemSheet({
     super.key,
     required this.assets,
-    required this.onAdd,
+    required this.onSave,
+    this.editItem,
   });
 
   @override
@@ -26,10 +34,23 @@ class PortfolioAddItemSheet extends StatefulWidget {
 
 class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _amountController = TextEditingController();
+  late final TextEditingController _amountController;
 
-  String? _selectedSymbol;
-  String _amountType = 'try';
+  late String? _selectedSymbol;
+  late String _amountType;
+
+  bool get _isEditMode => widget.editItem != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final edit = widget.editItem;
+    _selectedSymbol = edit?.assetSymbol;
+    _amountType = edit?.amountType ?? 'try';
+    _amountController = TextEditingController(
+      text: edit != null ? edit.amount.toString().replaceAll('.', ',') : '',
+    );
+  }
 
   @override
   void dispose() {
@@ -55,7 +76,7 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
       ).showSnackBar(SnackBar(content: Text(context.l10n.validAmountRequired)));
       return;
     }
-    widget.onAdd(
+    widget.onSave(
       assetSymbol: _selectedSymbol!,
       assetDisplayName: _selectedAsset?.displayName ?? _selectedSymbol!,
       amount: amount,
@@ -96,7 +117,9 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
             ),
 
             Text(
-              l10n.portfolioAddAssetTitle,
+              _isEditMode
+                  ? l10n.portfolioEditAssetTitle
+                  : l10n.portfolioAddAssetTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
@@ -121,7 +144,9 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
 
             FilledButton(
               onPressed: _submit,
-              child: Text(l10n.portfolioAddAsset),
+              child: Text(
+                _isEditMode ? l10n.portfolioSaveAsset : l10n.portfolioAddAsset,
+              ),
             ),
           ],
         ),

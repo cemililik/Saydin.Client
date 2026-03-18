@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
-import 'package:saydin/features/scenarios/presentation/bloc/scenarios_state.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/l10n/app_localizations.dart';
-import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_event.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
@@ -99,154 +98,150 @@ class _WhatIfPageState extends State<WhatIfPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.whatIfTitle), centerTitle: true),
-      body: BlocListener<ScenariosBloc, ScenariosState>(
+      appBar: AppBar(title: const _BrandedTitle(), centerTitle: true),
+      body: BlocConsumer<WhatIfBloc, WhatIfState>(
         listenWhen: (prev, curr) =>
-            curr is ScenariosSaved || curr is ScenariosDuplicate,
+            curr is WhatIfSuccess ||
+            curr is WhatIfFailure ||
+            prev.formInput.amount != curr.formInput.amount ||
+            (!prev.formInput.dateAdjusted && curr.formInput.dateAdjusted),
         listener: (context, state) {
-          if (state is ScenariosSaved) {
+          if (state is WhatIfSuccess) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _scrollController.hasClients) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 450),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
+          }
+          if (state is WhatIfFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(context.l10n.scenarioSaved),
-                backgroundColor: AppColors.profit,
+                content: Text(_errorMessage(state.error, context.l10n)),
+                backgroundColor: Colors.red.shade700,
               ),
-            );
-          } else if (state is ScenariosDuplicate) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(context.l10n.scenarioDuplicate)),
             );
           }
-        },
-        child: BlocConsumer<WhatIfBloc, WhatIfState>(
-          listenWhen: (prev, curr) =>
-              curr is WhatIfSuccess ||
-              curr is WhatIfFailure ||
-              prev.formInput.amount != curr.formInput.amount ||
-              (!prev.formInput.dateAdjusted && curr.formInput.dateAdjusted),
-          listener: (context, state) {
-            if (state is WhatIfSuccess) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && _scrollController.hasClients) {
-                  _scrollController.animateTo(
-                    _scrollController.position.maxScrollExtent,
-                    duration: const Duration(milliseconds: 450),
-                    curve: Curves.easeOut,
-                  );
-                }
-              });
-            }
-            if (state is WhatIfFailure) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_errorMessage(state.error, context.l10n)),
-                  backgroundColor: Colors.red.shade700,
-                ),
-              );
-            }
-            if (state.formInput.dateAdjusted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.l10n.dateAdjustedWarning)),
-              );
-            }
-            final amount = state.formInput.amount;
-            if (amount != null) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  _amountController.text = amount.toString().replaceAll(
-                    '.',
-                    ',',
-                  );
-                }
-              });
-            }
-          },
-          builder: (context, state) {
-            if (state is WhatIfAssetsLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            final assets = switch (state) {
-              WhatIfAssetsLoaded(:final assets) => assets,
-              WhatIfCalculating(:final assets) => assets,
-              WhatIfSuccess(:final assets) => assets,
-              WhatIfFailure(:final assets) => assets,
-              _ => <Asset>[],
-            };
-
-            final formInput = state.formInput;
-            final successResult = state is WhatIfSuccess ? state.result : null;
-            final selectedAsset = assets
-                .where((a) => a.symbol == formInput.selectedSymbol)
-                .firstOrNull;
-            final priceHistoryMonths = context
-                .read<AppConfigCubit>()
-                .state
-                .features
-                .priceHistoryMonths;
-            final dateRange = assetDateRange(
-              assetFirstDate: selectedAsset?.firstDate,
-              assetLastDate: selectedAsset?.lastDate,
-              priceHistoryMonths: priceHistoryMonths,
+          if (state.formInput.dateAdjusted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(context.l10n.dateAdjustedWarning)),
             );
+          }
+          final amount = state.formInput.amount;
+          if (amount != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _amountController.text = amount.toString().replaceAll('.', ',');
+              }
+            });
+          }
+        },
+        builder: (context, state) {
+          if (state is WhatIfAssetsLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            final config = context.read<AppConfigCubit>().state;
-            return _WhatIfForm(
-              formKey: _formKey,
-              scrollController: _scrollController,
-              assets: assets,
-              selectedSymbol: formInput.selectedSymbol,
-              buyDate: formInput.buyDate,
-              sellDate: formInput.sellDate,
-              amountType: formInput.amountType,
-              amountController: _amountController,
-              isCalculating: state is WhatIfCalculating,
-              result: successResult,
-              assetFirstDate: dateRange.firstDate,
-              assetLastDate: dateRange.lastDate,
-              includeInflation: formInput.includeInflation,
-              inflationEnabled: config.features.inflationAdjustment,
-              onAssetChanged: (v) =>
-                  context.read<WhatIfBloc>().add(WhatIfSymbolChanged(v)),
-              onBuyDateChanged: (v) =>
-                  context.read<WhatIfBloc>().add(WhatIfBuyDateChanged(v)),
-              onSellDateChanged: (v) =>
-                  context.read<WhatIfBloc>().add(WhatIfSellDateChanged(v)),
-              onAmountTypeChanged: (v) =>
-                  context.read<WhatIfBloc>().add(WhatIfAmountTypeChanged(v)),
-              onInflationToggled: () => context.read<WhatIfBloc>().add(
-                const WhatIfInflationToggled(),
-              ),
-              onCalculate: _onCalculate,
-              onShare: successResult != null
-                  ? () => showModalBottomSheet<void>(
+          final assets = switch (state) {
+            WhatIfAssetsLoaded(:final assets) => assets,
+            WhatIfCalculating(:final assets) => assets,
+            WhatIfSuccess(:final assets) => assets,
+            WhatIfFailure(:final assets) => assets,
+            _ => <Asset>[],
+          };
+
+          final formInput = state.formInput;
+          final successResult = state is WhatIfSuccess ? state.result : null;
+          final selectedAsset = assets
+              .where((a) => a.symbol == formInput.selectedSymbol)
+              .firstOrNull;
+          final priceHistoryMonths = context
+              .read<AppConfigCubit>()
+              .state
+              .features
+              .priceHistoryMonths;
+          final dateRange = assetDateRange(
+            assetFirstDate: selectedAsset?.firstDate,
+            assetLastDate: selectedAsset?.lastDate,
+            priceHistoryMonths: priceHistoryMonths,
+          );
+
+          final config = context.read<AppConfigCubit>().state;
+          return _WhatIfForm(
+            formKey: _formKey,
+            scrollController: _scrollController,
+            assets: assets,
+            selectedSymbol: formInput.selectedSymbol,
+            buyDate: formInput.buyDate,
+            sellDate: formInput.sellDate,
+            amountType: formInput.amountType,
+            amountController: _amountController,
+            isCalculating: state is WhatIfCalculating,
+            result: successResult,
+            assetFirstDate: dateRange.firstDate,
+            assetLastDate: dateRange.lastDate,
+            includeInflation: formInput.includeInflation,
+            inflationEnabled: config.features.inflationAdjustment,
+            onAssetChanged: (v) =>
+                context.read<WhatIfBloc>().add(WhatIfSymbolChanged(v)),
+            onBuyDateChanged: (v) =>
+                context.read<WhatIfBloc>().add(WhatIfBuyDateChanged(v)),
+            onSellDateChanged: (v) =>
+                context.read<WhatIfBloc>().add(WhatIfSellDateChanged(v)),
+            onAmountTypeChanged: (v) =>
+                context.read<WhatIfBloc>().add(WhatIfAmountTypeChanged(v)),
+            onInflationToggled: () =>
+                context.read<WhatIfBloc>().add(const WhatIfInflationToggled()),
+            onCalculate: _onCalculate,
+            onShare: successResult != null
+                ? () {
+                    final r = successResult;
+                    final fmt = NumberFormat.currency(
+                      locale: 'tr_TR',
+                      symbol: '₺',
+                      decimalDigits: 0,
+                    );
+                    final pct = r.profitLossPercent;
+                    final sign = pct >= 0 ? '+' : '';
+                    final text =
+                        '${r.assetDisplayName}\'e ${fmt.format(r.initialValueTry)} '
+                        'yatırsaydım ${fmt.format(r.finalValueTry)} ederdi '
+                        '($sign${pct.toStringAsFixed(2).replaceAll('.', ',')}%)! 📊 #saydın';
+                    showModalBottomSheet<void>(
                       context: context,
                       isScrollControlled: true,
-                      builder: (_) =>
-                          ShareCardPreviewSheet(result: successResult),
-                    )
-                  : null,
-              onSave: successResult != null
-                  ? () => context.read<ScenariosBloc>().add(
-                      ScenarioSaveRequested(
-                        assetSymbol: successResult.assetSymbol,
-                        assetDisplayName: successResult.assetDisplayName,
-                        buyDate: successResult.buyDate,
-                        sellDate: successResult.sellDate,
-                        amount: _amountController.text.isEmpty
-                            ? 0
-                            : num.tryParse(
-                                    _amountController.text.replaceAll(',', '.'),
-                                  ) ??
-                                  0,
-                        amountType: formInput.amountType,
+                      builder: (_) => ShareCardPreviewSheet(
+                        result: successResult,
+                        shareText: text,
                       ),
-                    )
-                  : null,
-            );
-          },
-        ),
+                    );
+                  }
+                : null,
+            onSave: successResult != null
+                ? () => context.read<ScenariosBloc>().add(
+                    ScenarioSaveRequested(
+                      assetSymbol: successResult.assetSymbol,
+                      assetDisplayName: successResult.assetDisplayName,
+                      buyDate: successResult.buyDate,
+                      sellDate: successResult.sellDate,
+                      amount: _amountController.text.isEmpty
+                          ? 0
+                          : num.tryParse(
+                                  _amountController.text.replaceAll(',', '.'),
+                                ) ??
+                                0,
+                      amountType: formInput.amountType,
+                      extraData: {
+                        'includeInflation': formInput.includeInflation,
+                      },
+                    ),
+                  )
+                : null,
+          );
+        },
       ),
     );
   }
@@ -426,6 +421,39 @@ class _WhatIfForm extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Branded AppBar title ──────────────────────────────────────────────────────
+
+class _BrandedTitle extends StatelessWidget {
+  const _BrandedTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'al/sat ',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.normal,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          TextSpan(
+            text: 'saydın',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: primary,
+            ),
+          ),
+        ],
       ),
     );
   }

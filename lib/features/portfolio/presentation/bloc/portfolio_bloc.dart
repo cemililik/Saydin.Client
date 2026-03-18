@@ -30,9 +30,12 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
     on<PortfolioBuyDateChanged>(_onBuyDateChanged);
     on<PortfolioSellDateChanged>(_onSellDateChanged);
     on<PortfolioItemAdded>(_onItemAdded);
+    on<PortfolioItemUpdated>(_onItemUpdated);
     on<PortfolioItemRemoved>(_onItemRemoved);
     on<PortfolioCalculateRequested>(_onCalculateRequested);
+    on<PortfolioInflationToggled>(_onInflationToggled);
     on<PortfolioReset>(_onReset);
+    on<PortfolioReplayRequested>(_onReplayRequested);
   }
 
   Future<void> _onAssetsRequested(
@@ -45,6 +48,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
         items: state.items,
         buyDate: state.buyDate,
         sellDate: state.sellDate,
+        includeInflation: state.includeInflation,
       ),
     );
     try {
@@ -55,6 +59,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
           items: state.items,
           buyDate: state.buyDate,
           sellDate: state.sellDate,
+          includeInflation: state.includeInflation,
         ),
       );
     } on DioException catch (e, st) {
@@ -67,6 +72,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
           items: state.items,
           buyDate: state.buyDate,
           sellDate: state.sellDate,
+          includeInflation: state.includeInflation,
           error: error,
         ),
       );
@@ -77,6 +83,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
           items: state.items,
           buyDate: state.buyDate,
           sellDate: state.sellDate,
+          includeInflation: state.includeInflation,
           error: UnknownError(cause: e),
         ),
       );
@@ -93,6 +100,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
         items: state.items,
         buyDate: event.date,
         sellDate: state.sellDate,
+        includeInflation: state.includeInflation,
       ),
     );
   }
@@ -107,6 +115,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
         items: state.items,
         buyDate: state.buyDate,
         sellDate: event.date,
+        includeInflation: state.includeInflation,
       ),
     );
   }
@@ -125,6 +134,35 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
         items: [...state.items, newItem],
         buyDate: state.buyDate,
         sellDate: state.sellDate,
+        includeInflation: state.includeInflation,
+      ),
+    );
+  }
+
+  void _onItemUpdated(
+    PortfolioItemUpdated event,
+    Emitter<PortfolioState> emit,
+  ) {
+    final updatedItems = state.items.map((item) {
+      if (item.id == event.id) {
+        return PortfolioItem(
+          id: item.id,
+          assetSymbol: event.assetSymbol,
+          assetDisplayName: event.assetDisplayName,
+          amount: event.amount,
+          amountType: event.amountType,
+        );
+      }
+      return item;
+    }).toList();
+
+    emit(
+      PortfolioEditing(
+        assets: state.assets,
+        items: updatedItems,
+        buyDate: state.buyDate,
+        sellDate: state.sellDate,
+        includeInflation: state.includeInflation,
       ),
     );
   }
@@ -139,6 +177,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
         items: state.items.where((i) => i.id != event.id).toList(),
         buyDate: state.buyDate,
         sellDate: state.sellDate,
+        includeInflation: state.includeInflation,
       ),
     );
   }
@@ -153,6 +192,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
         items: state.items,
         buyDate: state.buyDate,
         sellDate: state.sellDate,
+        includeInflation: state.includeInflation,
       ),
     );
     try {
@@ -160,6 +200,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
         items: state.items,
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
+        includeInflation: state.includeInflation,
       );
       emit(
         PortfolioSuccess(
@@ -167,6 +208,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
           items: state.items,
           buyDate: state.buyDate,
           sellDate: state.sellDate,
+          includeInflation: state.includeInflation,
           result: result,
         ),
       );
@@ -181,6 +223,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
           items: state.items,
           buyDate: state.buyDate,
           sellDate: state.sellDate,
+          includeInflation: state.includeInflation,
           error: error,
         ),
       );
@@ -192,13 +235,47 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
           items: state.items,
           buyDate: state.buyDate,
           sellDate: state.sellDate,
+          includeInflation: state.includeInflation,
           error: UnknownError(cause: e),
         ),
       );
     }
   }
 
+  void _onInflationToggled(
+    PortfolioInflationToggled event,
+    Emitter<PortfolioState> emit,
+  ) {
+    emit(
+      PortfolioEditing(
+        assets: state.assets,
+        items: state.items,
+        buyDate: state.buyDate,
+        sellDate: state.sellDate,
+        includeInflation: !state.includeInflation,
+      ),
+    );
+  }
+
   void _onReset(PortfolioReset event, Emitter<PortfolioState> emit) {
     emit(PortfolioEditing(assets: state.assets));
+  }
+
+  Future<void> _onReplayRequested(
+    PortfolioReplayRequested event,
+    Emitter<PortfolioState> emit,
+  ) async {
+    emit(
+      PortfolioEditing(
+        assets: state.assets,
+        items: event.items,
+        buyDate: event.buyDate,
+        sellDate: event.sellDate,
+        includeInflation: event.includeInflation,
+      ),
+    );
+    if (event.items.isNotEmpty) {
+      await _onCalculateRequested(const PortfolioCalculateRequested(), emit);
+    }
   }
 }

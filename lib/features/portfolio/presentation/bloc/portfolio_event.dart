@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 
 sealed class PortfolioEvent extends Equatable {
   const PortfolioEvent();
@@ -49,6 +50,32 @@ class PortfolioItemAdded extends PortfolioEvent {
   ];
 }
 
+/// Mevcut bir portföy kalemini günceller (id ile eşleşen kalemi değiştirir).
+class PortfolioItemUpdated extends PortfolioEvent {
+  final String id;
+  final String assetSymbol;
+  final String assetDisplayName;
+  final num amount;
+  final String amountType;
+
+  const PortfolioItemUpdated({
+    required this.id,
+    required this.assetSymbol,
+    required this.assetDisplayName,
+    required this.amount,
+    required this.amountType,
+  });
+
+  @override
+  List<Object?> get props => [
+    id,
+    assetSymbol,
+    assetDisplayName,
+    amount,
+    amountType,
+  ];
+}
+
 class PortfolioItemRemoved extends PortfolioEvent {
   final String id;
   const PortfolioItemRemoved(this.id);
@@ -61,6 +88,27 @@ class PortfolioCalculateRequested extends PortfolioEvent {
   const PortfolioCalculateRequested();
 }
 
+class PortfolioInflationToggled extends PortfolioEvent {
+  const PortfolioInflationToggled();
+}
+
 class PortfolioReset extends PortfolioEvent {
   const PortfolioReset();
+}
+
+class PortfolioReplayRequested extends PortfolioEvent {
+  final DateTime buyDate;
+  final DateTime? sellDate;
+  final bool includeInflation;
+  final List<PortfolioItem> items;
+
+  const PortfolioReplayRequested({
+    required this.buyDate,
+    this.sellDate,
+    this.includeInflation = false,
+    this.items = const [],
+  });
+
+  @override
+  List<Object?> get props => [buyDate, sellDate, includeInflation, items];
 }

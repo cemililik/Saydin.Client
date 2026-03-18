@@ -729,6 +729,60 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'En az 1 varlık ekleyin.'**
   String get portfolioMinItems;
+
+  /// No description provided for @portfolioHistoryLimit.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücretsiz planda son {months} aya ait tarih seçilebilir.'**
+  String portfolioHistoryLimit(int months);
+
+  /// No description provided for @portfolioEditAssetTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlığı Düzenle'**
+  String get portfolioEditAssetTitle;
+
+  /// No description provided for @portfolioSaveAsset.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kaydet'**
+  String get portfolioSaveAsset;
+
+  /// No description provided for @portfolioInflationLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Enflasyona Göre Düzelt'**
+  String get portfolioInflationLabel;
+
+  /// No description provided for @portfolioRealReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reel Toplam Getiri'**
+  String get portfolioRealReturn;
+
+  /// No description provided for @portfolioRealProfitLoss.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reel Kar / Zarar'**
+  String get portfolioRealProfitLoss;
+
+  /// No description provided for @scenarioTypeWhatIf.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesaplama'**
+  String get scenarioTypeWhatIf;
+
+  /// No description provided for @scenarioTypeComparison.
+  ///
+  /// In tr, this message translates to:
+  /// **'Karşılaştırma'**
+  String get scenarioTypeComparison;
+
+  /// No description provided for @scenarioTypePortfolio.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföy'**
+  String get scenarioTypePortfolio;
 }
 
 class _AppLocalizationsDelegate

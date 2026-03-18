@@ -9,13 +9,17 @@ import 'package:share_plus/share_plus.dart';
 /// [RepaintBoundary] ile işaretlenmiş widget'ı PNG olarak yakalar ve
 /// platform paylaşım sayfasını açar.
 ///
-/// Çıktı: her zaman 1080×1080 px (540pt × 2.0 pixelRatio).
+/// [shareText]: WhatsApp / Twitter gibi uygulamalarda görünecek metin.
+/// Belirtilmezse varsayılan marka metni kullanılır.
 class ShareCardRenderer {
   ShareCardRenderer._();
 
   static const _targetPx = 1080.0;
 
-  static Future<void> shareFromKey(GlobalKey key) async {
+  static const _cta =
+      '\n\n📱 Saydın uygulamasını indir — App Store ve Google Play\'de "saydın" ara.';
+
+  static Future<void> shareFromKey(GlobalKey key, {String? shareText}) async {
     final boundary =
         key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) return;
@@ -35,8 +39,10 @@ class ShareCardRenderer {
     );
     await file.writeAsBytes(bytes);
 
+    final text = (shareText ?? 'saydın.app üzerinden hesapladım.') + _cta;
+
     await Share.shareXFiles([
       XFile(file.path, mimeType: 'image/png'),
-    ], text: 'Ya alsaydın? saydın.app üzerinden hesapladım.');
+    ], text: text);
   }
 }

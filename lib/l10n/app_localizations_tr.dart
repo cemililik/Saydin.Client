@@ -347,4 +347,33 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get portfolioMinItems => 'En az 1 varlık ekleyin.';
+
+  @override
+  String portfolioHistoryLimit(int months) {
+    return 'Ücretsiz planda son $months aya ait tarih seçilebilir.';
+  }
+
+  @override
+  String get portfolioEditAssetTitle => 'Varlığı Düzenle';
+
+  @override
+  String get portfolioSaveAsset => 'Kaydet';
+
+  @override
+  String get portfolioInflationLabel => 'Enflasyona Göre Düzelt';
+
+  @override
+  String get portfolioRealReturn => 'Reel Toplam Getiri';
+
+  @override
+  String get portfolioRealProfitLoss => 'Reel Kar / Zarar';
+
+  @override
+  String get scenarioTypeWhatIf => 'Hesaplama';
+
+  @override
+  String get scenarioTypeComparison => 'Karşılaştırma';
+
+  @override
+  String get scenarioTypePortfolio => 'Portföy';
 }

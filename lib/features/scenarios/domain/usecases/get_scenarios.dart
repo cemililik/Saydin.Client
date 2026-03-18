@@ -6,5 +6,6 @@ class GetScenarios {
 
   const GetScenarios(this._repository);
 
-  Future<List<SavedScenario>> call() => _repository.getScenarios();
+  Future<List<SavedScenario>> call({String plan = 'free'}) =>
+      _repository.getScenarios(plan: plan);
 }

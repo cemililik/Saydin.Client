@@ -148,5 +148,20 @@
   "portfolioTotalReturn": "Toplam Getiri",
   "portfolioChartTitle": "Son Değer Dağılımı",
   "portfolioBuyDateRequired": "Başlangıç tarihi giriniz",
-  "portfolioMinItems": "En az 1 varlık ekleyin."
+  "portfolioMinItems": "En az 1 varlık ekleyin.",
+  "portfolioHistoryLimit": "Ücretsiz planda son {months} aya ait tarih seçilebilir.",
+  "@portfolioHistoryLimit": {
+    "placeholders": {
+      "months": { "type": "int" }
+    }
+  },
+  "portfolioEditAssetTitle": "Varlığı Düzenle",
+  "portfolioSaveAsset": "Kaydet",
+  "portfolioInflationLabel": "Enflasyona Göre Düzelt",
+  "portfolioRealReturn": "Reel Toplam Getiri",
+  "portfolioRealProfitLoss": "Reel Kar / Zarar",
+
+  "scenarioTypeWhatIf": "Hesaplama",
+  "scenarioTypeComparison": "Karşılaştırma",
+  "scenarioTypePortfolio": "Portföy"
 }

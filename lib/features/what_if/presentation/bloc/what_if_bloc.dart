@@ -178,6 +178,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       sellDate: event.sellDate,
       amountType: event.amountType,
       amount: event.amount,
+      includeInflation: event.includeInflation,
     );
     _emitWithUpdatedForm(emit, filled);
     await _onCalculateRequested(
@@ -187,6 +188,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
         sellDate: event.sellDate,
         amount: event.amount,
         amountType: event.amountType,
+        includeInflation: event.includeInflation,
       ),
       emit,
     );

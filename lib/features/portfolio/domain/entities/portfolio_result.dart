@@ -29,6 +29,11 @@ class PortfolioResult extends Equatable {
   final double totalProfitLossPercent;
   final bool isProfit;
 
+  // Enflasyon düzeltmesi — null ise hesaplanmadı / aktif değil
+  final double? totalRealProfitLossTry;
+  final double? totalRealProfitLossPercent;
+  final double? totalCumulativeInflationPercent;
+
   const PortfolioResult({
     required this.items,
     required this.totalInitialValueTry,
@@ -36,7 +41,12 @@ class PortfolioResult extends Equatable {
     required this.totalProfitLossTry,
     required this.totalProfitLossPercent,
     required this.isProfit,
+    this.totalRealProfitLossTry,
+    this.totalRealProfitLossPercent,
+    this.totalCumulativeInflationPercent,
   });
+
+  bool get hasInflation => totalRealProfitLossPercent != null;
 
   @override
   List<Object?> get props => [
@@ -46,5 +56,8 @@ class PortfolioResult extends Equatable {
     totalProfitLossTry,
     totalProfitLossPercent,
     isProfit,
+    totalRealProfitLossTry,
+    totalRealProfitLossPercent,
+    totalCumulativeInflationPercent,
   ];
 }

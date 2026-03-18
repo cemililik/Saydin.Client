@@ -12,6 +12,7 @@ class CalculatePortfolio {
     required List<PortfolioItem> items,
     required DateTime buyDate,
     DateTime? sellDate,
+    bool includeInflation = false,
   }) async {
     assert(items.isNotEmpty, 'Portföyde en az 1 kalem olmalı');
 
@@ -23,6 +24,7 @@ class CalculatePortfolio {
           sellDate: sellDate,
           amount: item.amount,
           amountType: item.amountType,
+          includeInflation: includeInflation,
         ),
       ),
     );
@@ -43,6 +45,36 @@ class CalculatePortfolio {
       );
     });
 
+    // Enflasyon aggregasyonu — sadece tüm kalemlerde inflation verisi varsa
+    double? totalRealPnL;
+    double? totalRealPct;
+    double? totalInflation;
+
+    if (includeInflation &&
+        results.every((r) => r.realProfitLossPercent != null)) {
+      // Her kalemin reel son değeri: initialValue * (1 + realPct/100)
+      double totalRealFinal = 0;
+      for (final r in results) {
+        totalRealFinal +=
+            r.initialValueTry * (1 + r.realProfitLossPercent! / 100);
+      }
+      totalRealPnL = totalRealFinal - totalInitial;
+      totalRealPct = totalInitial > 0
+          ? (totalRealPnL / totalInitial) * 100
+          : 0.0;
+
+      // Ağırlıklı ortalama birikimli enflasyon (başlangıç değeri ağırlıklı)
+      if (results.every((r) => r.cumulativeInflationPercent != null)) {
+        double weightedInfl = 0;
+        for (final r in results) {
+          weightedInfl +=
+              r.cumulativeInflationPercent! *
+              (r.initialValueTry / totalInitial);
+        }
+        totalInflation = weightedInfl;
+      }
+    }
+
     return PortfolioResult(
       items: itemResults,
       totalInitialValueTry: totalInitial,
@@ -50,6 +82,9 @@ class CalculatePortfolio {
       totalProfitLossTry: totalPnL,
       totalProfitLossPercent: totalPct,
       isProfit: totalPnL >= 0,
+      totalRealProfitLossTry: totalRealPnL,
+      totalRealProfitLossPercent: totalRealPct,
+      totalCumulativeInflationPercent: totalInflation,
     );
   }
 }

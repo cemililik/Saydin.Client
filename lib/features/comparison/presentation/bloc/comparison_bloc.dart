@@ -30,6 +30,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     on<ComparisonAmountTypeChanged>(_onAmountTypeChanged);
     on<ComparisonInflationToggled>(_onInflationToggled);
     on<ComparisonCalculateRequested>(_onCalculateRequested);
+    on<ComparisonReplayRequested>(_onReplayRequested);
   }
 
   ComparisonAssetsLoaded? get _loaded {
@@ -213,6 +214,24 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
         ),
       );
     }
+  }
+
+  Future<void> _onReplayRequested(
+    ComparisonReplayRequested event,
+    Emitter<ComparisonState> emit,
+  ) async {
+    final loaded = _loaded;
+    if (loaded == null) return;
+    emit(
+      loaded.copyWith(
+        selectedSymbols: event.symbols,
+        buyDate: event.buyDate,
+        sellDate: event.sellDate,
+        amount: event.amount,
+        includeInflation: event.includeInflation,
+      ),
+    );
+    await _onCalculateRequested(const ComparisonCalculateRequested(), emit);
   }
 
   String _errorMessage(AppError error) => switch (error) {
