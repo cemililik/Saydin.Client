@@ -352,6 +352,13 @@ jobs:
         id: ipa
         run: echo "path=$(find build/ios/ipa -name '*.ipa' | head -1)" >> $GITHUB_OUTPUT
 
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saydin-ios-${{ github.ref_name }}-${{ needs.version.outputs.version_name }}+${{ needs.version.outputs.build_number }}
+          path: ${{ steps.ipa.outputs.path }}
+          retention-days: 30
+
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v1
         with:
@@ -360,11 +367,12 @@ jobs:
           api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
-  # ── Git Tag (test + main push, release'ler başarıyla tamamlandıktan sonra) ─
-  # test  → v1.0.0-rc.42   (release candidate)
+  # ── GitHub Release (test + main push, release'ler başarıyla tamamlandıktan sonra)
+  # test  → v1.0.0-rc.42   (pre-release)
   # main  → v1.0.0         (production release)
-  tag-release:
-    name: Tag Release
+  # Source code otomatik eklenir, AAB ve IPA artifact olarak indirilip eklenir.
+  github-release:
+    name: GitHub Release
     runs-on: ubuntu-latest
     needs: [version, release-android, release-ios]
     if: >
@@ -376,14 +384,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create and push release tag
+      - name: Determine tag
+        id: tag
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            TAG="v${{ needs.version.outputs.version_name }}"
+            echo "tag=v${{ needs.version.outputs.version_name }}" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
           else
-            TAG="v${{ needs.version.outputs.version_name }}-rc.${{ needs.version.outputs.build_number }}"
+            echo "tag=v${{ needs.version.outputs.version_name }}-rc.${{ needs.version.outputs.build_number }}" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f "$TAG" -m "Release $TAG (build ${{ needs.version.outputs.build_number }})"
-          git push origin "$TAG" --force
+
+      - name: Download Android AAB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: saydin-${{ github.ref_name }}-${{ needs.version.outputs.version_name }}+${{ needs.version.outputs.build_number }}
+          path: release-assets/
+
+      - name: Download iOS IPA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: saydin-ios-${{ github.ref_name }}-${{ needs.version.outputs.version_name }}+${{ needs.version.outputs.build_number }}
+          path: release-assets/
+
+      - name: Rename artifacts
+        run: |
+          mv release-assets/app-release.aab "release-assets/saydin-${{ steps.tag.outputs.tag }}.aab"
+          mv release-assets/*.ipa "release-assets/saydin-${{ steps.tag.outputs.tag }}.ipa"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          prerelease: ${{ steps.tag.outputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            release-assets/saydin-${{ steps.tag.outputs.tag }}.aab
+            release-assets/saydin-${{ steps.tag.outputs.tag }}.ipa
