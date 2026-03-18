@@ -43,11 +43,13 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   void _showAddSheet(PortfolioState state) {
+    final existingSymbols = state.items.map((item) => item.assetSymbol).toSet();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (_) => PortfolioAddItemSheet(
         assets: state.assets,
+        excludeSymbols: existingSymbols,
         onSave:
             ({
               required assetSymbol,

@@ -8,11 +8,15 @@ class AssetSelector extends StatelessWidget {
   final String? selectedSymbol;
   final ValueChanged<String> onChanged;
 
+  /// Listeden gizlenecek semboller (ör. portföyde zaten eklenmiş varlıklar).
+  final Set<String> excludeSymbols;
+
   const AssetSelector({
     super.key,
     required this.assets,
     required this.selectedSymbol,
     required this.onChanged,
+    this.excludeSymbols = const {},
   });
 
   String? _selectedName() {
@@ -25,6 +29,9 @@ class AssetSelector extends StatelessWidget {
   }
 
   Future<void> _openSheet(BuildContext context) async {
+    final visibleAssets = excludeSymbols.isEmpty
+        ? assets
+        : assets.where((a) => !excludeSymbols.contains(a.symbol)).toList();
     final selected = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -32,8 +39,10 @@ class AssetSelector extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) =>
-          _AssetSearchSheet(assets: assets, selectedSymbol: selectedSymbol),
+      builder: (_) => _AssetSearchSheet(
+        assets: visibleAssets,
+        selectedSymbol: selectedSymbol,
+      ),
     );
     if (selected != null) onChanged(selected);
   }

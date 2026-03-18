@@ -13,6 +13,9 @@ class PortfolioAddItemSheet extends StatefulWidget {
   /// Düzenleme modunda pre-fill için mevcut kalem; null ise ekleme modu.
   final PortfolioItem? editItem;
 
+  /// Listeden gizlenecek semboller (portföyde zaten eklenmiş varlıklar).
+  final Set<String> excludeSymbols;
+
   final void Function({
     required String assetSymbol,
     required String assetDisplayName,
@@ -26,6 +29,7 @@ class PortfolioAddItemSheet extends StatefulWidget {
     required this.assets,
     required this.onSave,
     this.editItem,
+    this.excludeSymbols = const {},
   });
 
   @override
@@ -127,6 +131,7 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
             AssetSelector(
               assets: widget.assets,
               selectedSymbol: _selectedSymbol,
+              excludeSymbols: widget.excludeSymbols,
               onChanged: (v) => setState(() {
                 _selectedSymbol = v;
                 _amountType = 'try';
