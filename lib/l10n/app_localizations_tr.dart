@@ -411,4 +411,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String favoritesMaxReached(int max) {
     return 'En fazla $max favori ekleyebilirsiniz.';
   }
+
+  @override
+  String get settingsLanguage => 'Dil';
+
+  @override
+  String get settingsLanguageSubtitle => 'Uygulama dilini seçin';
+
+  @override
+  String get languageTurkish => 'Türkçe';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageSystem => 'Sistem';
 }

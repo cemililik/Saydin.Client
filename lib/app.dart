@@ -30,6 +30,16 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 class SaydinApp extends StatelessWidget {
   const SaydinApp({super.key});
 
+  /// Kullanıcının dil tercihine göre locale döndürür.
+  /// [AppLanguage.system] ise null döner — Flutter sistem diline göre seçer.
+  static Locale? _resolveLocale(AppLanguage language) {
+    return switch (language) {
+      AppLanguage.tr => const Locale('tr', 'TR'),
+      AppLanguage.en => const Locale('en', 'US'),
+      AppLanguage.system => null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -42,8 +52,8 @@ class SaydinApp extends StatelessWidget {
           return MaterialApp(
             title: 'Saydın',
             debugShowCheckedModeBanner: false,
-            locale: const Locale('tr', 'TR'),
-            supportedLocales: const [Locale('tr', 'TR')],
+            locale: _resolveLocale(settings.language),
+            supportedLocales: const [Locale('tr', 'TR'), Locale('en', 'US')],
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,

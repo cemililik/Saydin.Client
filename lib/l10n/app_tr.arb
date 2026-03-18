@@ -182,5 +182,11 @@
     "placeholders": {
       "max": { "type": "int" }
     }
-  }
+  },
+
+  "settingsLanguage": "Dil",
+  "settingsLanguageSubtitle": "Uygulama dilini seçin",
+  "languageTurkish": "Türkçe",
+  "languageEnglish": "English",
+  "languageSystem": "Sistem"
 }

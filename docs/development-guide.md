@@ -37,11 +37,11 @@ Commit format hatası verirse: `dart format lib/ test/` çalıştırıp tekrar c
 ## 2. Lokalizasyon Kodunu Üret
 
 ```bash
-# app_tr.arb → app_localizations.dart
+# app_tr.arb + app_en.arb → app_localizations.dart, app_localizations_tr.dart, app_localizations_en.dart
 flutter gen-l10n
 ```
 
-> Bu adım `app_tr.arb` her değiştiğinde tekrarlanmalıdır. CI'da da zorunludur.
+> Bu adım `app_tr.arb` veya `app_en.arb` her değiştiğinde tekrarlanmalıdır. CI'da da zorunludur.
 
 ## 3. Ortam Yapılandırması
 
@@ -169,18 +169,35 @@ flutter pub outdated
 7. BLoC, Event, State yaz — state'lerde `AppError` kullan, string mesaj **yok**
 8. Widget'ta hata mesajını `switch(state.error)` + `context.l10n.errorXxx` ile çöz
 9. `lib/core/di/injection.dart` dosyasına DI kayıtlarını ekle
-10. Yeni string'leri `lib/l10n/app_tr.arb`'a ekle, `flutter gen-l10n` çalıştır
+10. Yeni string'leri `lib/l10n/app_tr.arb` ve `lib/l10n/app_en.arb`'a ekle, `flutter gen-l10n` çalıştır
 11. Birim testleri yaz (`test/features/<feature_name>/`)
 
 ## 10. Lokalizasyon Ekleme
 
-`lib/l10n/app_tr.arb` dosyasını düzenle:
+**Desteklenen diller:** Türkçe (`tr`, varsayılan), İngilizce (`en`)
 
+Her iki ARB dosyasını birlikte düzenle:
+
+**`lib/l10n/app_tr.arb`:**
 ```json
 {
   "@@locale": "tr",
   "myNewKey": "Yeni metin",
   "myParamKey": "{amount} TL yatırım",
+  "@myParamKey": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  }
+}
+```
+
+**`lib/l10n/app_en.arb`:**
+```json
+{
+  "@@locale": "en",
+  "myNewKey": "New text",
+  "myParamKey": "{amount} TRY investment",
   "@myParamKey": {
     "placeholders": {
       "amount": {"type": "String"}
@@ -199,6 +216,14 @@ Kullanım:
 context.l10n.myNewKey
 context.l10n.myParamKey(amount: '10.000')
 ```
+
+> **Önemli:** `app_tr.arb`'a eklenen her key `app_en.arb`'a da eklenmelidir. Eksik key derleme hatasına neden olur.
+
+### Backend Lokalizasyonu
+
+Backend'de de lokalize edilmesi gereken metin varsa (hata mesajı, asset ismi vb.) `.resx` dosyalarını güncelle:
+- `src/Saydin.Api/Resources/ErrorMessages.resx` — Türkçe
+- `src/Saydin.Api/Resources/ErrorMessages.en.resx` — İngilizce
 
 ## 11. Yaygın Sorunlar
 

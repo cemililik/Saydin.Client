@@ -11,7 +11,7 @@ lib/
 │   ├── di/                        ← injection.dart (get_it servis locator)
 │   ├── error/                     ← AppError, DioErrorMapper, ErrorReporter
 │   ├── l10n/                      ← L10nContext extension (context.l10n)
-│   ├── network/                   ← ApiClient, DeviceIdInterceptor, RetryInterceptor
+│   ├── network/                   ← ApiClient, DeviceIdInterceptor, LanguageInterceptor, RetryInterceptor
 │   ├── theme/                     ← AppTheme (light/dark ThemeData), ThemeModeMapper
 │   └── widgets/                   ← InflationToggle, SharePreviewSheet, SettingsIconButton
 ├── features/
@@ -44,16 +44,18 @@ lib/
 │       ├── data/
 │       │   └── repositories/     ← SettingsRepositoryImpl (SharedPreferences)
 │       ├── domain/
-│       │   ├── entities/          ← AppSettings (themeMode + copyWith)
+│       │   ├── entities/          ← AppSettings (themeMode, language + copyWith)
 │       │   └── repositories/     ← SettingsRepository (abstract interface)
 │       └── presentation/
 │           ├── cubit/             ← SettingsCubit (LazySingleton)
 │           ├── pages/             ← SettingsPage
-│           └── widgets/           ← ThemeSelectorTile (SegmentedButton)
+│           └── widgets/           ← ThemeSelectorTile, LanguageSelectorTile (SegmentedButton)
 └── l10n/                          ← flutter gen-l10n çıktısı (commit'lenir)
     ├── app_localizations.dart
     ├── app_localizations_tr.dart
-    └── app_tr.arb                 ← Kaynak dosya (elle düzenlenen tek dosya)
+    ├── app_localizations_en.dart
+    ├── app_tr.arb                 ← Türkçe kaynak dosya
+    └── app_en.arb                 ← İngilizce kaynak dosya
 ```
 
 ## Katman Mimarisi
@@ -207,6 +209,9 @@ Asset değiştiğinde `WhatIfBloc._onSymbolChanged`:
 DeviceIdInterceptor   ← Her isteğe X-Device-ID header ekler
     │
     ▼
+LanguageInterceptor   ← Her isteğe Accept-Language header ekler
+    │
+    ▼
 RetryInterceptor      ← GET/HEAD: max 2 yenileme, üstel backoff
     │
     ▼
@@ -217,6 +222,16 @@ Sunucu
 
 `FlutterSecureStorage` ile `saydin_device_id` anahtarı altında UUID v4 saklanır.
 **Fallback:** Storage erişimi başarısız olursa oturum süreli ephemeral UUID kullanılır — kullanıcı hata görmez.
+
+### LanguageInterceptor
+
+Her istekte `Accept-Language` header'ını `AppLocaleHolder.code` değerinden okuyarak ekler. `AppLocaleHolder` basit bir statik holder'dır — `SettingsCubit` dil değiştiğinde `update()` çağırarak günceller.
+
+| Kullanıcı seçimi | Accept-Language | Sonuç |
+|---|---|---|
+| Türkçe | `tr` | Backend Türkçe yanıt verir |
+| English | `en` | Backend İngilizce yanıt verir |
+| Sistem | Platform locale | Cihaz diline göre |
 
 ### RetryInterceptor
 
@@ -277,10 +292,12 @@ if (error is UnknownError || error is ServerError) {
 
 ## Lokalizasyon (L10n)
 
-Kaynak dosya: `lib/l10n/app_tr.arb` — **tüm kullanıcıya görünen string'ler buradadır**.
+**Desteklenen diller:** Türkçe (`tr`, varsayılan), İngilizce (`en`)
+
+Kaynak dosyalar: `lib/l10n/app_tr.arb` (Türkçe), `lib/l10n/app_en.arb` (İngilizce). Tüm kullanıcıya görünen string'ler buralardadır.
 
 ```bash
-# Kod üretimi (ARB değiştiğinde)
+# Kod üretimi (ARB dosyaları değiştiğinde)
 flutter gen-l10n
 ```
 
@@ -291,7 +308,28 @@ Text(l10n.calculate)
 Text(l10n.errorPriceNotFound)
 ```
 
-**Kural:** BLoC Türkçe string üretmez. Hata metni widget katmanında `switch (state.error)` ile l10n'dan çözülür.
+**Kural:** BLoC UI string üretmez. Hata metni widget katmanında `switch (state.error)` ile l10n'dan çözülür.
+
+### Dil Seçimi
+
+`AppSettings.language` enum'u üç seçenek sunar:
+
+| Seçenek | `MaterialApp.locale` | `Accept-Language` |
+|---|---|---|
+| `AppLanguage.tr` | `Locale('tr', 'TR')` | `tr` |
+| `AppLanguage.en` | `Locale('en', 'US')` | `en` |
+| `AppLanguage.system` | `null` (Flutter otomatik) | Platform locale |
+
+Dil değiştiğinde:
+1. `SettingsCubit.setLanguage()` → `AppSettings` emit eder
+2. `BlocBuilder<SettingsCubit>` → `MaterialApp.locale` güncellenir → UI yeniden çizilir
+3. `AppLocaleHolder.update()` → Sonraki API isteklerinde `Accept-Language` güncellenir
+
+### İstemci-Sunucu Dil Uyumu
+
+İstemci ve sunucu aynı dili konuşur:
+- **İstemci:** ARB dosyalarından `context.l10n` ile çözülen UI string'leri
+- **Sunucu:** `Accept-Language` header'ına göre `.resx` dosyalarından çözülen hata mesajları ve asset isimleri
 
 ## Grafik (ResultChart)
 
@@ -386,16 +424,21 @@ SettingsCubit (LazySingleton)
     │
     │ load()  ← uygulama başlangıcında çağrılır
     ▼
-AppSettings(themeMode: system)  ← SharedPreferences'tan okunur
-    │
+AppSettings(themeMode: system, language: system)  ← SharedPreferences'tan okunur
+    │                                                 + AppLocaleHolder.update()
     │ setThemeMode(dark)
     ▼
-AppSettings(themeMode: dark)    ← emit + SharedPreferences'a yaz
+AppSettings(themeMode: dark, language: system)     ← emit + SharedPreferences'a yaz
+    │
+    │ setLanguage(en)
+    ▼
+AppSettings(themeMode: dark, language: en)         ← emit + SharedPreferences'a yaz
+                                                      + AppLocaleHolder.update('en')
 ```
 
 **Neden Cubit, BLoC değil?** Ayar değiştirme basit bir setter — event/handler deseni gereksiz.
 
-**Neden LazySingleton, Factory değil?** Tema `MaterialApp` seviyesinde tüketilir, uygulama boyunca tek instance yeterli.
+**Neden LazySingleton, Factory değil?** Tema ve dil `MaterialApp` seviyesinde tüketilir, uygulama boyunca tek instance yeterli.
 
 ### Genişletme
 
@@ -404,7 +447,7 @@ Yeni ayar eklemek:
 2. `SettingsRepositoryImpl`'e okuma/yazma ekle (yeni SharedPreferences key)
 3. `SettingsCubit`'e setter ekle
 4. `SettingsPage`'e yeni widget ekle
-5. `app_tr.arb`'a l10n string'leri ekle
+5. `app_tr.arb` ve `app_en.arb`'a l10n string'leri ekle
 
 ### Navigasyon
 
