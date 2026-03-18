@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
+import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
+import 'package:saydin/features/what_if/presentation/widgets/share_card_widget.dart';
 
 /// Portföy sonucunu sosyal medyaya paylaşmak için render edilen kart.
 class PortfolioShareCardWidget extends StatelessWidget {
@@ -27,18 +29,9 @@ class PortfolioShareCardWidget extends StatelessWidget {
   );
   static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
 
-  String get _durationLabel {
-    final end = sellDate ?? DateTime.now();
-    final months = (end.year - buyDate.year) * 12 + end.month - buyDate.month;
-    if (months < 1) return '${end.difference(buyDate).inDays} gün';
-    if (months < 12) return '$months ay';
-    final years = months ~/ 12;
-    final rem = months % 12;
-    return rem > 0 ? '$years yıl $rem ay' : '$years yıl';
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final color = result.isProfit ? AppColors.profit : AppColors.loss;
     final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
     final sign = result.totalProfitLossPercent >= 0 ? '+' : '';
@@ -88,10 +81,10 @@ class PortfolioShareCardWidget extends StatelessWidget {
                   // Başlık + süre chip
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Portföy Getirisi',
-                          style: TextStyle(
+                          l10n.shareCardPortfolioTitle,
+                          style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A1A1A),
@@ -108,7 +101,11 @@ class PortfolioShareCardWidget extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          _durationLabel,
+                          ShareCardWidget.durationLabel(
+                            l10n,
+                            buyDate,
+                            sellDate,
+                          ),
                           style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.primary,
@@ -125,7 +122,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${result.items.length} varlık',
+                    l10n.shareCardAssetCount(result.items.length),
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                   ),
 
@@ -178,7 +175,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Toplam Yatırım',
+                                l10n.shareCardTotalInvestment,
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.grey.shade500,
@@ -208,7 +205,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                'Son Değer',
+                                l10n.shareCardFinalValue,
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.grey.shade500,
@@ -244,7 +241,9 @@ class PortfolioShareCardWidget extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          hasInflation ? 'Nominal Getiri' : 'Toplam Getiri',
+                          hasInflation
+                              ? l10n.shareCardNominalTotalReturn
+                              : l10n.shareCardTotalReturn,
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,
@@ -272,7 +271,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '$sign${_tryFormatter.format(result.totalProfitLossTry)} '
-                          '${result.isProfit ? 'kazanç' : 'zarar'}',
+                          '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
                           style: TextStyle(
                             fontSize: 15,
                             color: color,
@@ -298,9 +297,9 @@ class PortfolioShareCardWidget extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Birikimli Enflasyon',
-                                style: TextStyle(
+                              Text(
+                                l10n.shareCardCumulativeInflation,
+                                style: const TextStyle(
                                   fontSize: 13,
                                   color: Color(0xFF666666),
                                 ),
@@ -322,9 +321,9 @@ class PortfolioShareCardWidget extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Reel Getiri',
-                                style: TextStyle(
+                              Text(
+                                l10n.shareCardRealReturn,
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF1A1A1A),
@@ -356,7 +355,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Portföyüm ne kazandırdı?',
+                    l10n.shareCardPortfolioFooter,
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade500,

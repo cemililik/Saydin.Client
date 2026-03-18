@@ -188,5 +188,76 @@
   "settingsLanguageSubtitle": "Uygulama dilini seçin",
   "languageTurkish": "Türkçe",
   "languageEnglish": "English",
-  "languageSystem": "Sistem"
+  "languageSystem": "Sistem",
+
+  "shareCardInitialValue": "Başlangıç",
+  "shareCardFinalValue": "Son Değer",
+  "shareCardNominalReturn": "Nominal Getiri",
+  "shareCardReturn": "Getiri",
+  "shareCardProfit": "kazanç",
+  "shareCardLoss": "zarar",
+  "shareCardInflationTitle": "Enflasyon Düzeltmesi (TÜFE)",
+  "shareCardCumulativeInflation": "Birikimli Enflasyon",
+  "shareCardRealReturn": "Reel Getiri",
+  "shareCardWhatIfFooter": "Ya alsaydın?",
+  "shareCardComparisonTitle": "Varlık Karşılaştırması",
+  "shareCardComparisonFooter": "Hangisi daha kazandırdı?",
+  "shareCardPortfolioTitle": "Portföy Getirisi",
+  "shareCardPortfolioFooter": "Portföyüm ne kazandırdı?",
+  "shareCardTotalInvestment": "Toplam Yatırım",
+  "shareCardTotalReturn": "Toplam Getiri",
+  "shareCardNominalTotalReturn": "Nominal Getiri",
+  "shareCardAssetCount": "{count} varlık",
+  "@shareCardAssetCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "shareTextWhatIf": "{asset}'e {initial} yatırsaydım {final_value} ederdi ({percent})! 📊 #saydın",
+  "@shareTextWhatIf": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "initial": { "type": "String" },
+      "final_value": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareTextComparison": "Hangi yatırım daha kazandırdı? 🏆 {winner}: {percent} 📊 #saydın",
+  "@shareTextComparison": {
+    "placeholders": {
+      "winner": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareTextPortfolio": "Portföyüm {count} varlıkla {percent} getiri sağladı! 📊 #saydın",
+  "@shareTextPortfolio": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareDefaultText": "saydın.app üzerinden hesapladım.",
+  "shareCta": "\n\n📱 Saydın uygulamasını indir — App Store ve Google Play'de \"saydın\" ara.",
+
+  "scenarioNameComparison": "{count} Varlık Karşılaştırması",
+  "@scenarioNameComparison": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "scenarioNamePortfolio": "Portföy ({count} varlık)",
+  "@scenarioNamePortfolio": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "realReturnPrefix": "Reel: ",
+
+  "onboardingSkip": "Atla",
+  "onboardingNext": "İleri",
+  "onboardingGetStarted": "Hemen Dene",
+  "onboardingPage1Title": "Ya Alsaydım?",
+  "onboardingPage1Body": "Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.",
+  "onboardingPage2Title": "Karşılaştır ve Keşfet",
+  "onboardingPage2Body": "Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?",
+  "onboardingPage3Title": "Portföy Oluştur",
+  "onboardingPage3Body": "Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.",
+  "onboardingPage4Title": "Paylaş ve Kaydet",
+  "onboardingPage4Body": "Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön."
 }

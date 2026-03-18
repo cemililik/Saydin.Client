@@ -150,7 +150,7 @@ class _ComparisonResultCardState extends State<ComparisonResultCard>
                         if (calc.realProfitLossPercent != null) ...[
                           const SizedBox(height: 2),
                           Text(
-                            'Reel: ${calc.realProfitLossPercent! >= 0 ? '+' : ''}'
+                            '${l10n.realReturnPrefix}${calc.realProfitLossPercent! >= 0 ? '+' : ''}'
                             '${_pctFormatter.format(calc.realProfitLossPercent! / 100)}',
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(

@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// [RepaintBoundary] ile işaretlenmiş widget'ı PNG olarak yakalar ve
@@ -16,13 +17,18 @@ class ShareCardRenderer {
 
   static const _targetPx = 1080.0;
 
-  static const _cta =
-      '\n\n📱 Saydın uygulamasını indir — App Store ve Google Play\'de "saydın" ara.';
-
-  static Future<void> shareFromKey(GlobalKey key, {String? shareText}) async {
+  static Future<void> shareFromKey(
+    GlobalKey key, {
+    String? shareText,
+    required BuildContext context,
+  }) async {
     final boundary =
         key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) return;
+
+    // Resolve l10n before async gap.
+    final l10n = context.l10n;
+    final text = (shareText ?? l10n.shareDefaultText) + l10n.shareCta;
 
     // Ekranda hangi boyutta render edildiğine bakmaksızın 1080px çıktı üret.
     final displayWidth = boundary.size.width;
@@ -38,8 +44,6 @@ class ShareCardRenderer {
       '${tempDir.path}/saydin_share_${DateTime.now().millisecondsSinceEpoch}.png',
     );
     await file.writeAsBytes(bytes);
-
-    final text = (shareText ?? 'saydın.app üzerinden hesapladım.') + _cta;
 
     await Share.shareXFiles([
       XFile(file.path, mimeType: 'image/png'),

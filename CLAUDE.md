@@ -233,9 +233,30 @@ Color myColor = Color(0xFF2E7D32);  // magic number
 
 - Base URL dart-define ile geçilir — hardcode YASAK
 - Aktif backend URL: `https://fumed-cleverishly-moses.ngrok-free.dev/`
-- Deploy komutu: `flutter run --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ --device-id <device-id> --release`
 - `X-Device-ID` header her istekte otomatik eklenir (interceptor)
 - `FlutterSecureStorage` ile UUID oluşturulur ve saklanır
+
+---
+
+## Cihaza Deploy (KRİTİK)
+
+**Test cihazı:** iPhone "C.I." — `00008101-00013C6A02B9003A` (iOS 18.6)
+
+```bash
+# Debug modda iPhone'a deploy (varsayılan)
+flutter run \
+  --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ \
+  --device-id 00008101-00013C6A02B9003A
+
+# Release modda iPhone'a deploy
+flutter run \
+  --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ \
+  --device-id 00008101-00013C6A02B9003A \
+  --release
+```
+
+- Kullanıcı "iPhone'a gönder" veya "cihaza deploy et" dediğinde **debug mod** varsayılandır (aksi belirtilmezse)
+- Cihaz bağlı değilse önce `flutter devices` ile kontrol et
 
 ---
 

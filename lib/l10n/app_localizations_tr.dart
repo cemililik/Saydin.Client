@@ -426,4 +426,137 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get languageSystem => 'Sistem';
+
+  @override
+  String get shareCardInitialValue => 'Başlangıç';
+
+  @override
+  String get shareCardFinalValue => 'Son Değer';
+
+  @override
+  String get shareCardNominalReturn => 'Nominal Getiri';
+
+  @override
+  String get shareCardReturn => 'Getiri';
+
+  @override
+  String get shareCardProfit => 'kazanç';
+
+  @override
+  String get shareCardLoss => 'zarar';
+
+  @override
+  String get shareCardInflationTitle => 'Enflasyon Düzeltmesi (TÜFE)';
+
+  @override
+  String get shareCardCumulativeInflation => 'Birikimli Enflasyon';
+
+  @override
+  String get shareCardRealReturn => 'Reel Getiri';
+
+  @override
+  String get shareCardWhatIfFooter => 'Ya alsaydın?';
+
+  @override
+  String get shareCardComparisonTitle => 'Varlık Karşılaştırması';
+
+  @override
+  String get shareCardComparisonFooter => 'Hangisi daha kazandırdı?';
+
+  @override
+  String get shareCardPortfolioTitle => 'Portföy Getirisi';
+
+  @override
+  String get shareCardPortfolioFooter => 'Portföyüm ne kazandırdı?';
+
+  @override
+  String get shareCardTotalInvestment => 'Toplam Yatırım';
+
+  @override
+  String get shareCardTotalReturn => 'Toplam Getiri';
+
+  @override
+  String get shareCardNominalTotalReturn => 'Nominal Getiri';
+
+  @override
+  String shareCardAssetCount(int count) {
+    return '$count varlık';
+  }
+
+  @override
+  String shareTextWhatIf(
+    String asset,
+    String initial,
+    String final_value,
+    String percent,
+  ) {
+    return '$asset\'e $initial yatırsaydım $final_value ederdi ($percent)! 📊 #saydın';
+  }
+
+  @override
+  String shareTextComparison(String winner, String percent) {
+    return 'Hangi yatırım daha kazandırdı? 🏆 $winner: $percent 📊 #saydın';
+  }
+
+  @override
+  String shareTextPortfolio(int count, String percent) {
+    return 'Portföyüm $count varlıkla $percent getiri sağladı! 📊 #saydın';
+  }
+
+  @override
+  String get shareDefaultText => 'saydın.app üzerinden hesapladım.';
+
+  @override
+  String get shareCta =>
+      '\n\n📱 Saydın uygulamasını indir — App Store ve Google Play\'de \"saydın\" ara.';
+
+  @override
+  String scenarioNameComparison(int count) {
+    return '$count Varlık Karşılaştırması';
+  }
+
+  @override
+  String scenarioNamePortfolio(int count) {
+    return 'Portföy ($count varlık)';
+  }
+
+  @override
+  String get realReturnPrefix => 'Reel: ';
+
+  @override
+  String get onboardingSkip => 'Atla';
+
+  @override
+  String get onboardingNext => 'İleri';
+
+  @override
+  String get onboardingGetStarted => 'Hemen Dene';
+
+  @override
+  String get onboardingPage1Title => 'Ya Alsaydım?';
+
+  @override
+  String get onboardingPage1Body =>
+      'Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.';
+
+  @override
+  String get onboardingPage2Title => 'Karşılaştır ve Keşfet';
+
+  @override
+  String get onboardingPage2Body =>
+      'Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?';
+
+  @override
+  String get onboardingPage3Title => 'Portföy Oluştur';
+
+  @override
+  String get onboardingPage3Body =>
+      'Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.';
+
+  @override
+  String get onboardingPage4Title => 'Paylaş ve Kaydet';
+
+  @override
+  String get onboardingPage4Body =>
+      'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.';
 }

@@ -1,10 +1,14 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
+import 'package:saydin/features/what_if/domain/entities/asset.dart';
+import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
+import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
 
 class ScenarioCard extends StatelessWidget {
   final SavedScenario scenario;
@@ -25,6 +29,25 @@ class ScenarioCard extends StatelessWidget {
         onTap: onTap,
       ),
     };
+  }
+
+  /// Asset sembolünden güncel lokalize adı çözer.
+  /// BLoC'taki asset listesinden arar, bulamazsa [fallback] döner.
+  static String resolveAssetName(
+    BuildContext context,
+    String symbol,
+    String fallback,
+  ) {
+    final state = context.read<WhatIfBloc>().state;
+    final assets = switch (state) {
+      WhatIfAssetsLoaded(:final assets) => assets,
+      WhatIfSuccess(:final assets) => assets,
+      WhatIfFailure(:final assets) => assets,
+      WhatIfCalculating(:final assets) => assets,
+      _ => <Asset>[],
+    };
+    return assets.where((a) => a.symbol == symbol).firstOrNull?.displayName ??
+        fallback;
   }
 }
 
@@ -146,7 +169,11 @@ class _WhatIfCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            scenario.assetDisplayName,
+                            ScenarioCard.resolveAssetName(
+                              context,
+                              scenario.assetSymbol,
+                              scenario.assetDisplayName,
+                            ),
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -217,7 +244,15 @@ class _ComparisonCard extends StatelessWidget {
         ? _dateFormatter.format(scenario.sellDate!)
         : l10n.today;
 
-    final winnerName = scenario.extraData?['winnerName'] as String? ?? '';
+    // Sembol sayısından lokalize başlık oluştur
+    final symbolCount = scenario.assetSymbol.split(',').length;
+    final title = l10n.scenarioNameComparison(symbolCount);
+
+    final winnerSymbol = scenario.extraData?['winnerSymbol'] as String?;
+    final rawWinnerName = scenario.extraData?['winnerName'] as String? ?? '';
+    final winnerName = winnerSymbol != null
+        ? ScenarioCard.resolveAssetName(context, winnerSymbol, rawWinnerName)
+        : rawWinnerName;
     final winnerReturn =
         (scenario.extraData?['winnerReturn'] as num?)?.toDouble() ?? 0.0;
     final winnerSign = winnerReturn >= 0 ? '+' : '';
@@ -249,7 +284,7 @@ class _ComparisonCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            scenario.assetDisplayName,
+                            title,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -326,6 +361,10 @@ class _PortfolioCard extends StatelessWidget {
         ? _dateFormatter.format(scenario.sellDate!)
         : l10n.today;
 
+    // Varlık sayısından lokalize başlık oluştur
+    final rawItems = scenario.extraData?['items'] as List<dynamic>? ?? [];
+    final title = l10n.scenarioNamePortfolio(rawItems.length);
+
     final totalReturn =
         (scenario.extraData?['totalReturn'] as num?)?.toDouble() ?? 0.0;
     final returnSign = totalReturn >= 0 ? '+' : '';
@@ -357,7 +396,7 @@ class _PortfolioCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            scenario.assetDisplayName,
+                            title,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),

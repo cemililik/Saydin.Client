@@ -73,14 +73,16 @@ class _ComparisonPageState extends State<ComparisonPage> {
     ctx.read<ScenariosBloc>().add(
       ScenarioSaveRequested(
         assetSymbol: symbols,
-        assetDisplayName:
-            '${state.result.results.length} Varlık Karşılaştırması',
+        assetDisplayName: ctx.l10n.scenarioNameComparison(
+          state.result.results.length,
+        ),
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
         amount: state.amount ?? 0,
         amountType: 'try',
         type: ScenarioType.comparison,
         extraData: {
+          'winnerSymbol': winner?.calculation.assetSymbol ?? '',
           'winnerName': winner?.calculation.assetDisplayName ?? '',
           'winnerReturn': winner?.calculation.profitLossPercent ?? 0.0,
           'includeInflation': state.includeInflation,
@@ -100,8 +102,10 @@ class _ComparisonPageState extends State<ComparisonPage> {
     final winnerName = winner?.calculation.assetDisplayName ?? '';
     final winnerPct = winner?.calculation.profitLossPercent ?? 0;
     final sign = winnerPct >= 0 ? '+' : '';
-    final shareText =
-        'Hangi yatırım daha kazandırdı? 🏆 $winnerName: $sign${winnerPct.toStringAsFixed(2).replaceAll('.', ',')}% 📊 #saydın';
+    final shareText = ctx.l10n.shareTextComparison(
+      winnerName,
+      '$sign${winnerPct.toStringAsFixed(2).replaceAll('.', ',')}%',
+    );
     showModalBottomSheet<void>(
       context: ctx,
       isScrollControlled: true,

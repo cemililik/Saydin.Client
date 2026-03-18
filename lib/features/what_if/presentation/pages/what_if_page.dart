@@ -215,10 +215,12 @@ class _WhatIfPageState extends State<WhatIfPage> {
                     );
                     final pct = r.profitLossPercent;
                     final sign = pct >= 0 ? '+' : '';
-                    final text =
-                        '${r.assetDisplayName}\'e ${fmt.format(r.initialValueTry)} '
-                        'yatırsaydım ${fmt.format(r.finalValueTry)} ederdi '
-                        '($sign${pct.toStringAsFixed(2).replaceAll('.', ',')}%)! 📊 #saydın';
+                    final text = context.l10n.shareTextWhatIf(
+                      r.assetDisplayName,
+                      fmt.format(r.initialValueTry),
+                      fmt.format(r.finalValueTry),
+                      '$sign${pct.toStringAsFixed(2).replaceAll('.', ',')}%',
+                    );
                     showModalBottomSheet<void>(
                       context: context,
                       isScrollControlled: true,

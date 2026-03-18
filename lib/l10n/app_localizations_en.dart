@@ -426,4 +426,137 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get languageSystem => 'System';
+
+  @override
+  String get shareCardInitialValue => 'Initial';
+
+  @override
+  String get shareCardFinalValue => 'Final Value';
+
+  @override
+  String get shareCardNominalReturn => 'Nominal Return';
+
+  @override
+  String get shareCardReturn => 'Return';
+
+  @override
+  String get shareCardProfit => 'profit';
+
+  @override
+  String get shareCardLoss => 'loss';
+
+  @override
+  String get shareCardInflationTitle => 'Inflation Adjustment (CPI)';
+
+  @override
+  String get shareCardCumulativeInflation => 'Cumulative Inflation';
+
+  @override
+  String get shareCardRealReturn => 'Real Return';
+
+  @override
+  String get shareCardWhatIfFooter => 'What if I bought?';
+
+  @override
+  String get shareCardComparisonTitle => 'Asset Comparison';
+
+  @override
+  String get shareCardComparisonFooter => 'Which one made more?';
+
+  @override
+  String get shareCardPortfolioTitle => 'Portfolio Return';
+
+  @override
+  String get shareCardPortfolioFooter => 'What did my portfolio earn?';
+
+  @override
+  String get shareCardTotalInvestment => 'Total Investment';
+
+  @override
+  String get shareCardTotalReturn => 'Total Return';
+
+  @override
+  String get shareCardNominalTotalReturn => 'Nominal Return';
+
+  @override
+  String shareCardAssetCount(int count) {
+    return '$count assets';
+  }
+
+  @override
+  String shareTextWhatIf(
+    String asset,
+    String initial,
+    String final_value,
+    String percent,
+  ) {
+    return 'If I had invested $initial in $asset, it would be worth $final_value ($percent)! 📊 #saydın';
+  }
+
+  @override
+  String shareTextComparison(String winner, String percent) {
+    return 'Which investment performed better? 🏆 $winner: $percent 📊 #saydın';
+  }
+
+  @override
+  String shareTextPortfolio(int count, String percent) {
+    return 'My portfolio with $count assets returned $percent! 📊 #saydın';
+  }
+
+  @override
+  String get shareDefaultText => 'Calculated on saydın.app.';
+
+  @override
+  String get shareCta =>
+      '\n\n📱 Download Saydın — search \"saydın\" on App Store and Google Play.';
+
+  @override
+  String scenarioNameComparison(int count) {
+    return '$count Asset Comparison';
+  }
+
+  @override
+  String scenarioNamePortfolio(int count) {
+    return 'Portfolio ($count assets)';
+  }
+
+  @override
+  String get realReturnPrefix => 'Real: ';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingGetStarted => 'Get Started';
+
+  @override
+  String get onboardingPage1Title => 'What If I Bought?';
+
+  @override
+  String get onboardingPage1Body =>
+      'Calculate any investment retroactively. Dollar, gold, Bitcoin and more.';
+
+  @override
+  String get onboardingPage2Title => 'Compare and Discover';
+
+  @override
+  String get onboardingPage2Body =>
+      'Compare assets side by side, build portfolios. Which one performed better?';
+
+  @override
+  String get onboardingPage3Title => 'Build a Portfolio';
+
+  @override
+  String get onboardingPage3Body =>
+      'Create portfolios with multiple assets, calculate total returns and discover the best strategy.';
+
+  @override
+  String get onboardingPage4Title => 'Share and Save';
+
+  @override
+  String get onboardingPage4Body =>
+      'Share your results with friends, save your scenarios and come back anytime.';
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
+import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
+import 'package:saydin/features/what_if/presentation/widgets/share_card_widget.dart';
 
 /// Karşılaştırma sonucunu sosyal medyaya paylaşmak için render edilen kart.
 class ComparisonShareCardWidget extends StatelessWidget {
@@ -24,18 +26,9 @@ class ComparisonShareCardWidget extends StatelessWidget {
 
   static const _rankEmojis = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
 
-  String get _durationLabel {
-    final end = sellDate ?? DateTime.now();
-    final months = (end.year - buyDate.year) * 12 + end.month - buyDate.month;
-    if (months < 1) return '${end.difference(buyDate).inDays} gün';
-    if (months < 12) return '$months ay';
-    final years = months ~/ 12;
-    final rem = months % 12;
-    return rem > 0 ? '$years yıl $rem ay' : '$years yıl';
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final sellLabel = sellDate != null
         ? _dateFormatter.format(sellDate!)
         : _dateFormatter.format(DateTime.now());
@@ -78,10 +71,10 @@ class ComparisonShareCardWidget extends StatelessWidget {
                   // Başlık + süre chip
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Varlık Karşılaştırması',
-                          style: TextStyle(
+                          l10n.shareCardComparisonTitle,
+                          style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A1A1A),
@@ -98,7 +91,11 @@ class ComparisonShareCardWidget extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          _durationLabel,
+                          ShareCardWidget.durationLabel(
+                            l10n,
+                            buyDate,
+                            sellDate,
+                          ),
                           style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.primary,
@@ -187,7 +184,7 @@ class ComparisonShareCardWidget extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Hangisi daha kazandırdı?',
+                    l10n.shareCardComparisonFooter,
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade500,

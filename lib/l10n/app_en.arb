@@ -188,5 +188,76 @@
   "settingsLanguageSubtitle": "Choose app language",
   "languageTurkish": "Türkçe",
   "languageEnglish": "English",
-  "languageSystem": "System"
+  "languageSystem": "System",
+
+  "shareCardInitialValue": "Initial",
+  "shareCardFinalValue": "Final Value",
+  "shareCardNominalReturn": "Nominal Return",
+  "shareCardReturn": "Return",
+  "shareCardProfit": "profit",
+  "shareCardLoss": "loss",
+  "shareCardInflationTitle": "Inflation Adjustment (CPI)",
+  "shareCardCumulativeInflation": "Cumulative Inflation",
+  "shareCardRealReturn": "Real Return",
+  "shareCardWhatIfFooter": "What if I bought?",
+  "shareCardComparisonTitle": "Asset Comparison",
+  "shareCardComparisonFooter": "Which one made more?",
+  "shareCardPortfolioTitle": "Portfolio Return",
+  "shareCardPortfolioFooter": "What did my portfolio earn?",
+  "shareCardTotalInvestment": "Total Investment",
+  "shareCardTotalReturn": "Total Return",
+  "shareCardNominalTotalReturn": "Nominal Return",
+  "shareCardAssetCount": "{count} assets",
+  "@shareCardAssetCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "shareTextWhatIf": "If I had invested {initial} in {asset}, it would be worth {final_value} ({percent})! 📊 #saydın",
+  "@shareTextWhatIf": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "initial": { "type": "String" },
+      "final_value": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareTextComparison": "Which investment performed better? 🏆 {winner}: {percent} 📊 #saydın",
+  "@shareTextComparison": {
+    "placeholders": {
+      "winner": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareTextPortfolio": "My portfolio with {count} assets returned {percent}! 📊 #saydın",
+  "@shareTextPortfolio": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareDefaultText": "Calculated on saydın.app.",
+  "shareCta": "\n\n📱 Download Saydın — search \"saydın\" on App Store and Google Play.",
+
+  "scenarioNameComparison": "{count} Asset Comparison",
+  "@scenarioNameComparison": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "scenarioNamePortfolio": "Portfolio ({count} assets)",
+  "@scenarioNamePortfolio": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "realReturnPrefix": "Real: ",
+
+  "onboardingSkip": "Skip",
+  "onboardingNext": "Next",
+  "onboardingGetStarted": "Get Started",
+  "onboardingPage1Title": "What If I Bought?",
+  "onboardingPage1Body": "Calculate any investment retroactively. Dollar, gold, Bitcoin and more.",
+  "onboardingPage2Title": "Compare and Discover",
+  "onboardingPage2Body": "Compare assets side by side, build portfolios. Which one performed better?",
+  "onboardingPage3Title": "Build a Portfolio",
+  "onboardingPage3Body": "Create portfolios with multiple assets, calculate total returns and discover the best strategy.",
+  "onboardingPage4Title": "Share and Save",
+  "onboardingPage4Body": "Share your results with friends, save your scenarios and come back anytime."
 }

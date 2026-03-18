@@ -101,7 +101,9 @@ class _PortfolioPageState extends State<PortfolioPage> {
     context.read<ScenariosBloc>().add(
       ScenarioSaveRequested(
         assetSymbol: 'PORTFOLIO',
-        assetDisplayName: 'Portföy (${state.items.length} varlık)',
+        assetDisplayName: context.l10n.scenarioNamePortfolio(
+          state.items.length,
+        ),
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
         amount: state.result.totalInitialValueTry,
@@ -130,8 +132,10 @@ class _PortfolioPageState extends State<PortfolioPage> {
     final pct = state.result.totalProfitLossPercent
         .toStringAsFixed(2)
         .replaceAll('.', ',');
-    final shareText =
-        'Portföyüm ${state.result.items.length} varlıkla $sign$pct% getiri sağladı! 📊 #saydın';
+    final shareText = context.l10n.shareTextPortfolio(
+      state.result.items.length,
+      '$sign$pct%',
+    );
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

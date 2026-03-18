@@ -28,6 +28,7 @@ class _SharePreviewSheetState extends State<SharePreviewSheet> {
       await ShareCardRenderer.shareFromKey(
         _repaintKey,
         shareText: widget.shareText,
+        context: context,
       );
     } finally {
       if (mounted) setState(() => _isSharing = false);

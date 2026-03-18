@@ -883,6 +883,233 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Sistem'**
   String get languageSystem;
+
+  /// No description provided for @shareCardInitialValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç'**
+  String get shareCardInitialValue;
+
+  /// No description provided for @shareCardFinalValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son Değer'**
+  String get shareCardFinalValue;
+
+  /// No description provided for @shareCardNominalReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Nominal Getiri'**
+  String get shareCardNominalReturn;
+
+  /// No description provided for @shareCardReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Getiri'**
+  String get shareCardReturn;
+
+  /// No description provided for @shareCardProfit.
+  ///
+  /// In tr, this message translates to:
+  /// **'kazanç'**
+  String get shareCardProfit;
+
+  /// No description provided for @shareCardLoss.
+  ///
+  /// In tr, this message translates to:
+  /// **'zarar'**
+  String get shareCardLoss;
+
+  /// No description provided for @shareCardInflationTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Enflasyon Düzeltmesi (TÜFE)'**
+  String get shareCardInflationTitle;
+
+  /// No description provided for @shareCardCumulativeInflation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birikimli Enflasyon'**
+  String get shareCardCumulativeInflation;
+
+  /// No description provided for @shareCardRealReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reel Getiri'**
+  String get shareCardRealReturn;
+
+  /// No description provided for @shareCardWhatIfFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ya alsaydın?'**
+  String get shareCardWhatIfFooter;
+
+  /// No description provided for @shareCardComparisonTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık Karşılaştırması'**
+  String get shareCardComparisonTitle;
+
+  /// No description provided for @shareCardComparisonFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hangisi daha kazandırdı?'**
+  String get shareCardComparisonFooter;
+
+  /// No description provided for @shareCardPortfolioTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföy Getirisi'**
+  String get shareCardPortfolioTitle;
+
+  /// No description provided for @shareCardPortfolioFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföyüm ne kazandırdı?'**
+  String get shareCardPortfolioFooter;
+
+  /// No description provided for @shareCardTotalInvestment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Yatırım'**
+  String get shareCardTotalInvestment;
+
+  /// No description provided for @shareCardTotalReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Getiri'**
+  String get shareCardTotalReturn;
+
+  /// No description provided for @shareCardNominalTotalReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Nominal Getiri'**
+  String get shareCardNominalTotalReturn;
+
+  /// No description provided for @shareCardAssetCount.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} varlık'**
+  String shareCardAssetCount(int count);
+
+  /// No description provided for @shareTextWhatIf.
+  ///
+  /// In tr, this message translates to:
+  /// **'{asset}\'e {initial} yatırsaydım {final_value} ederdi ({percent})! 📊 #saydın'**
+  String shareTextWhatIf(
+    String asset,
+    String initial,
+    String final_value,
+    String percent,
+  );
+
+  /// No description provided for @shareTextComparison.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hangi yatırım daha kazandırdı? 🏆 {winner}: {percent} 📊 #saydın'**
+  String shareTextComparison(String winner, String percent);
+
+  /// No description provided for @shareTextPortfolio.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföyüm {count} varlıkla {percent} getiri sağladı! 📊 #saydın'**
+  String shareTextPortfolio(int count, String percent);
+
+  /// No description provided for @shareDefaultText.
+  ///
+  /// In tr, this message translates to:
+  /// **'saydın.app üzerinden hesapladım.'**
+  String get shareDefaultText;
+
+  /// No description provided for @shareCta.
+  ///
+  /// In tr, this message translates to:
+  /// **'\n\n📱 Saydın uygulamasını indir — App Store ve Google Play\'de \"saydın\" ara.'**
+  String get shareCta;
+
+  /// No description provided for @scenarioNameComparison.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} Varlık Karşılaştırması'**
+  String scenarioNameComparison(int count);
+
+  /// No description provided for @scenarioNamePortfolio.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföy ({count} varlık)'**
+  String scenarioNamePortfolio(int count);
+
+  /// No description provided for @realReturnPrefix.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reel: '**
+  String get realReturnPrefix;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Atla'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In tr, this message translates to:
+  /// **'İleri'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingGetStarted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hemen Dene'**
+  String get onboardingGetStarted;
+
+  /// No description provided for @onboardingPage1Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ya Alsaydım?'**
+  String get onboardingPage1Title;
+
+  /// No description provided for @onboardingPage1Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.'**
+  String get onboardingPage1Body;
+
+  /// No description provided for @onboardingPage2Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Karşılaştır ve Keşfet'**
+  String get onboardingPage2Title;
+
+  /// No description provided for @onboardingPage2Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?'**
+  String get onboardingPage2Body;
+
+  /// No description provided for @onboardingPage3Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföy Oluştur'**
+  String get onboardingPage3Title;
+
+  /// No description provided for @onboardingPage3Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.'**
+  String get onboardingPage3Body;
+
+  /// No description provided for @onboardingPage4Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaş ve Kaydet'**
+  String get onboardingPage4Title;
+
+  /// No description provided for @onboardingPage4Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.'**
+  String get onboardingPage4Body;
 }
 
 class _AppLocalizationsDelegate
