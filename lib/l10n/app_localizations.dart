@@ -783,6 +783,18 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Portföy'**
   String get scenarioTypePortfolio;
+
+  /// No description provided for @brandedTitlePrefix.
+  ///
+  /// In tr, this message translates to:
+  /// **'al/sat '**
+  String get brandedTitlePrefix;
+
+  /// No description provided for @brandedTitleSuffix.
+  ///
+  /// In tr, this message translates to:
+  /// **'saydın'**
+  String get brandedTitleSuffix;
 }
 
 class _AppLocalizationsDelegate

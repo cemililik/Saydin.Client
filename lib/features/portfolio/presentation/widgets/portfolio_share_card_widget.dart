@@ -236,21 +236,9 @@ class PortfolioShareCardWidget extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Color.fromRGBO(
-                        color.r.toInt(),
-                        color.g.toInt(),
-                        color.b.toInt(),
-                        0.07,
-                      ),
+                      color: color.withValues(alpha: 0.07),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Color.fromRGBO(
-                          color.r.toInt(),
-                          color.g.toInt(),
-                          color.b.toInt(),
-                          0.22,
-                        ),
-                      ),
+                      border: Border.all(color: color.withValues(alpha: 0.22)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,

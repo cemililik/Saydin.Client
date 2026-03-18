@@ -163,5 +163,8 @@
 
   "scenarioTypeWhatIf": "Hesaplama",
   "scenarioTypeComparison": "Karşılaştırma",
-  "scenarioTypePortfolio": "Portföy"
+  "scenarioTypePortfolio": "Portföy",
+
+  "brandedTitlePrefix": "al/sat ",
+  "brandedTitleSuffix": "saydın"
 }

@@ -206,20 +206,10 @@ class ShareCardWidget extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Color.fromRGBO(
-                        nominalColor.r.toInt(),
-                        nominalColor.g.toInt(),
-                        nominalColor.b.toInt(),
-                        0.07,
-                      ),
+                      color: nominalColor.withValues(alpha: 0.07),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Color.fromRGBO(
-                          nominalColor.r.toInt(),
-                          nominalColor.g.toInt(),
-                          nominalColor.b.toInt(),
-                          0.22,
-                        ),
+                        color: nominalColor.withValues(alpha: 0.22),
                       ),
                     ),
                     child: Column(

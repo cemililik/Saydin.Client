@@ -17,6 +17,7 @@ import 'package:saydin/features/what_if/presentation/widgets/amount_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/asset_selector.dart';
 import 'package:saydin/features/what_if/presentation/widgets/date_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/result_card.dart';
+import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/features/what_if/presentation/widgets/share_card_preview_sheet.dart';
 
 class WhatIfPage extends StatefulWidget {
@@ -345,7 +346,7 @@ class _WhatIfForm extends StatelessWidget {
                 onAmountTypeChanged: onAmountTypeChanged,
               ),
               const SizedBox(height: 8),
-              _InflationToggle(
+              InflationToggle(
                 value: includeInflation,
                 enabled: inflationEnabled,
                 onToggle: onInflationToggled,
@@ -433,12 +434,13 @@ class _BrandedTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final primary = Theme.of(context).colorScheme.primary;
     return Text.rich(
       TextSpan(
         children: [
           TextSpan(
-            text: 'al/sat ',
+            text: l10n.brandedTitlePrefix,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.normal,
@@ -446,7 +448,7 @@ class _BrandedTitle extends StatelessWidget {
             ),
           ),
           TextSpan(
-            text: 'saydın',
+            text: l10n.brandedTitleSuffix,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -454,87 +456,6 @@ class _BrandedTitle extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Inflation toggle ──────────────────────────────────────────────────────────
-
-class _InflationToggle extends StatelessWidget {
-  final bool value;
-  final bool enabled;
-  final VoidCallback onToggle;
-
-  const _InflationToggle({
-    required this.value,
-    required this.enabled,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return InkWell(
-      onTap: enabled ? onToggle : null,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Switch(
-              value: enabled ? value : false,
-              onChanged: enabled ? (_) => onToggle() : null,
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        l10n.inflationAdjust,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      if (!enabled) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            l10n.premiumFeature,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text(
-                    l10n.inflationAdjustSubtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

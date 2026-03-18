@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 
@@ -104,7 +105,7 @@ class ComparisonSuccess extends ComparisonState {
 }
 
 class ComparisonFailure extends ComparisonState {
-  final String message;
+  final AppError error;
 
   const ComparisonFailure({
     required super.assets,
@@ -114,11 +115,11 @@ class ComparisonFailure extends ComparisonState {
     super.amount,
     super.amountType,
     super.includeInflation,
-    required this.message,
+    required this.error,
   });
 
   @override
-  List<Object?> get props => [...super.props, message];
+  List<Object?> get props => [...super.props, error];
 }
 
 const _sentinel = Object();

@@ -44,6 +44,7 @@ class ScenarioSaveRequested extends ScenariosEvent {
     amount,
     amountType,
     type,
+    extraData,
   ];
 }
 

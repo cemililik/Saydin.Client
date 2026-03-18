@@ -376,4 +376,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get scenarioTypePortfolio => 'Portföy';
+
+  @override
+  String get brandedTitlePrefix => 'al/sat ';
+
+  @override
+  String get brandedTitleSuffix => 'saydın';
 }

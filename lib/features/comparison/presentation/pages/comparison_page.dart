@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/l10n/app_localizations.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
@@ -109,6 +112,16 @@ class _ComparisonPageState extends State<ComparisonPage> {
     );
   }
 
+  String _errorMessage(AppError error, AppLocalizations l10n) =>
+      switch (error) {
+        PriceNotFoundError() => l10n.errorPriceNotFound,
+        DailyLimitError() => l10n.errorDailyLimit,
+        ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
+        NoInternetError() => l10n.errorNoInternet,
+        ServerError() => l10n.errorServer,
+        UnknownError() => l10n.errorGeneric,
+      };
+
   void _showAssetPicker(BuildContext pageContext) {
     final bloc = pageContext.read<ComparisonBloc>();
     showModalBottomSheet<void>(
@@ -166,7 +179,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(state.message),
+                    Text(_errorMessage(state.error, l10n)),
                     const SizedBox(height: 12),
                     ElevatedButton(
                       onPressed: () => context.read<ComparisonBloc>().add(
@@ -268,7 +281,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                           .state
                           .features
                           .inflationAdjustment;
-                      return _InflationToggle(
+                      return InflationToggle(
                         value: state.includeInflation,
                         enabled: inflationEnabled,
                         onToggle: () => context.read<ComparisonBloc>().add(
@@ -304,7 +317,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                   if (state is ComparisonFailure) ...[
                     const SizedBox(height: 12),
                     Text(
-                      state.message,
+                      _errorMessage(state.error, l10n),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -365,87 +378,6 @@ class _ComparisonPageState extends State<ComparisonPage> {
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-// ── Inflation toggle ──────────────────────────────────────────────────────────
-
-class _InflationToggle extends StatelessWidget {
-  final bool value;
-  final bool enabled;
-  final VoidCallback onToggle;
-
-  const _InflationToggle({
-    required this.value,
-    required this.enabled,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return InkWell(
-      onTap: enabled ? onToggle : null,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Switch(
-              value: enabled ? value : false,
-              onChanged: enabled ? (_) => onToggle() : null,
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        l10n.inflationAdjust,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      if (!enabled) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            l10n.premiumFeature,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text(
-                    l10n.inflationAdjustSubtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );

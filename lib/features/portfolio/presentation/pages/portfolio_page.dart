@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
@@ -271,12 +272,13 @@ class _PortfolioPageState extends State<PortfolioPage> {
 
                 // Enflasyon toggle
                 const SizedBox(height: 4),
-                _InflationToggle(
+                InflationToggle(
                   value: state.includeInflation,
                   enabled: inflationEnabled,
                   onToggle: () => context.read<PortfolioBloc>().add(
                     const PortfolioInflationToggled(),
                   ),
+                  label: context.l10n.portfolioInflationLabel,
                 ),
 
                 const SizedBox(height: 16),
@@ -434,87 +436,6 @@ class _PortfolioPageState extends State<PortfolioPage> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-// ── Enflasyon toggle ──────────────────────────────────────────────────────────
-
-class _InflationToggle extends StatelessWidget {
-  final bool value;
-  final bool enabled;
-  final VoidCallback onToggle;
-
-  const _InflationToggle({
-    required this.value,
-    required this.enabled,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return InkWell(
-      onTap: enabled ? onToggle : null,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Switch(
-              value: enabled ? value : false,
-              onChanged: enabled ? (_) => onToggle() : null,
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        l10n.portfolioInflationLabel,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      if (!enabled) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            l10n.premiumFeature,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text(
-                    l10n.inflationAdjustSubtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

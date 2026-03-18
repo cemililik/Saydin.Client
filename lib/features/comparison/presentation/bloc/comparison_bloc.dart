@@ -66,7 +66,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
         ComparisonFailure(
           assets: const [],
           selectedSymbols: const [],
-          message: _errorMessage(error),
+          error: error,
         ),
       );
     } catch (e, st) {
@@ -75,7 +75,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
         ComparisonFailure(
           assets: const [],
           selectedSymbols: const [],
-          message: e.toString(),
+          error: const UnknownError(),
         ),
       );
     }
@@ -196,7 +196,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
           amount: loaded.amount,
           amountType: loaded.amountType,
           includeInflation: loaded.includeInflation,
-          message: _errorMessage(error),
+          error: error,
         ),
       );
     } catch (e, st) {
@@ -210,7 +210,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
           amount: loaded.amount,
           amountType: loaded.amountType,
           includeInflation: loaded.includeInflation,
-          message: e.toString(),
+          error: const UnknownError(),
         ),
       );
     }
@@ -233,12 +233,4 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     );
     await _onCalculateRequested(const ComparisonCalculateRequested(), emit);
   }
-
-  String _errorMessage(AppError error) => switch (error) {
-    PriceNotFoundError() => 'Bu tarih için fiyat bilgisi bulunamadı.',
-    DailyLimitError() => 'Günlük hesaplama limitine ulaştınız.',
-    NoInternetError() => 'İnternet bağlantısı yok.',
-    ServerError() => 'Sunucu hatası. Lütfen tekrar deneyin.',
-    _ => 'Bir hata oluştu. Lütfen tekrar deneyin.',
-  };
 }
