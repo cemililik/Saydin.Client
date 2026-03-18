@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error.dart';
@@ -19,6 +20,7 @@ import 'package:saydin/features/what_if/presentation/widgets/asset_selector.dart
 import 'package:saydin/features/what_if/presentation/widgets/date_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/result_card.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
+import 'package:saydin/core/widgets/skeleton_card.dart';
 import 'package:saydin/features/what_if/presentation/widgets/share_card_preview_sheet.dart';
 
 class WhatIfPage extends StatefulWidget {
@@ -114,6 +116,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
             (!prev.formInput.dateAdjusted && curr.formInput.dateAdjusted),
         listener: (context, state) {
           if (state is WhatIfSuccess) {
+            HapticFeedback.mediumImpact();
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && _scrollController.hasClients) {
                 _scrollController.animateTo(
@@ -374,6 +377,10 @@ class _WhatIfForm extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
+              if (isCalculating) ...[
+                const SizedBox(height: 24),
+                const SkeletonCard(),
+              ],
               if (result case final result?) ...[
                 const SizedBox(height: 24),
                 ResultCard(result: result),

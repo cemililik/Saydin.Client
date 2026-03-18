@@ -39,6 +39,7 @@ dependencies:
 
   # Observability
   sentry_flutter: ^8.14.2
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

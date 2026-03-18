@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
+import 'package:saydin/core/widgets/skeleton_card.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
@@ -183,6 +185,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
             curr is PortfolioSuccess || curr is PortfolioFailure,
         listener: (context, state) {
           if (state is PortfolioSuccess) {
+            HapticFeedback.mediumImpact();
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && _scrollController.hasClients) {
                 _scrollController.animateTo(
@@ -398,6 +401,12 @@ class _PortfolioPageState extends State<PortfolioPage> {
                     ],
                   ],
                 ),
+
+                // ── Skeleton loading ──────────────────────────────────
+                if (isCalculating) ...[
+                  const SizedBox(height: 24),
+                  const SkeletonCard(),
+                ],
 
                 // ── Sonuç kartı ───────────────────────────────────────
                 if (state is PortfolioSuccess) ...[

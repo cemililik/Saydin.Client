@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
@@ -17,6 +18,7 @@ import 'package:saydin/features/comparison/presentation/widgets/comparison_share
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
+import 'package:saydin/core/widgets/skeleton_card.dart';
 import 'package:saydin/features/favorites/presentation/cubit/favorites_cubit.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/widgets/amount_input.dart';
@@ -159,6 +161,9 @@ class _ComparisonPageState extends State<ComparisonPage> {
         body: BlocConsumer<ComparisonBloc, ComparisonState>(
           listenWhen: (_, curr) => curr is ComparisonSuccess,
           listener: (context, state) {
+            if (state is ComparisonSuccess) {
+              HapticFeedback.mediumImpact();
+            }
             if (state is ComparisonSuccess && state.amount != null) {
               final controllerAmount = num.tryParse(
                 _amountController.text.replaceAll(',', '.'),
@@ -335,6 +340,12 @@ class _ComparisonPageState extends State<ComparisonPage> {
                       ),
                       textAlign: TextAlign.center,
                     ),
+                  ],
+
+                  // ── Skeleton loading ─────────────────────────────
+                  if (isCalculating) ...[
+                    const SizedBox(height: 24),
+                    const SkeletonCard(),
                   ],
 
                   // ── Results ──────────────────────────────────────
