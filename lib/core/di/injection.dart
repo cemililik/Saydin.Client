@@ -19,6 +19,8 @@ import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart'
 import 'package:saydin/features/favorites/data/repositories/favorites_repository_impl.dart';
 import 'package:saydin/features/favorites/domain/repositories/favorites_repository.dart';
 import 'package:saydin/features/favorites/presentation/cubit/favorites_cubit.dart';
+import 'package:saydin/features/onboarding/data/repositories/onboarding_repository_impl.dart';
+import 'package:saydin/features/onboarding/domain/repositories/onboarding_repository.dart';
 import 'package:saydin/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:saydin/features/settings/domain/repositories/settings_repository.dart';
 import 'package:saydin/features/settings/presentation/cubit/settings_cubit.dart';
@@ -53,6 +55,11 @@ void configureDependencies() {
   // Error handling
   sl.registerLazySingleton(() => const DioErrorMapper());
   sl.registerLazySingleton(() => const ErrorReporter());
+
+  // Onboarding
+  sl.registerLazySingleton<OnboardingRepository>(
+    () => OnboardingRepositoryImpl(SharedPreferencesAsync()),
+  );
 
   // Settings
   sl.registerLazySingleton<SettingsRepository>(
