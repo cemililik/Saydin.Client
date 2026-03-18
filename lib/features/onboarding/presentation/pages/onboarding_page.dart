@@ -17,7 +17,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     with TickerProviderStateMixin {
   final _controller = PageController();
   int _currentPage = 0;
-  static const _pageCount = 4;
+  static const _pageCount = 5;
 
   late final AnimationController _iconPulse;
   late final AnimationController _contentEntrance;
@@ -91,6 +91,15 @@ class _OnboardingPageState extends State<OnboardingPage>
       gradientColors: [Color(0xFFE65100), Color(0xFFBF360C)],
     ),
     _PageData(
+      mainIcon: Icons.repeat_rounded,
+      floatingIcons: [
+        Icons.calendar_month_rounded,
+        Icons.savings_rounded,
+        Icons.show_chart_rounded,
+      ],
+      gradientColors: [Color(0xFFEF6C00), Color(0xFFE65100)],
+    ),
+    _PageData(
       mainIcon: Icons.rocket_launch_rounded,
       floatingIcons: [
         Icons.bookmark_rounded,
@@ -112,12 +121,14 @@ class _OnboardingPageState extends State<OnboardingPage>
       l10n.onboardingPage2Title,
       l10n.onboardingPage3Title,
       l10n.onboardingPage4Title,
+      l10n.onboardingPage5Title,
     ];
     final bodies = [
       l10n.onboardingPage1Body,
       l10n.onboardingPage2Body,
       l10n.onboardingPage3Body,
       l10n.onboardingPage4Body,
+      l10n.onboardingPage5Body,
     ];
 
     return Scaffold(

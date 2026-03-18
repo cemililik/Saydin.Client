@@ -7,6 +7,9 @@ import 'package:saydin/core/theme/theme_mode_mapper.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_event.dart';
 import 'package:saydin/features/comparison/presentation/pages/comparison_page.dart';
+import 'package:saydin/features/dca/presentation/bloc/dca_bloc.dart';
+import 'package:saydin/features/dca/presentation/bloc/dca_event.dart';
+import 'package:saydin/features/dca/presentation/pages/dca_page.dart';
 import 'package:saydin/features/onboarding/domain/repositories/onboarding_repository.dart';
 import 'package:saydin/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
@@ -72,6 +75,7 @@ class SaydinApp extends StatelessWidget {
                 BlocProvider(create: (_) => sl<ScenariosBloc>()),
                 BlocProvider(create: (_) => sl<ComparisonBloc>()),
                 BlocProvider(create: (_) => sl<PortfolioBloc>()),
+                BlocProvider(create: (_) => sl<DcaBloc>()),
               ],
               child: const _AppHome(),
             ),
@@ -147,7 +151,7 @@ class _MainShellState extends State<MainShell> {
                 (scenario.extraData?['includeInflation'] as bool?) ?? false,
           ),
         );
-        setState(() => _selectedIndex = 0);
+        setState(() => _selectedIndex = 0); // WhatIfPage
       case ScenarioType.comparison:
         context.read<ComparisonBloc>().add(
           ComparisonReplayRequested(
@@ -184,6 +188,21 @@ class _MainShellState extends State<MainShell> {
           ),
         );
         setState(() => _selectedIndex = 2);
+      case ScenarioType.dca:
+        final extra = scenario.extraData;
+        context.read<DcaBloc>().add(
+          DcaReplayRequested(
+            assetSymbol: scenario.assetSymbol,
+            startDate: scenario.buyDate,
+            endDate: scenario.sellDate,
+            periodicAmount:
+                (extra?['periodicAmount'] as num?) ?? scenario.amount,
+            period: (extra?['period'] as String?) ?? 'monthly',
+            amountType: scenario.amountType,
+            includeInflation: (extra?['includeInflation'] as bool?) ?? false,
+          ),
+        );
+        setState(() => _selectedIndex = 3); // DcaPage
     }
   }
 
@@ -204,6 +223,7 @@ class _MainShellState extends State<MainShell> {
             ctx.read<WhatIfBloc>().add(const WhatIfLanguageChanged());
             ctx.read<ComparisonBloc>().add(const ComparisonLanguageChanged());
             ctx.read<PortfolioBloc>().add(const PortfolioLanguageChanged());
+            ctx.read<DcaBloc>().add(const DcaLanguageChanged());
           },
         ),
         BlocListener<ScenariosBloc, ScenariosState>(
@@ -236,7 +256,8 @@ class _MainShellState extends State<MainShell> {
             const WhatIfPage(), // 0 — Hesaplama
             const ComparisonPage(), // 1 — Karşılaştırma
             const PortfolioPage(), // 2 — Portföy
-            ScenariosPage(onScenarioTap: _onScenarioTap), // 3 — Senaryolar
+            const DcaPage(), // 3 — DCA
+            ScenariosPage(onScenarioTap: _onScenarioTap), // 4 — Senaryolar
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
@@ -259,6 +280,11 @@ class _MainShellState extends State<MainShell> {
               icon: const Icon(Icons.account_balance_wallet_outlined),
               activeIcon: const Icon(Icons.account_balance_wallet),
               label: l10n.tabPortfolio,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.repeat_outlined),
+              activeIcon: const Icon(Icons.repeat),
+              label: l10n.tabDca,
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.bookmark_border),

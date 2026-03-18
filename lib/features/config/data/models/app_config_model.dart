@@ -18,6 +18,7 @@ class AppConfigModel extends AppConfig {
         comparison: f['comparison'] as bool? ?? true,
         inflationAdjustment: f['inflationAdjustment'] as bool? ?? true,
         share: f['share'] as bool? ?? true,
+        dca: f['dca'] as bool? ?? true,
         priceHistoryMonths: f['priceHistoryMonths'] as int? ?? 12,
       ),
     );

@@ -788,6 +788,12 @@ abstract class AppLocalizations {
   /// **'Portföy'**
   String get scenarioTypePortfolio;
 
+  /// No description provided for @scenarioTypeDca.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birikim'**
+  String get scenarioTypeDca;
+
   /// No description provided for @brandedTitlePrefix.
   ///
   /// In tr, this message translates to:
@@ -1102,14 +1108,152 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPage4Title.
   ///
   /// In tr, this message translates to:
-  /// **'Paylaş ve Kaydet'**
+  /// **'Düzenli Yatırım'**
   String get onboardingPage4Title;
 
   /// No description provided for @onboardingPage4Body.
   ///
   /// In tr, this message translates to:
-  /// **'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.'**
+  /// **'Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.'**
   String get onboardingPage4Body;
+
+  /// No description provided for @onboardingPage5Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaş ve Kaydet'**
+  String get onboardingPage5Title;
+
+  /// No description provided for @onboardingPage5Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.'**
+  String get onboardingPage5Body;
+
+  /// No description provided for @tabDca.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birikim'**
+  String get tabDca;
+
+  /// No description provided for @dcaTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli Yatırım Simülasyonu'**
+  String get dcaTitle;
+
+  /// No description provided for @dcaStartDate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç Tarihi'**
+  String get dcaStartDate;
+
+  /// No description provided for @dcaEndDate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bitiş Tarihi (opsiyonel)'**
+  String get dcaEndDate;
+
+  /// No description provided for @dcaStartDateRequired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç tarihi giriniz'**
+  String get dcaStartDateRequired;
+
+  /// No description provided for @dcaPeriodWeekly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Haftalık'**
+  String get dcaPeriodWeekly;
+
+  /// No description provided for @dcaPeriodMonthly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aylık'**
+  String get dcaPeriodMonthly;
+
+  /// No description provided for @dcaPeriodLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Periyot'**
+  String get dcaPeriodLabel;
+
+  /// No description provided for @dcaPeriodicAmountLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Periyodik Tutar'**
+  String get dcaPeriodicAmountLabel;
+
+  /// No description provided for @dcaPeriodicAmount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Periyodik Tutar'**
+  String get dcaPeriodicAmount;
+
+  /// No description provided for @dcaCalculate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Simüle Et'**
+  String get dcaCalculate;
+
+  /// No description provided for @dcaTotalInvested.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Yatırım'**
+  String get dcaTotalInvested;
+
+  /// No description provided for @dcaCurrentValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güncel Değer'**
+  String get dcaCurrentValue;
+
+  /// No description provided for @dcaTotalPurchases.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Alım'**
+  String get dcaTotalPurchases;
+
+  /// No description provided for @dcaAvgCost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama Maliyet'**
+  String get dcaAvgCost;
+
+  /// No description provided for @dcaTotalUnits.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Adet'**
+  String get dcaTotalUnits;
+
+  /// No description provided for @dcaCurrentPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güncel Fiyat'**
+  String get dcaCurrentPrice;
+
+  /// No description provided for @dcaChartCost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Maliyet'**
+  String get dcaChartCost;
+
+  /// No description provided for @dcaChartValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Değer'**
+  String get dcaChartValue;
+
+  /// No description provided for @shareCardDcaFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli yatırım ile birikim'**
+  String get shareCardDcaFooter;
+
+  /// No description provided for @shareTextDca.
+  ///
+  /// In tr, this message translates to:
+  /// **'{asset} için {count} alım yaptım, getiri: {percent}! 📊 #saydın'**
+  String shareTextDca(String asset, int count, String percent);
 }
 
 class _AppLocalizationsDelegate

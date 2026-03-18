@@ -378,6 +378,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scenarioTypePortfolio => 'Portfolio';
 
   @override
+  String get scenarioTypeDca => 'DCA';
+
+  @override
   String get brandedTitlePrefix => 'buy/sell ';
 
   @override
@@ -554,9 +557,81 @@ class AppLocalizationsEn extends AppLocalizations {
       'Create portfolios with multiple assets, calculate total returns and discover the best strategy.';
 
   @override
-  String get onboardingPage4Title => 'Share and Save';
+  String get onboardingPage4Title => 'Regular Investing';
 
   @override
   String get onboardingPage4Body =>
+      'Simulate weekly or monthly recurring purchases, see average cost and total return.';
+
+  @override
+  String get onboardingPage5Title => 'Share and Save';
+
+  @override
+  String get onboardingPage5Body =>
       'Share your results with friends, save your scenarios and come back anytime.';
+
+  @override
+  String get tabDca => 'DCA';
+
+  @override
+  String get dcaTitle => 'DCA Simulation';
+
+  @override
+  String get dcaStartDate => 'Start Date';
+
+  @override
+  String get dcaEndDate => 'End Date (optional)';
+
+  @override
+  String get dcaStartDateRequired => 'Please enter start date';
+
+  @override
+  String get dcaPeriodWeekly => 'Weekly';
+
+  @override
+  String get dcaPeriodMonthly => 'Monthly';
+
+  @override
+  String get dcaPeriodLabel => 'Period';
+
+  @override
+  String get dcaPeriodicAmountLabel => 'Periodic Amount';
+
+  @override
+  String get dcaPeriodicAmount => 'Periodic Amount';
+
+  @override
+  String get dcaCalculate => 'Simulate';
+
+  @override
+  String get dcaTotalInvested => 'Total Invested';
+
+  @override
+  String get dcaCurrentValue => 'Current Value';
+
+  @override
+  String get dcaTotalPurchases => 'Total Purchases';
+
+  @override
+  String get dcaAvgCost => 'Average Cost';
+
+  @override
+  String get dcaTotalUnits => 'Total Units';
+
+  @override
+  String get dcaCurrentPrice => 'Current Price';
+
+  @override
+  String get dcaChartCost => 'Cost';
+
+  @override
+  String get dcaChartValue => 'Value';
+
+  @override
+  String get shareCardDcaFooter => 'DCA — regular investing';
+
+  @override
+  String shareTextDca(String asset, int count, String percent) {
+    return 'DCA into $asset: $count purchases, return: $percent! 📊 #saydın';
+  }
 }

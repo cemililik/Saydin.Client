@@ -378,6 +378,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scenarioTypePortfolio => 'Portföy';
 
   @override
+  String get scenarioTypeDca => 'Birikim';
+
+  @override
   String get brandedTitlePrefix => 'al/sat ';
 
   @override
@@ -554,9 +557,81 @@ class AppLocalizationsTr extends AppLocalizations {
       'Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.';
 
   @override
-  String get onboardingPage4Title => 'Paylaş ve Kaydet';
+  String get onboardingPage4Title => 'Düzenli Yatırım';
 
   @override
   String get onboardingPage4Body =>
+      'Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.';
+
+  @override
+  String get onboardingPage5Title => 'Paylaş ve Kaydet';
+
+  @override
+  String get onboardingPage5Body =>
       'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.';
+
+  @override
+  String get tabDca => 'Birikim';
+
+  @override
+  String get dcaTitle => 'Düzenli Yatırım Simülasyonu';
+
+  @override
+  String get dcaStartDate => 'Başlangıç Tarihi';
+
+  @override
+  String get dcaEndDate => 'Bitiş Tarihi (opsiyonel)';
+
+  @override
+  String get dcaStartDateRequired => 'Başlangıç tarihi giriniz';
+
+  @override
+  String get dcaPeriodWeekly => 'Haftalık';
+
+  @override
+  String get dcaPeriodMonthly => 'Aylık';
+
+  @override
+  String get dcaPeriodLabel => 'Periyot';
+
+  @override
+  String get dcaPeriodicAmountLabel => 'Periyodik Tutar';
+
+  @override
+  String get dcaPeriodicAmount => 'Periyodik Tutar';
+
+  @override
+  String get dcaCalculate => 'Simüle Et';
+
+  @override
+  String get dcaTotalInvested => 'Toplam Yatırım';
+
+  @override
+  String get dcaCurrentValue => 'Güncel Değer';
+
+  @override
+  String get dcaTotalPurchases => 'Toplam Alım';
+
+  @override
+  String get dcaAvgCost => 'Ortalama Maliyet';
+
+  @override
+  String get dcaTotalUnits => 'Toplam Adet';
+
+  @override
+  String get dcaCurrentPrice => 'Güncel Fiyat';
+
+  @override
+  String get dcaChartCost => 'Maliyet';
+
+  @override
+  String get dcaChartValue => 'Değer';
+
+  @override
+  String get shareCardDcaFooter => 'Düzenli yatırım ile birikim';
+
+  @override
+  String shareTextDca(String asset, int count, String percent) {
+    return '$asset için $count alım yaptım, getiri: $percent! 📊 #saydın';
+  }
 }

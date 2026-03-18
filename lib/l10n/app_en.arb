@@ -164,6 +164,7 @@
   "scenarioTypeWhatIf": "Calculation",
   "scenarioTypeComparison": "Comparison",
   "scenarioTypePortfolio": "Portfolio",
+  "scenarioTypeDca": "DCA",
 
   "brandedTitlePrefix": "buy/sell ",
   "brandedTitleSuffix": "saydın",
@@ -258,6 +259,38 @@
   "onboardingPage2Body": "Compare assets side by side, build portfolios. Which one performed better?",
   "onboardingPage3Title": "Build a Portfolio",
   "onboardingPage3Body": "Create portfolios with multiple assets, calculate total returns and discover the best strategy.",
-  "onboardingPage4Title": "Share and Save",
-  "onboardingPage4Body": "Share your results with friends, save your scenarios and come back anytime."
+  "onboardingPage4Title": "Regular Investing",
+  "onboardingPage4Body": "Simulate weekly or monthly recurring purchases, see average cost and total return.",
+  "onboardingPage5Title": "Share and Save",
+  "onboardingPage5Body": "Share your results with friends, save your scenarios and come back anytime.",
+
+  "tabDca": "DCA",
+  "dcaTitle": "DCA Simulation",
+  "dcaStartDate": "Start Date",
+  "dcaEndDate": "End Date (optional)",
+  "dcaStartDateRequired": "Please enter start date",
+  "dcaPeriodWeekly": "Weekly",
+  "dcaPeriodMonthly": "Monthly",
+  "dcaPeriodLabel": "Period",
+  "dcaPeriodicAmountLabel": "Periodic Amount",
+  "dcaPeriodicAmount": "Periodic Amount",
+  "dcaCalculate": "Simulate",
+  "dcaTotalInvested": "Total Invested",
+  "dcaCurrentValue": "Current Value",
+  "dcaTotalPurchases": "Total Purchases",
+  "dcaAvgCost": "Average Cost",
+  "dcaTotalUnits": "Total Units",
+  "dcaCurrentPrice": "Current Price",
+  "dcaChartCost": "Cost",
+  "dcaChartValue": "Value",
+
+  "shareCardDcaFooter": "DCA — regular investing",
+  "shareTextDca": "DCA into {asset}: {count} purchases, return: {percent}! 📊 #saydın",
+  "@shareTextDca": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "count": { "type": "int" },
+      "percent": { "type": "String" }
+    }
+  }
 }

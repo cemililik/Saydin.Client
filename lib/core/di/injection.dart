@@ -28,6 +28,10 @@ import 'package:saydin/features/what_if/data/repositories/what_if_repository_imp
 import 'package:saydin/features/what_if/domain/repositories/what_if_repository.dart';
 import 'package:saydin/features/portfolio/domain/usecases/calculate_portfolio.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
+import 'package:saydin/features/dca/data/repositories/dca_repository_impl.dart';
+import 'package:saydin/features/dca/domain/repositories/dca_repository.dart';
+import 'package:saydin/features/dca/domain/usecases/calculate_dca.dart';
+import 'package:saydin/features/dca/presentation/bloc/dca_bloc.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
@@ -95,6 +99,12 @@ void configureDependencies() {
   );
   sl.registerLazySingleton(() => CompareWhatIf(sl()));
 
+  // DCA
+  sl.registerLazySingleton<DcaRepository>(
+    () => DcaRepositoryImpl(sl<ApiClient>().dio),
+  );
+  sl.registerLazySingleton(() => CalculateDca(sl()));
+
   // BLoC (factory — her sayfa açılışında yeni instance)
   sl.registerFactory(
     () => WhatIfBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
@@ -104,6 +114,9 @@ void configureDependencies() {
   );
   sl.registerFactory(
     () => PortfolioBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
+  );
+  sl.registerFactory(
+    () => DcaBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
   );
 
   // Scenarios

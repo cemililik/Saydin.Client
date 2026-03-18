@@ -38,6 +38,7 @@ class SavedScenarioModel extends SavedScenario {
   static ScenarioType _parseType(String? value) => switch (value) {
     'comparison' => ScenarioType.comparison,
     'portfolio' => ScenarioType.portfolio,
+    'dca' => ScenarioType.dca,
     _ => ScenarioType.whatIf,
   };
 

@@ -5,5 +5,6 @@ class ApiEndpoints {
   static const whatIfCompare = '/v1/what-if/compare';
   static const assets = '/v1/assets';
   static const scenarios = '/v1/scenarios';
+  static const dcaCalculate = '/v1/what-if/dca';
   static const appConfig = '/v1/config';
 }

@@ -28,6 +28,7 @@ class ScenarioCard extends StatelessWidget {
         scenario: scenario,
         onTap: onTap,
       ),
+      ScenarioType.dca => _DcaCard(scenario: scenario, onTap: onTap),
     };
   }
 
@@ -201,6 +202,116 @@ class _WhatIfCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           _formatAmount(),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (onTap != null) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── DCA kartı ────────────────────────────────────────────────────────────────
+
+class _DcaCard extends StatelessWidget {
+  final SavedScenario scenario;
+  final VoidCallback? onTap;
+
+  const _DcaCard({required this.scenario, this.onTap});
+
+  static final _tryFormatter = NumberFormat.currency(
+    locale: 'tr_TR',
+    symbol: '₺',
+    decimalDigits: 2,
+  );
+  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final buyLabel = _dateFormatter.format(scenario.buyDate);
+    final sellLabel = scenario.sellDate != null
+        ? _dateFormatter.format(scenario.sellDate!)
+        : l10n.today;
+    final period = scenario.extraData?['period'] as String? ?? 'monthly';
+    final periodLabel = period == 'weekly'
+        ? l10n.dcaPeriodWeekly
+        : l10n.dcaPeriodMonthly;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: Colors.orange.shade50,
+                child: Icon(
+                  Icons.repeat,
+                  color: Colors.orange.shade600,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            ScenarioCard.resolveAssetName(
+                              context,
+                              scenario.assetSymbol,
+                              scenario.assetDisplayName,
+                            ),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _TypeChip(
+                          label: l10n.scenarioTypeDca,
+                          bgColor: Colors.orange.shade50,
+                          textColor: Colors.orange.shade700,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    _dateRow(context, '$buyLabel → $sellLabel'),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.payments_outlined,
+                          size: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${_tryFormatter.format(scenario.amount)} / $periodLabel',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),

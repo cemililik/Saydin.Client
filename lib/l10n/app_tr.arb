@@ -164,6 +164,7 @@
   "scenarioTypeWhatIf": "Hesaplama",
   "scenarioTypeComparison": "Karşılaştırma",
   "scenarioTypePortfolio": "Portföy",
+  "scenarioTypeDca": "Birikim",
 
   "brandedTitlePrefix": "al/sat ",
   "brandedTitleSuffix": "saydın",
@@ -258,6 +259,38 @@
   "onboardingPage2Body": "Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?",
   "onboardingPage3Title": "Portföy Oluştur",
   "onboardingPage3Body": "Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.",
-  "onboardingPage4Title": "Paylaş ve Kaydet",
-  "onboardingPage4Body": "Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön."
+  "onboardingPage4Title": "Düzenli Yatırım",
+  "onboardingPage4Body": "Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.",
+  "onboardingPage5Title": "Paylaş ve Kaydet",
+  "onboardingPage5Body": "Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.",
+
+  "tabDca": "Birikim",
+  "dcaTitle": "Düzenli Yatırım Simülasyonu",
+  "dcaStartDate": "Başlangıç Tarihi",
+  "dcaEndDate": "Bitiş Tarihi (opsiyonel)",
+  "dcaStartDateRequired": "Başlangıç tarihi giriniz",
+  "dcaPeriodWeekly": "Haftalık",
+  "dcaPeriodMonthly": "Aylık",
+  "dcaPeriodLabel": "Periyot",
+  "dcaPeriodicAmountLabel": "Periyodik Tutar",
+  "dcaPeriodicAmount": "Periyodik Tutar",
+  "dcaCalculate": "Simüle Et",
+  "dcaTotalInvested": "Toplam Yatırım",
+  "dcaCurrentValue": "Güncel Değer",
+  "dcaTotalPurchases": "Toplam Alım",
+  "dcaAvgCost": "Ortalama Maliyet",
+  "dcaTotalUnits": "Toplam Adet",
+  "dcaCurrentPrice": "Güncel Fiyat",
+  "dcaChartCost": "Maliyet",
+  "dcaChartValue": "Değer",
+
+  "shareCardDcaFooter": "Düzenli yatırım ile birikim",
+  "shareTextDca": "{asset} için {count} alım yaptım, getiri: {percent}! 📊 #saydın",
+  "@shareTextDca": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "count": { "type": "int" },
+      "percent": { "type": "String" }
+    }
+  }
 }
