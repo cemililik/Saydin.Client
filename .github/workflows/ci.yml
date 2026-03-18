@@ -238,12 +238,11 @@ jobs:
           echo "✅ [3/4] Store password ve alias doğrulandı"
 
           # ── 4. Key password doğrulama ──────────────────────────────────────
-          if ! keytool -keypasswd \
+          if ! keytool -exportcert \
                 -keystore android/saydin-release.jks \
                 -storepass "$STORE_PASSWORD" \
                 -alias "$KEY_ALIAS" \
-                -keypass "$KEY_PASSWORD" \
-                -new "$KEY_PASSWORD" > /dev/null 2>&1; then
+                -keypass "$KEY_PASSWORD" > /dev/null 2>&1; then
             echo "❌ [4/4] KEY_PASSWORD hatalı"
             exit 1
           fi
