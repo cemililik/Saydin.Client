@@ -7,7 +7,7 @@ import 'core/di/injection.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('tr_TR');
-  configureDependencies();
+  await configureDependencies();
 
   await SentryFlutter.init(
     (options) {

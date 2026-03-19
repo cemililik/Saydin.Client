@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
@@ -39,7 +40,10 @@ import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
 
 final sl = GetIt.instance;
 
-void configureDependencies() {
+Future<void> configureDependencies() async {
+  // PackageInfo (async — uygulama başlangıcında bir kez çözümlenir)
+  final packageInfo = await PackageInfo.fromPlatform();
+
   // Network
   sl.registerLazySingleton<ApiClient>(() {
     const baseUrl = String.fromEnvironment('API_BASE_URL');
@@ -54,7 +58,7 @@ void configureDependencies() {
         'Pass --dart-define=API_BASE_URL=http://<host>:5080',
       );
     }
-    return ApiClient(baseUrl: baseUrl);
+    return ApiClient(baseUrl: baseUrl, packageInfo: packageInfo);
   });
 
   // Error handling
