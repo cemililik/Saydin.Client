@@ -133,32 +133,32 @@ class _AssetSearchSheetState extends State<_AssetSearchSheet> {
     final filtered = _filtered;
     if (_query.isNotEmpty) return filtered;
 
-    final grouped = <String, List<Asset>>{};
-    for (final a in filtered) {
-      grouped.putIfAbsent(a.category, () => []).add(a);
-    }
-
     final items = <Object>[];
 
     // Favoriler bölümü (en üstte)
-    if (favorites.isNotEmpty) {
-      final favoriteAssets = filtered
-          .where((a) => favorites.contains(a.symbol))
-          .toList();
-      if (favoriteAssets.isNotEmpty) {
-        items.add('favorites');
-        items.addAll(favoriteAssets);
-      }
+    final favoriteAssets = favorites.isNotEmpty
+        ? filtered.where((a) => favorites.contains(a.symbol)).toList()
+        : <Asset>[];
+    if (favoriteAssets.isNotEmpty) {
+      items.add('favorites');
+      items.addAll(favoriteAssets);
     }
 
-    // Kategoriler
+    // Kategori gruplama — favorileri hariç tut
+    final nonFavorites = favorites.isNotEmpty
+        ? filtered.where((a) => !favorites.contains(a.symbol)).toList()
+        : filtered;
+    final grouped = <String, List<Asset>>{};
+    for (final a in nonFavorites) {
+      grouped.putIfAbsent(a.category, () => []).add(a);
+    }
+
     for (final cat in _categoryOrder) {
       final list = grouped[cat];
       if (list == null || list.isEmpty) continue;
       items.add(cat);
       items.addAll(list);
     }
-    // Sıralamada olmayan kategoriler
     for (final cat in grouped.keys) {
       if (_categoryOrder.contains(cat)) continue;
       items.add(cat);

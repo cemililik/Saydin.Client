@@ -8,7 +8,7 @@ Feature-first Clean Architecture + BLoC pattern. Her özellik kendi klasöründe
 lib/
 ├── core/                          ← Özelliklerden bağımsız altyapı
 │   ├── constants/                 ← AppColors, ApiEndpoints
-│   ├── di/                        ← injection.dart (get_it servis locator)
+│   ├── di/                        ← injection.dart (get_it service locator)
 │   ├── error/                     ← AppError, DioErrorMapper, ErrorReporter
 │   ├── l10n/                      ← L10nContext extension (context.l10n)
 │   ├── network/                   ← ApiClient, DeviceIdInterceptor, LanguageInterceptor, RetryInterceptor
