@@ -261,8 +261,10 @@
   "onboardingPage3Body": "Create portfolios with multiple assets, calculate total returns and discover the best strategy.",
   "onboardingPage4Title": "Regular Investing",
   "onboardingPage4Body": "Simulate weekly or monthly recurring purchases, see average cost and total return.",
-  "onboardingPage5Title": "Share and Save",
-  "onboardingPage5Body": "Share your results with friends, save your scenarios and come back anytime.",
+  "onboardingPage5Title": "Reverse Scenario",
+  "onboardingPage5Body": "How much should you have invested to reach your goal? Find out with reverse calculation.",
+  "onboardingPage6Title": "Share and Save",
+  "onboardingPage6Body": "Share your results with friends, save your scenarios and come back anytime.",
 
   "tabDca": "DCA",
   "dcaTitle": "DCA Simulation",
@@ -292,5 +294,32 @@
       "count": { "type": "int" },
       "percent": { "type": "String" }
     }
-  }
+  },
+
+  "modeNormal": "Calculate",
+  "modeNormalHint": "How much would my investment be worth today?",
+  "modeReverse": "Reverse",
+  "modeReverseHint": "How much should I have invested to reach my target?",
+  "targetAmount": "Target Amount",
+  "enterTargetAmount": "Enter target amount",
+  "reverseCalculate": "Reverse Calculate",
+  "reverseCalculating": "Calculating...",
+  "requiredInvestment": "Required Investment",
+  "targetValue": "Target Value",
+  "reverseResultTitle": "Reverse Scenario Result",
+  "shareTextReverse": "To reach {target} with {asset}, I should have invested {required} ({percent})! 📊 #saydın",
+  "@shareTextReverse": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "target": { "type": "String" },
+      "required": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareCardReverseFooter": "How much should I have invested?",
+  "shareCardRequiredInvestment": "Required Investment",
+  "shareCardTargetValue": "Target Value",
+  "scenarioTypeReverse": "Reverse Calculation",
+  "compareHint": "Which asset would have earned more if you invested the same amount?",
+  "dcaHint": "Simulate regular purchases at fixed intervals to see average cost and total return."
 }

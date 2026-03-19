@@ -28,6 +28,7 @@ import 'package:saydin/features/settings/domain/entities/app_settings.dart';
 import 'package:saydin/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_event.dart';
+import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
 import 'package:saydin/features/what_if/presentation/pages/what_if_page.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -140,6 +141,7 @@ class _MainShellState extends State<MainShell> {
   void _onScenarioTap(SavedScenario scenario) {
     switch (scenario.type) {
       case ScenarioType.whatIf:
+        final isReverse = scenario.extraData?['mode'] == 'reverse';
         context.read<WhatIfBloc>().add(
           WhatIfReplayRequested(
             assetSymbol: scenario.assetSymbol,
@@ -149,6 +151,9 @@ class _MainShellState extends State<MainShell> {
             amountType: scenario.amountType,
             includeInflation:
                 (scenario.extraData?['includeInflation'] as bool?) ?? false,
+            calculationMode: isReverse
+                ? CalculationMode.reverse
+                : CalculationMode.normal,
           ),
         );
         setState(() => _selectedIndex = 0); // WhatIfPage

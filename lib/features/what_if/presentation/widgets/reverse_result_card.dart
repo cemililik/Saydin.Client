@@ -3,26 +3,26 @@ import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
-import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
+import 'package:saydin/features/what_if/domain/entities/reverse_what_if_result.dart';
 import 'package:saydin/features/what_if/presentation/widgets/result_chart.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
-class ResultCard extends StatefulWidget {
-  final WhatIfResult result;
+class ReverseResultCard extends StatefulWidget {
+  final ReverseWhatIfResult result;
 
-  const ResultCard({super.key, required this.result});
+  const ReverseResultCard({super.key, required this.result});
 
   @override
-  State<ResultCard> createState() => _ResultCardState();
+  State<ReverseResultCard> createState() => _ReverseResultCardState();
 }
 
-class _ResultCardState extends State<ResultCard>
+class _ReverseResultCardState extends State<ReverseResultCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
 
-  WhatIfResult get result => widget.result;
+  ReverseWhatIfResult get result => widget.result;
 
   @override
   void initState() {
@@ -55,7 +55,6 @@ class _ResultCardState extends State<ResultCard>
   );
   static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
 
-  /// İşaretli yüzde formatter: +%12,34 / -%5,67
   static String _pctSignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
     final fmt = NumberFormat.decimalPercentPattern(
@@ -65,13 +64,11 @@ class _ResultCardState extends State<ResultCard>
     return '$sign${fmt.format(v / 100)}';
   }
 
-  /// İşaretli TL formatter: +₺1.234,56 / -₺789,00
   static String _trySignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
     return '$sign${_tryFormatter.format(v)}';
   }
 
-  /// Küçük sayılar için anlamlı ondalık basamak (kripto, gram vb.)
   static String _formatUnits(double value) {
     if (value == 0) return '0';
     if (value >= 100) return NumberFormat('#,##0.##', 'tr_TR').format(value);
@@ -79,11 +76,9 @@ class _ResultCardState extends State<ResultCard>
     return NumberFormat('#,##0.########', 'tr_TR').format(value);
   }
 
-  /// İstenen tarih haftasonuna mı denk geliyor?
   static bool _isWeekend(DateTime d) =>
       d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
 
-  /// Tarih farklıysa gösterilecek bilgi notu widget'ı
   Widget? _buildDateNote(
     AppLocalizations l10n,
     BuildContext context, {
@@ -165,7 +160,7 @@ class _ResultCardState extends State<ResultCard>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            result.isProfit ? l10n.profit : l10n.loss,
+                            l10n.reverseResultTitle,
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(
                                   color: color,
@@ -188,21 +183,25 @@ class _ResultCardState extends State<ResultCard>
                   ],
                 ),
 
-                ResultChart.fromResult(result),
+                if (result.priceHistory.isNotEmpty)
+                  ResultChart(
+                    priceHistory: result.priceHistory,
+                    isProfit: result.isProfit,
+                  ),
 
                 const Divider(height: 24),
 
-                // ── Ana metrikler (animasyonlu) ───────────────────────────
+                // ── Ana metrikler ─────────────────────────────────────────
                 _AnimatedRow(
-                  l10n.initialValue,
-                  result.initialValueTry.toDouble(),
-                  formatter: _tryFormatter.format,
-                ),
-                _AnimatedRow(
-                  l10n.finalValue,
-                  result.finalValueTry.toDouble(),
+                  l10n.requiredInvestment,
+                  result.requiredInvestmentTry.toDouble(),
                   formatter: _tryFormatter.format,
                   bold: true,
+                ),
+                _AnimatedRow(
+                  l10n.targetValue,
+                  result.targetValueTry.toDouble(),
+                  formatter: _tryFormatter.format,
                 ),
                 _AnimatedRow(
                   result.isProfit ? l10n.profitLabel : l10n.lossLabel,
@@ -235,7 +234,7 @@ class _ResultCardState extends State<ResultCard>
                 ),
                 _Row(l10n.resultDuration, _formatDuration(l10n)),
 
-                // ── Tarih ayarlama notları (haftasonu / tatil) ────────────
+                // ── Tarih ayarlama notları ─────────────────────────────────
                 if (result.actualBuyDate != null)
                   _buildDateNote(
                     l10n,
@@ -280,7 +279,7 @@ class _ResultCardState extends State<ResultCard>
                   ),
                   _AnimatedRow(
                     l10n.realProfitLoss,
-                    (result.initialValueTry *
+                    (result.requiredInvestmentTry *
                             result.realProfitLossPercent! /
                             100)
                         .toDouble(),
@@ -352,7 +351,6 @@ class _Row extends StatelessWidget {
   }
 }
 
-/// Ana metriklerde count-up animasyonu gösteren satır.
 class _AnimatedRow extends StatelessWidget {
   final String label;
   final double value;

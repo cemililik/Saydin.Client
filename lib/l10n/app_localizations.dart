@@ -359,7 +359,7 @@ abstract class AppLocalizations {
   /// No description provided for @tabScenarios.
   ///
   /// In tr, this message translates to:
-  /// **'Senaryolarım'**
+  /// **'Kayıtlarım'**
   String get tabScenarios;
 
   /// No description provided for @searchAsset.
@@ -1120,14 +1120,26 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPage5Title.
   ///
   /// In tr, this message translates to:
-  /// **'Paylaş ve Kaydet'**
+  /// **'Ters Senaryo'**
   String get onboardingPage5Title;
 
   /// No description provided for @onboardingPage5Body.
   ///
   /// In tr, this message translates to:
-  /// **'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.'**
+  /// **'Hedefine ulaşmak için ne kadar yatırmalıydın? Ters hesaplama ile gereken tutarı öğren.'**
   String get onboardingPage5Body;
+
+  /// No description provided for @onboardingPage6Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaş ve Kaydet'**
+  String get onboardingPage6Title;
+
+  /// No description provided for @onboardingPage6Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.'**
+  String get onboardingPage6Body;
 
   /// No description provided for @tabDca.
   ///
@@ -1254,6 +1266,119 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'{asset} için {count} alım yaptım, getiri: {percent}! 📊 #saydın'**
   String shareTextDca(String asset, int count, String percent);
+
+  /// No description provided for @modeNormal.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesapla'**
+  String get modeNormal;
+
+  /// No description provided for @modeNormalHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Belirli bir tutarı yatırsaydım bugün ne kadar ederdi?'**
+  String get modeNormalHint;
+
+  /// No description provided for @modeReverse.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ters Hesapla'**
+  String get modeReverse;
+
+  /// No description provided for @modeReverseHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef tutara ulaşmak için ne kadar yatırmalıydım?'**
+  String get modeReverseHint;
+
+  /// No description provided for @targetAmount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef Tutar'**
+  String get targetAmount;
+
+  /// No description provided for @enterTargetAmount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef tutarı giriniz'**
+  String get enterTargetAmount;
+
+  /// No description provided for @reverseCalculate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ters Hesapla'**
+  String get reverseCalculate;
+
+  /// No description provided for @reverseCalculating.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesaplanıyor...'**
+  String get reverseCalculating;
+
+  /// No description provided for @requiredInvestment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gereken Yatırım'**
+  String get requiredInvestment;
+
+  /// No description provided for @targetValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef Değer'**
+  String get targetValue;
+
+  /// No description provided for @reverseResultTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ters Senaryo Sonucu'**
+  String get reverseResultTitle;
+
+  /// No description provided for @shareTextReverse.
+  ///
+  /// In tr, this message translates to:
+  /// **'{asset} ile {target} hedefime ulaşmak için {required} yatırmalıydım ({percent})! 📊 #saydın'**
+  String shareTextReverse(
+    String asset,
+    String target,
+    String required,
+    String percent,
+  );
+
+  /// No description provided for @shareCardReverseFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ne kadar yatırmalıydım?'**
+  String get shareCardReverseFooter;
+
+  /// No description provided for @shareCardRequiredInvestment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gereken Yatırım'**
+  String get shareCardRequiredInvestment;
+
+  /// No description provided for @shareCardTargetValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef Değer'**
+  String get shareCardTargetValue;
+
+  /// No description provided for @scenarioTypeReverse.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ters Hesaplama'**
+  String get scenarioTypeReverse;
+
+  /// No description provided for @compareHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aynı tutarı farklı varlıklara yatırsaydınız hangisi daha çok kazandırırdı?'**
+  String get compareHint;
+
+  /// No description provided for @dcaHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli aralıklarla alım yaparak yatırım maliyetinizi ve getirinizi simüle edin.'**
+  String get dcaHint;
 }
 
 class _AppLocalizationsDelegate

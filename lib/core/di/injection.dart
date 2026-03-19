@@ -32,6 +32,7 @@ import 'package:saydin/features/dca/data/repositories/dca_repository_impl.dart';
 import 'package:saydin/features/dca/domain/repositories/dca_repository.dart';
 import 'package:saydin/features/dca/domain/usecases/calculate_dca.dart';
 import 'package:saydin/features/dca/presentation/bloc/dca_bloc.dart';
+import 'package:saydin/features/what_if/domain/usecases/calculate_reverse_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
@@ -90,6 +91,7 @@ void configureDependencies() {
 
   // Use cases
   sl.registerLazySingleton(() => CalculateWhatIf(sl()));
+  sl.registerLazySingleton(() => CalculateReverseWhatIf(sl()));
   sl.registerLazySingleton(() => GetAssets(sl()));
   sl.registerLazySingleton(() => CalculatePortfolio(sl()));
 
@@ -107,7 +109,7 @@ void configureDependencies() {
 
   // BLoC (factory — her sayfa açılışında yeni instance)
   sl.registerFactory(
-    () => WhatIfBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
+    () => WhatIfBloc(sl(), sl(), sl(), errorMapper: sl(), reporter: sl()),
   );
   sl.registerFactory(
     () => ComparisonBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),

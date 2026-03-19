@@ -248,7 +248,31 @@ class _DcaPageState extends State<DcaPage> {
                         const DcaInflationToggled(),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 13,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              l10n.dcaHint,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     FilledButton.icon(
                       onPressed: state is DcaCalculating ? null : _onCalculate,
                       icon: state is DcaCalculating

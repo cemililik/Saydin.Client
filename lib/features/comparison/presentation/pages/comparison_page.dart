@@ -313,6 +313,30 @@ class _ComparisonPageState extends State<ComparisonPage> {
                   ),
                   const SizedBox(height: 12),
 
+                  // ── Bilgi notu ─────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 13,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            l10n.compareHint,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // ── Compare button ───────────────────────────────
                   SizedBox(
                     height: 52,
@@ -445,8 +469,22 @@ class _SelectedAssetChips extends StatelessWidget {
           ),
         if (!isCalculating && selectedSymbols.length < 5)
           ActionChip(
-            avatar: const Icon(Icons.add, size: 18),
-            label: Text(l10n.compareAddAsset),
+            avatar: Icon(
+              Icons.add_circle_outline,
+              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            label: Text(
+              l10n.compareAddAsset,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.primary,
+              width: 1.5,
+            ),
             onPressed: onAdd,
           ),
       ],

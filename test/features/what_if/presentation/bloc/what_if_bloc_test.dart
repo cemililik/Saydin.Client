@@ -2,6 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
+import 'package:saydin/features/what_if/domain/usecases/calculate_reverse_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
@@ -12,13 +13,18 @@ class MockGetAssets extends Mock implements GetAssets {}
 
 class MockCalculateWhatIf extends Mock implements CalculateWhatIf {}
 
+class MockCalculateReverseWhatIf extends Mock
+    implements CalculateReverseWhatIf {}
+
 void main() {
   late MockGetAssets mockGetAssets;
   late MockCalculateWhatIf mockCalculateWhatIf;
+  late MockCalculateReverseWhatIf mockCalculateReverseWhatIf;
 
   setUp(() {
     mockGetAssets = MockGetAssets();
     mockCalculateWhatIf = MockCalculateWhatIf();
+    mockCalculateReverseWhatIf = MockCalculateReverseWhatIf();
   });
 
   final assetWithRange = Asset(
@@ -32,7 +38,11 @@ void main() {
   group('WhatIfBloc — WhatIfSymbolChanged', () {
     blocTest<WhatIfBloc, WhatIfState>(
       'tarihleri sıkıştırır ve dateAdjusted=true set eder',
-      build: () => WhatIfBloc(mockGetAssets, mockCalculateWhatIf),
+      build: () => WhatIfBloc(
+        mockGetAssets,
+        mockCalculateWhatIf,
+        mockCalculateReverseWhatIf,
+      ),
       seed: () => WhatIfAssetsLoaded(
         [assetWithRange],
         formInput: WhatIfFormInput(
@@ -61,7 +71,11 @@ void main() {
 
     blocTest<WhatIfBloc, WhatIfState>(
       'tarihler aralık içindeyse dateAdjusted=false kalır',
-      build: () => WhatIfBloc(mockGetAssets, mockCalculateWhatIf),
+      build: () => WhatIfBloc(
+        mockGetAssets,
+        mockCalculateWhatIf,
+        mockCalculateReverseWhatIf,
+      ),
       seed: () => WhatIfAssetsLoaded(
         [assetWithRange],
         formInput: WhatIfFormInput(
@@ -83,7 +97,11 @@ void main() {
 
     blocTest<WhatIfBloc, WhatIfState>(
       'tarihler null ise dateAdjusted=false kalır',
-      build: () => WhatIfBloc(mockGetAssets, mockCalculateWhatIf),
+      build: () => WhatIfBloc(
+        mockGetAssets,
+        mockCalculateWhatIf,
+        mockCalculateReverseWhatIf,
+      ),
       seed: () => WhatIfAssetsLoaded(
         [assetWithRange],
         formInput: const WhatIfFormInput(
@@ -104,7 +122,11 @@ void main() {
 
     blocTest<WhatIfBloc, WhatIfState>(
       'yeni asset desteklemiyorsa amountType try\'ye sıfırlanır',
-      build: () => WhatIfBloc(mockGetAssets, mockCalculateWhatIf),
+      build: () => WhatIfBloc(
+        mockGetAssets,
+        mockCalculateWhatIf,
+        mockCalculateReverseWhatIf,
+      ),
       seed: () => WhatIfAssetsLoaded(
         [assetWithRange],
         formInput: const WhatIfFormInput(
@@ -124,7 +146,11 @@ void main() {
 
     blocTest<WhatIfBloc, WhatIfState>(
       'sembol state\'e yazılır',
-      build: () => WhatIfBloc(mockGetAssets, mockCalculateWhatIf),
+      build: () => WhatIfBloc(
+        mockGetAssets,
+        mockCalculateWhatIf,
+        mockCalculateReverseWhatIf,
+      ),
       seed: () => WhatIfAssetsLoaded([assetWithRange]),
       act: (bloc) => bloc.add(const WhatIfSymbolChanged('USDTRY')),
       expect: () => [

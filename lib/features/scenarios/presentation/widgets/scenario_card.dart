@@ -183,9 +183,15 @@ class _WhatIfCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         _TypeChip(
-                          label: l10n.scenarioTypeWhatIf,
-                          bgColor: Colors.blue.shade50,
-                          textColor: Colors.blue.shade700,
+                          label: scenario.extraData?['mode'] == 'reverse'
+                              ? l10n.scenarioTypeReverse
+                              : l10n.scenarioTypeWhatIf,
+                          bgColor: scenario.extraData?['mode'] == 'reverse'
+                              ? Colors.orange.shade50
+                              : Colors.blue.shade50,
+                          textColor: scenario.extraData?['mode'] == 'reverse'
+                              ? Colors.orange.shade700
+                              : Colors.blue.shade700,
                         ),
                       ],
                     ),

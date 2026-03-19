@@ -564,10 +564,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Simulate weekly or monthly recurring purchases, see average cost and total return.';
 
   @override
-  String get onboardingPage5Title => 'Share and Save';
+  String get onboardingPage5Title => 'Reverse Scenario';
 
   @override
   String get onboardingPage5Body =>
+      'How much should you have invested to reach your goal? Find out with reverse calculation.';
+
+  @override
+  String get onboardingPage6Title => 'Share and Save';
+
+  @override
+  String get onboardingPage6Body =>
       'Share your results with friends, save your scenarios and come back anytime.';
 
   @override
@@ -634,4 +641,68 @@ class AppLocalizationsEn extends AppLocalizations {
   String shareTextDca(String asset, int count, String percent) {
     return 'DCA into $asset: $count purchases, return: $percent! 📊 #saydın';
   }
+
+  @override
+  String get modeNormal => 'Calculate';
+
+  @override
+  String get modeNormalHint => 'How much would my investment be worth today?';
+
+  @override
+  String get modeReverse => 'Reverse';
+
+  @override
+  String get modeReverseHint =>
+      'How much should I have invested to reach my target?';
+
+  @override
+  String get targetAmount => 'Target Amount';
+
+  @override
+  String get enterTargetAmount => 'Enter target amount';
+
+  @override
+  String get reverseCalculate => 'Reverse Calculate';
+
+  @override
+  String get reverseCalculating => 'Calculating...';
+
+  @override
+  String get requiredInvestment => 'Required Investment';
+
+  @override
+  String get targetValue => 'Target Value';
+
+  @override
+  String get reverseResultTitle => 'Reverse Scenario Result';
+
+  @override
+  String shareTextReverse(
+    String asset,
+    String target,
+    String required,
+    String percent,
+  ) {
+    return 'To reach $target with $asset, I should have invested $required ($percent)! 📊 #saydın';
+  }
+
+  @override
+  String get shareCardReverseFooter => 'How much should I have invested?';
+
+  @override
+  String get shareCardRequiredInvestment => 'Required Investment';
+
+  @override
+  String get shareCardTargetValue => 'Target Value';
+
+  @override
+  String get scenarioTypeReverse => 'Reverse Calculation';
+
+  @override
+  String get compareHint =>
+      'Which asset would have earned more if you invested the same amount?';
+
+  @override
+  String get dcaHint =>
+      'Simulate regular purchases at fixed intervals to see average cost and total return.';
 }

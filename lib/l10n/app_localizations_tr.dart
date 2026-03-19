@@ -141,7 +141,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tabCalculate => 'Hesapla';
 
   @override
-  String get tabScenarios => 'Senaryolarım';
+  String get tabScenarios => 'Kayıtlarım';
 
   @override
   String get searchAsset => 'Varlık ara...';
@@ -564,10 +564,17 @@ class AppLocalizationsTr extends AppLocalizations {
       'Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.';
 
   @override
-  String get onboardingPage5Title => 'Paylaş ve Kaydet';
+  String get onboardingPage5Title => 'Ters Senaryo';
 
   @override
   String get onboardingPage5Body =>
+      'Hedefine ulaşmak için ne kadar yatırmalıydın? Ters hesaplama ile gereken tutarı öğren.';
+
+  @override
+  String get onboardingPage6Title => 'Paylaş ve Kaydet';
+
+  @override
+  String get onboardingPage6Body =>
       'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.';
 
   @override
@@ -634,4 +641,69 @@ class AppLocalizationsTr extends AppLocalizations {
   String shareTextDca(String asset, int count, String percent) {
     return '$asset için $count alım yaptım, getiri: $percent! 📊 #saydın';
   }
+
+  @override
+  String get modeNormal => 'Hesapla';
+
+  @override
+  String get modeNormalHint =>
+      'Belirli bir tutarı yatırsaydım bugün ne kadar ederdi?';
+
+  @override
+  String get modeReverse => 'Ters Hesapla';
+
+  @override
+  String get modeReverseHint =>
+      'Hedef tutara ulaşmak için ne kadar yatırmalıydım?';
+
+  @override
+  String get targetAmount => 'Hedef Tutar';
+
+  @override
+  String get enterTargetAmount => 'Hedef tutarı giriniz';
+
+  @override
+  String get reverseCalculate => 'Ters Hesapla';
+
+  @override
+  String get reverseCalculating => 'Hesaplanıyor...';
+
+  @override
+  String get requiredInvestment => 'Gereken Yatırım';
+
+  @override
+  String get targetValue => 'Hedef Değer';
+
+  @override
+  String get reverseResultTitle => 'Ters Senaryo Sonucu';
+
+  @override
+  String shareTextReverse(
+    String asset,
+    String target,
+    String required,
+    String percent,
+  ) {
+    return '$asset ile $target hedefime ulaşmak için $required yatırmalıydım ($percent)! 📊 #saydın';
+  }
+
+  @override
+  String get shareCardReverseFooter => 'Ne kadar yatırmalıydım?';
+
+  @override
+  String get shareCardRequiredInvestment => 'Gereken Yatırım';
+
+  @override
+  String get shareCardTargetValue => 'Hedef Değer';
+
+  @override
+  String get scenarioTypeReverse => 'Ters Hesaplama';
+
+  @override
+  String get compareHint =>
+      'Aynı tutarı farklı varlıklara yatırsaydınız hangisi daha çok kazandırırdı?';
+
+  @override
+  String get dcaHint =>
+      'Düzenli aralıklarla alım yaparak yatırım maliyetinizi ve getirinizi simüle edin.';
 }

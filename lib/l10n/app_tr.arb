@@ -48,7 +48,7 @@
   "deleteScenario": "Sil",
   "undo": "Geri Al",
   "tabCalculate": "Hesapla",
-  "tabScenarios": "Senaryolarım",
+  "tabScenarios": "Kayıtlarım",
 
   "searchAsset": "Varlık ara...",
   "categoryCurrency": "Döviz",
@@ -261,8 +261,10 @@
   "onboardingPage3Body": "Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.",
   "onboardingPage4Title": "Düzenli Yatırım",
   "onboardingPage4Body": "Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.",
-  "onboardingPage5Title": "Paylaş ve Kaydet",
-  "onboardingPage5Body": "Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.",
+  "onboardingPage5Title": "Ters Senaryo",
+  "onboardingPage5Body": "Hedefine ulaşmak için ne kadar yatırmalıydın? Ters hesaplama ile gereken tutarı öğren.",
+  "onboardingPage6Title": "Paylaş ve Kaydet",
+  "onboardingPage6Body": "Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.",
 
   "tabDca": "Birikim",
   "dcaTitle": "Düzenli Yatırım Simülasyonu",
@@ -292,5 +294,32 @@
       "count": { "type": "int" },
       "percent": { "type": "String" }
     }
-  }
+  },
+
+  "modeNormal": "Hesapla",
+  "modeNormalHint": "Belirli bir tutarı yatırsaydım bugün ne kadar ederdi?",
+  "modeReverse": "Ters Hesapla",
+  "modeReverseHint": "Hedef tutara ulaşmak için ne kadar yatırmalıydım?",
+  "targetAmount": "Hedef Tutar",
+  "enterTargetAmount": "Hedef tutarı giriniz",
+  "reverseCalculate": "Ters Hesapla",
+  "reverseCalculating": "Hesaplanıyor...",
+  "requiredInvestment": "Gereken Yatırım",
+  "targetValue": "Hedef Değer",
+  "reverseResultTitle": "Ters Senaryo Sonucu",
+  "shareTextReverse": "{asset} ile {target} hedefime ulaşmak için {required} yatırmalıydım ({percent})! 📊 #saydın",
+  "@shareTextReverse": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "target": { "type": "String" },
+      "required": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareCardReverseFooter": "Ne kadar yatırmalıydım?",
+  "shareCardRequiredInvestment": "Gereken Yatırım",
+  "shareCardTargetValue": "Hedef Değer",
+  "scenarioTypeReverse": "Ters Hesaplama",
+  "compareHint": "Aynı tutarı farklı varlıklara yatırsaydınız hangisi daha çok kazandırırdı?",
+  "dcaHint": "Düzenli aralıklarla alım yaparak yatırım maliyetinizi ve getirinizi simüle edin."
 }
