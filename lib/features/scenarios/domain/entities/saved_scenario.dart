@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum ScenarioType { whatIf, comparison, portfolio }
+enum ScenarioType { whatIf, comparison, portfolio, dca }
 
 class SavedScenario extends Equatable {
   final String id;

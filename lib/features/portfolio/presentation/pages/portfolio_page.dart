@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
+import 'package:saydin/core/widgets/skeleton_card.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
@@ -42,11 +45,13 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   void _showAddSheet(PortfolioState state) {
+    final existingSymbols = state.items.map((item) => item.assetSymbol).toSet();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (_) => PortfolioAddItemSheet(
         assets: state.assets,
+        excludeSymbols: existingSymbols,
         onSave:
             ({
               required assetSymbol,
@@ -96,7 +101,9 @@ class _PortfolioPageState extends State<PortfolioPage> {
     context.read<ScenariosBloc>().add(
       ScenarioSaveRequested(
         assetSymbol: 'PORTFOLIO',
-        assetDisplayName: 'Portföy (${state.items.length} varlık)',
+        assetDisplayName: context.l10n.scenarioNamePortfolio(
+          state.items.length,
+        ),
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
         amount: state.result.totalInitialValueTry,
@@ -125,8 +132,10 @@ class _PortfolioPageState extends State<PortfolioPage> {
     final pct = state.result.totalProfitLossPercent
         .toStringAsFixed(2)
         .replaceAll('.', ',');
-    final shareText =
-        'Portföyüm ${state.result.items.length} varlıkla $sign$pct% getiri sağladı! 📊 #saydın';
+    final shareText = context.l10n.shareTextPortfolio(
+      state.result.items.length,
+      '$sign$pct%',
+    );
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -173,12 +182,14 @@ class _PortfolioPageState extends State<PortfolioPage> {
       appBar: AppBar(
         title: Text(context.l10n.portfolioTitle),
         centerTitle: true,
+        actions: const [SettingsIconButton()],
       ),
       body: BlocConsumer<PortfolioBloc, PortfolioState>(
         listenWhen: (_, curr) =>
             curr is PortfolioSuccess || curr is PortfolioFailure,
         listener: (context, state) {
           if (state is PortfolioSuccess) {
+            HapticFeedback.mediumImpact();
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && _scrollController.hasClients) {
                 _scrollController.animateTo(
@@ -394,6 +405,12 @@ class _PortfolioPageState extends State<PortfolioPage> {
                     ],
                   ],
                 ),
+
+                // ── Skeleton loading ──────────────────────────────────
+                if (isCalculating) ...[
+                  const SizedBox(height: 24),
+                  const SkeletonCard(),
+                ],
 
                 // ── Sonuç kartı ───────────────────────────────────────
                 if (state is PortfolioSuccess) ...[

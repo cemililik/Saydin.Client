@@ -4,6 +4,7 @@ import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
+import 'package:saydin/features/what_if/domain/usecases/calculate_reverse_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'what_if_event.dart';
@@ -20,12 +21,14 @@ extension on DateTime {
 class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   final GetAssets _getAssets;
   final CalculateWhatIf _calculateWhatIf;
+  final CalculateReverseWhatIf _calculateReverseWhatIf;
   final DioErrorMapper _errorMapper;
   final ErrorReporter _reporter;
 
   WhatIfBloc(
     this._getAssets,
-    this._calculateWhatIf, {
+    this._calculateWhatIf,
+    this._calculateReverseWhatIf, {
     DioErrorMapper errorMapper = const DioErrorMapper(),
     ErrorReporter reporter = const ErrorReporter(),
   }) : _errorMapper = errorMapper,
@@ -37,11 +40,23 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     on<WhatIfSellDateChanged>(_onSellDateChanged);
     on<WhatIfAmountTypeChanged>(_onAmountTypeChanged);
     on<WhatIfInflationToggled>(_onInflationToggled);
+    on<WhatIfModeChanged>(_onModeChanged);
     on<WhatIfReplayRequested>(_onReplayRequested);
     on<WhatIfCalculateRequested>(_onCalculateRequested);
+    on<WhatIfReverseCalculateRequested>(_onReverseCalculateRequested);
+    on<WhatIfLanguageChanged>(_onLanguageChanged);
   }
 
   WhatIfFormInput get _formInput => state.formInput;
+
+  /// Mevcut assets listesinden sembol listesi çıkarır.
+  List<Asset> _currentAssets() => switch (state) {
+    WhatIfAssetsLoaded(:final assets) => assets,
+    WhatIfSuccess(:final assets) => assets,
+    WhatIfFailure(:final assets) => assets,
+    WhatIfCalculating(:final assets) => assets,
+    _ => <Asset>[],
+  };
 
   Future<void> _onAssetsRequested(
     WhatIfAssetsRequested event,
@@ -70,13 +85,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   }
 
   void _onSymbolChanged(WhatIfSymbolChanged event, Emitter<WhatIfState> emit) {
-    final assets = switch (state) {
-      WhatIfAssetsLoaded(:final assets) => assets,
-      WhatIfSuccess(:final assets) => assets,
-      WhatIfFailure(:final assets) => assets,
-      WhatIfCalculating(:final assets) => assets,
-      _ => <Asset>[],
-    };
+    final assets = _currentAssets();
     final asset = assets.where((a) => a.symbol == event.symbol).firstOrNull;
     final allowed = asset?.allowedAmountTypes ?? ['try'];
     final newAmountType = allowed.contains(_formInput.amountType)
@@ -153,6 +162,13 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     );
   }
 
+  void _onModeChanged(WhatIfModeChanged event, Emitter<WhatIfState> emit) {
+    final updated = event.mode == CalculationMode.reverse
+        ? _formInput.copyWith(calculationMode: event.mode, amountType: 'try')
+        : _formInput.copyWith(calculationMode: event.mode);
+    _emitWithUpdatedForm(emit, updated);
+  }
+
   void _emitWithUpdatedForm(
     Emitter<WhatIfState> emit,
     WhatIfFormInput updated,
@@ -179,32 +195,42 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       amountType: event.amountType,
       amount: event.amount,
       includeInflation: event.includeInflation,
+      calculationMode: event.calculationMode,
     );
     _emitWithUpdatedForm(emit, filled);
-    await _onCalculateRequested(
-      WhatIfCalculateRequested(
-        assetSymbol: event.assetSymbol,
-        buyDate: event.buyDate,
-        sellDate: event.sellDate,
-        amount: event.amount,
-        amountType: event.amountType,
-        includeInflation: event.includeInflation,
-      ),
-      emit,
-    );
+
+    if (event.calculationMode == CalculationMode.reverse) {
+      await _onReverseCalculateRequested(
+        WhatIfReverseCalculateRequested(
+          assetSymbol: event.assetSymbol,
+          buyDate: event.buyDate,
+          sellDate: event.sellDate,
+          targetAmount: event.amount,
+          targetAmountType: event.amountType,
+          includeInflation: event.includeInflation,
+        ),
+        emit,
+      );
+    } else {
+      await _onCalculateRequested(
+        WhatIfCalculateRequested(
+          assetSymbol: event.assetSymbol,
+          buyDate: event.buyDate,
+          sellDate: event.sellDate,
+          amount: event.amount,
+          amountType: event.amountType,
+          includeInflation: event.includeInflation,
+        ),
+        emit,
+      );
+    }
   }
 
   Future<void> _onCalculateRequested(
     WhatIfCalculateRequested event,
     Emitter<WhatIfState> emit,
   ) async {
-    final currentAssets = switch (state) {
-      WhatIfAssetsLoaded(:final assets) => assets,
-      WhatIfSuccess(:final assets) => assets,
-      WhatIfFailure(:final assets) => assets,
-      WhatIfCalculating(:final assets) => assets,
-      _ => <Asset>[],
-    };
+    final currentAssets = _currentAssets();
 
     await _reporter.addBreadcrumb(
       'WhatIf calculated: ${event.assetSymbol} ${event.buyDate.toIso8601String()}',
@@ -249,6 +275,122 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
           formInput: _formInput,
         ),
       );
+    }
+  }
+
+  Future<void> _onReverseCalculateRequested(
+    WhatIfReverseCalculateRequested event,
+    Emitter<WhatIfState> emit,
+  ) async {
+    final currentAssets = _currentAssets();
+
+    await _reporter.addBreadcrumb(
+      'ReverseWhatIf calculated: ${event.assetSymbol} ${event.buyDate.toIso8601String()}',
+      category: 'what_if',
+    );
+
+    emit(WhatIfCalculating(currentAssets, formInput: _formInput));
+    try {
+      final result = await _calculateReverseWhatIf(
+        assetSymbol: event.assetSymbol,
+        buyDate: event.buyDate,
+        sellDate: event.sellDate,
+        targetAmount: event.targetAmount,
+        targetAmountType: event.targetAmountType,
+        includeInflation: event.includeInflation,
+      );
+      emit(
+        WhatIfSuccess(
+          assets: currentAssets,
+          reverseResult: result,
+          formInput: _formInput,
+        ),
+      );
+    } on DioException catch (e, st) {
+      final error = _errorMapper.map(e);
+      if (error is UnknownError || error is ServerError) {
+        await _reporter.report(e, st, context: 'reverse_calculate_what_if');
+      }
+      emit(
+        WhatIfFailure(
+          assets: currentAssets,
+          error: error,
+          formInput: _formInput,
+        ),
+      );
+    } catch (e, st) {
+      await _reporter.report(e, st, context: 'reverse_calculate_what_if');
+      emit(
+        WhatIfFailure(
+          assets: currentAssets,
+          error: UnknownError(cause: e),
+          formInput: _formInput,
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLanguageChanged(
+    WhatIfLanguageChanged event,
+    Emitter<WhatIfState> emit,
+  ) async {
+    // Form state'i ve önceki hesaplama sonucunu kaydet
+    final savedForm = _formInput;
+    final hadResult = state is WhatIfSuccess;
+    final prevAssets = _currentAssets();
+
+    try {
+      final assets = await _getAssets();
+
+      if (hadResult) {
+        // Önceki hesaplama sonucu vardı — yeni asset'lerle yeniden hesapla
+        emit(WhatIfCalculating(assets, formInput: savedForm));
+        try {
+          if (savedForm.calculationMode == CalculationMode.reverse) {
+            final result = await _calculateReverseWhatIf(
+              assetSymbol: savedForm.selectedSymbol!,
+              buyDate: savedForm.buyDate!,
+              sellDate: savedForm.sellDate,
+              targetAmount: savedForm.amount!,
+              targetAmountType: savedForm.amountType,
+              includeInflation: savedForm.includeInflation,
+            );
+            emit(
+              WhatIfSuccess(
+                assets: assets,
+                reverseResult: result,
+                formInput: savedForm,
+              ),
+            );
+          } else {
+            final result = await _calculateWhatIf(
+              assetSymbol: savedForm.selectedSymbol!,
+              buyDate: savedForm.buyDate!,
+              sellDate: savedForm.sellDate,
+              amount: savedForm.amount!,
+              amountType: savedForm.amountType,
+              includeInflation: savedForm.includeInflation,
+            );
+            emit(
+              WhatIfSuccess(
+                assets: assets,
+                result: result,
+                formInput: savedForm,
+              ),
+            );
+          }
+        } catch (e) {
+          // Hesaplama başarısız olursa en azından yeni asset'lerle form korunsun
+          emit(WhatIfAssetsLoaded(assets, formInput: savedForm));
+        }
+      } else {
+        emit(WhatIfAssetsLoaded(assets, formInput: savedForm));
+      }
+    } catch (_) {
+      // Asset fetch başarısız — mevcut state'i koru
+      if (hadResult) {
+        emit(WhatIfAssetsLoaded(prevAssets, formInput: savedForm));
+      }
     }
   }
 }

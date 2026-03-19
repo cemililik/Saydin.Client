@@ -31,6 +31,7 @@ class AppConfig extends Equatable {
       comparison: true,
       inflationAdjustment: true,
       share: true,
+      dca: true,
       priceHistoryMonths: 12,
     ),
   );
@@ -48,6 +49,7 @@ class AppFeatureFlags extends Equatable {
   final bool comparison;
   final bool inflationAdjustment;
   final bool share;
+  final bool dca;
 
   /// 0 = tüm geçmiş
   final int priceHistoryMonths;
@@ -56,6 +58,7 @@ class AppFeatureFlags extends Equatable {
     required this.comparison,
     required this.inflationAdjustment,
     required this.share,
+    required this.dca,
     required this.priceHistoryMonths,
   });
 
@@ -64,6 +67,7 @@ class AppFeatureFlags extends Equatable {
     comparison,
     inflationAdjustment,
     share,
+    dca,
     priceHistoryMonths,
   ];
 }

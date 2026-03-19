@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
@@ -16,6 +18,8 @@ import 'package:saydin/features/comparison/presentation/widgets/comparison_share
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
+import 'package:saydin/core/widgets/skeleton_card.dart';
+import 'package:saydin/features/favorites/presentation/cubit/favorites_cubit.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/widgets/amount_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/date_input.dart';
@@ -69,14 +73,16 @@ class _ComparisonPageState extends State<ComparisonPage> {
     ctx.read<ScenariosBloc>().add(
       ScenarioSaveRequested(
         assetSymbol: symbols,
-        assetDisplayName:
-            '${state.result.results.length} Varlık Karşılaştırması',
+        assetDisplayName: ctx.l10n.scenarioNameComparison(
+          state.result.results.length,
+        ),
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
         amount: state.amount ?? 0,
         amountType: 'try',
         type: ScenarioType.comparison,
         extraData: {
+          'winnerSymbol': winner?.calculation.assetSymbol ?? '',
           'winnerName': winner?.calculation.assetDisplayName ?? '',
           'winnerReturn': winner?.calculation.profitLossPercent ?? 0.0,
           'includeInflation': state.includeInflation,
@@ -96,8 +102,10 @@ class _ComparisonPageState extends State<ComparisonPage> {
     final winnerName = winner?.calculation.assetDisplayName ?? '';
     final winnerPct = winner?.calculation.profitLossPercent ?? 0;
     final sign = winnerPct >= 0 ? '+' : '';
-    final shareText =
-        'Hangi yatırım daha kazandırdı? 🏆 $winnerName: $sign${winnerPct.toStringAsFixed(2).replaceAll('.', ',')}% 📊 #saydın';
+    final shareText = ctx.l10n.shareTextComparison(
+      winnerName,
+      '$sign${winnerPct.toStringAsFixed(2).replaceAll('.', ',')}%',
+    );
     showModalBottomSheet<void>(
       context: ctx,
       isScrollControlled: true,
@@ -124,6 +132,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   void _showAssetPicker(BuildContext pageContext) {
     final bloc = pageContext.read<ComparisonBloc>();
+    final favoritesCubit = pageContext.read<FavoritesCubit>();
     showModalBottomSheet<void>(
       context: pageContext,
       isScrollControlled: true,
@@ -131,8 +140,13 @@ class _ComparisonPageState extends State<ComparisonPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) =>
-          BlocProvider.value(value: bloc, child: const _AssetPickerSheet()),
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: bloc),
+          BlocProvider.value(value: favoritesCubit),
+        ],
+        child: const _AssetPickerSheet(),
+      ),
     );
   }
 
@@ -143,10 +157,17 @@ class _ComparisonPageState extends State<ComparisonPage> {
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.compareTitle), centerTitle: true),
+        appBar: AppBar(
+          title: Text(l10n.compareTitle),
+          centerTitle: true,
+          actions: const [SettingsIconButton()],
+        ),
         body: BlocConsumer<ComparisonBloc, ComparisonState>(
           listenWhen: (_, curr) => curr is ComparisonSuccess,
           listener: (context, state) {
+            if (state is ComparisonSuccess) {
+              HapticFeedback.mediumImpact();
+            }
             if (state is ComparisonSuccess && state.amount != null) {
               final controllerAmount = num.tryParse(
                 _amountController.text.replaceAll(',', '.'),
@@ -292,6 +313,30 @@ class _ComparisonPageState extends State<ComparisonPage> {
                   ),
                   const SizedBox(height: 12),
 
+                  // ── Bilgi notu ─────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 13,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            l10n.compareHint,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // ── Compare button ───────────────────────────────
                   SizedBox(
                     height: 52,
@@ -323,6 +368,12 @@ class _ComparisonPageState extends State<ComparisonPage> {
                       ),
                       textAlign: TextAlign.center,
                     ),
+                  ],
+
+                  // ── Skeleton loading ─────────────────────────────
+                  if (isCalculating) ...[
+                    const SizedBox(height: 24),
+                    const SkeletonCard(),
                   ],
 
                   // ── Results ──────────────────────────────────────
@@ -418,8 +469,22 @@ class _SelectedAssetChips extends StatelessWidget {
           ),
         if (!isCalculating && selectedSymbols.length < 5)
           ActionChip(
-            avatar: const Icon(Icons.add, size: 18),
-            label: Text(l10n.compareAddAsset),
+            avatar: Icon(
+              Icons.add_circle_outline,
+              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            label: Text(
+              l10n.compareAddAsset,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.primary,
+              width: 1.5,
+            ),
             onPressed: onAdd,
           ),
       ],
@@ -437,6 +502,13 @@ class _AssetPickerSheet extends StatefulWidget {
 }
 
 class _AssetPickerSheetState extends State<_AssetPickerSheet> {
+  static const _categoryOrder = [
+    'currency',
+    'precious_metal',
+    'crypto',
+    'stock',
+  ];
+
   final _searchController = TextEditingController();
   String _query = '';
   String? _category;
@@ -459,9 +531,58 @@ class _AssetPickerSheetState extends State<_AssetPickerSheet> {
     }).toList();
   }
 
+  String _categoryLabel(String category, AppLocalizations l10n) =>
+      switch (category) {
+        'favorites' => l10n.categoryFavorites,
+        'currency' => l10n.categoryCurrency,
+        'precious_metal' => l10n.categoryPreciousMetal,
+        'crypto' => l10n.categoryCrypto,
+        'stock' => l10n.categoryStock,
+        _ => category,
+      };
+
+  /// Groups filtered assets by category, with favorites section at top.
+  List<Object> _groupedItems(List<Asset> filtered, Set<String> favorites) {
+    if (_category != null) return filtered;
+
+    final items = <Object>[];
+
+    // Favoriler bölümü (en üstte)
+    final favoriteAssets = favorites.isNotEmpty
+        ? filtered.where((a) => favorites.contains(a.symbol)).toList()
+        : <Asset>[];
+    if (favoriteAssets.isNotEmpty) {
+      items.add('favorites');
+      items.addAll(favoriteAssets);
+    }
+
+    // Kategori gruplama — favorileri hariç tut
+    final nonFavorites = favorites.isNotEmpty
+        ? filtered.where((a) => !favorites.contains(a.symbol)).toList()
+        : filtered;
+    final grouped = <String, List<Asset>>{};
+    for (final a in nonFavorites) {
+      grouped.putIfAbsent(a.category, () => []).add(a);
+    }
+
+    for (final cat in _categoryOrder) {
+      final list = grouped[cat];
+      if (list == null || list.isEmpty) continue;
+      items.add(cat);
+      items.addAll(list);
+    }
+    for (final cat in grouped.keys) {
+      if (_categoryOrder.contains(cat)) continue;
+      items.add(cat);
+      items.addAll(grouped[cat]!);
+    }
+    return items;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
     final categories = <String?, String>{
       null: l10n.compareAllCategories,
       'currency': l10n.categoryCurrency,
@@ -475,106 +596,172 @@ class _AssetPickerSheetState extends State<_AssetPickerSheet> {
         final filtered = _filtered(state.assets);
         final selected = state.selectedSymbols;
 
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.4,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (_, scrollController) => Column(
-            children: [
-              // Handle
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+        return BlocBuilder<FavoritesCubit, Set<String>>(
+          builder: (context, favorites) {
+            final useGrouped = _query.isEmpty && _category == null;
+            final items = useGrouped
+                ? _groupedItems(filtered, favorites)
+                : filtered;
 
-              // Search field
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: false,
-                  decoration: InputDecoration(
-                    hintText: l10n.searchAsset,
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 10,
-                      horizontal: 12,
+            return DraggableScrollableSheet(
+              initialChildSize: 0.7,
+              minChildSize: 0.4,
+              maxChildSize: 0.95,
+              expand: false,
+              builder: (_, scrollController) => Column(
+                children: [
+                  // Handle
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    suffixIcon: _query.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _query = '');
-                            },
-                          )
-                        : null,
                   ),
-                  onChanged: (v) => setState(() => _query = v),
-                ),
-              ),
-              const SizedBox(height: 8),
 
-              // Category filter
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: categories.entries.map((entry) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(entry.value),
-                        selected: _category == entry.key,
-                        onSelected: (_) =>
-                            setState(() => _category = entry.key),
+                  // Search field
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: false,
+                      decoration: InputDecoration(
+                        hintText: l10n.searchAsset,
+                        prefixIcon: const Icon(Icons.search),
+                        border: const OutlineInputBorder(),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 12,
+                        ),
+                        suffixIcon: _query.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _query = '');
+                                },
+                              )
+                            : null,
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 4),
+                      onChanged: (v) => setState(() => _query = v),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
 
-              const Divider(height: 1),
+                  // Category filter
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: categories.entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(entry.value),
+                            selected: _category == entry.key,
+                            onSelected: (_) =>
+                                setState(() => _category = entry.key),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
 
-              // Asset list
-              Expanded(
-                child: filtered.isEmpty
-                    ? Center(child: Text(l10n.compareNoAssetsFound))
-                    : ListView.builder(
-                        controller: scrollController,
-                        itemCount: filtered.length,
-                        itemBuilder: (context, i) {
-                          final asset = filtered[i];
-                          final isSelected = selected.contains(asset.symbol);
-                          final canSelect = isSelected || selected.length < 5;
-                          return CheckboxListTile(
-                            value: isSelected,
-                            onChanged: canSelect
-                                ? (_) => context.read<ComparisonBloc>().add(
-                                    ComparisonSymbolToggled(asset.symbol),
-                                  )
-                                : null,
-                            title: Text(asset.displayName),
-                            subtitle: Text(
-                              asset.symbol,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            dense: true,
-                            controlAffinity: ListTileControlAffinity.trailing,
-                          );
-                        },
-                      ),
+                  const Divider(height: 1),
+
+                  // Asset list
+                  Expanded(
+                    child: items.isEmpty
+                        ? Center(child: Text(l10n.compareNoAssetsFound))
+                        : ListView.builder(
+                            controller: scrollController,
+                            itemCount: items.length,
+                            itemBuilder: (context, i) {
+                              final item = items[i];
+
+                              // Kategori başlığı
+                              if (item is String) {
+                                return Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    12,
+                                    16,
+                                    4,
+                                  ),
+                                  child: Text(
+                                    _categoryLabel(item, l10n).toUpperCase(),
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              final asset = item as Asset;
+                              final isSelected = selected.contains(
+                                asset.symbol,
+                              );
+                              final canSelect =
+                                  isSelected || selected.length < 5;
+                              final isFav = favorites.contains(asset.symbol);
+                              final cubit = context.read<FavoritesCubit>();
+
+                              return CheckboxListTile(
+                                value: isSelected,
+                                onChanged: canSelect
+                                    ? (_) => context.read<ComparisonBloc>().add(
+                                        ComparisonSymbolToggled(asset.symbol),
+                                      )
+                                    : null,
+                                title: Text(asset.displayName),
+                                subtitle: Text(
+                                  asset.symbol,
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                secondary: IconButton(
+                                  icon: Icon(
+                                    isFav ? Icons.star : Icons.star_border,
+                                    color: isFav
+                                        ? Colors.amber
+                                        : theme.colorScheme.outlineVariant,
+                                  ),
+                                  onPressed: () {
+                                    if (!isFav && cubit.isFull) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            l10n.favoritesMaxReached(
+                                              FavoritesCubit.maxFavorites,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    cubit.toggle(asset.symbol);
+                                  },
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                                dense: true,
+                                controlAffinity:
+                                    ListTileControlAffinity.trailing,
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

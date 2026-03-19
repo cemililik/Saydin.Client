@@ -36,6 +36,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
     on<PortfolioInflationToggled>(_onInflationToggled);
     on<PortfolioReset>(_onReset);
     on<PortfolioReplayRequested>(_onReplayRequested);
+    on<PortfolioLanguageChanged>(_onLanguageChanged);
   }
 
   Future<void> _onAssetsRequested(
@@ -276,6 +277,74 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
     );
     if (event.items.isNotEmpty) {
       await _onCalculateRequested(const PortfolioCalculateRequested(), emit);
+    }
+  }
+
+  Future<void> _onLanguageChanged(
+    PortfolioLanguageChanged event,
+    Emitter<PortfolioState> emit,
+  ) async {
+    // Form state'i ve önceki hesaplama sonucunu kaydet
+    final savedItems = state.items;
+    final savedBuyDate = state.buyDate;
+    final savedSellDate = state.sellDate;
+    final savedInflation = state.includeInflation;
+    final hadResult = state is PortfolioSuccess;
+
+    try {
+      final assets = await _getAssets();
+
+      if (hadResult && savedItems.isNotEmpty && savedBuyDate != null) {
+        emit(
+          PortfolioCalculating(
+            assets: assets,
+            items: savedItems,
+            buyDate: savedBuyDate,
+            sellDate: savedSellDate,
+            includeInflation: savedInflation,
+          ),
+        );
+        try {
+          final result = await _calculatePortfolio(
+            items: savedItems,
+            buyDate: savedBuyDate,
+            sellDate: savedSellDate,
+            includeInflation: savedInflation,
+          );
+          emit(
+            PortfolioSuccess(
+              assets: assets,
+              items: savedItems,
+              buyDate: savedBuyDate,
+              sellDate: savedSellDate,
+              includeInflation: savedInflation,
+              result: result,
+            ),
+          );
+        } catch (_) {
+          emit(
+            PortfolioEditing(
+              assets: assets,
+              items: savedItems,
+              buyDate: savedBuyDate,
+              sellDate: savedSellDate,
+              includeInflation: savedInflation,
+            ),
+          );
+        }
+      } else {
+        emit(
+          PortfolioEditing(
+            assets: assets,
+            items: savedItems,
+            buyDate: savedBuyDate,
+            sellDate: savedSellDate,
+            includeInflation: savedInflation,
+          ),
+        );
+      }
+    } catch (_) {
+      // Asset fetch başarısız — mevcut state'i koru
     }
   }
 }

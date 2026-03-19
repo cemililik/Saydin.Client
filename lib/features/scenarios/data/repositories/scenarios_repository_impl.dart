@@ -60,6 +60,7 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
     ScenarioType.whatIf => 'what_if',
     ScenarioType.comparison => 'comparison',
     ScenarioType.portfolio => 'portfolio',
+    ScenarioType.dca => 'dca',
   };
 
   String _formatDate(DateTime date) =>

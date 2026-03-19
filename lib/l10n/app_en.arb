@@ -1,0 +1,325 @@
+{
+  "@@locale": "en",
+  "appTitle": "Saydın",
+  "whatIfTitle": "What If I Bought?",
+  "selectAsset": "Select Asset",
+  "buyDate": "Buy Date",
+  "sellDate": "Sell Date (optional)",
+  "amount": "Amount",
+  "amountHint": "10000",
+  "amountTypeTry": "₺ TRY",
+  "amountTypeUnits": "Units",
+  "amountTypeGrams": "Grams",
+  "calculate": "Calculate",
+  "calculating": "Calculating...",
+  "resultTitle": "Result",
+  "initialValue": "Initial Value",
+  "finalValue": "Current Value",
+  "profitLoss": "Profit / Loss",
+  "profitLossPercent": "Return",
+  "today": "Today",
+  "profit": "Profit",
+  "loss": "Loss",
+  "profitLabel": "Profit",
+  "lossLabel": "Loss",
+  "enterAmount": "Enter amount",
+  "assetRequired": "Please select an asset",
+  "buyDateRequired": "Please enter buy date",
+  "validAmountRequired": "Please enter a valid amount",
+  "errorServer": "Server error. Please try again.",
+  "errorGeneric": "An error occurred. Please try again.",
+  "errorPriceNotFound": "No price data found for this date.",
+  "errorDailyLimit": "Daily calculation limit reached.",
+  "errorScenarioLimit": "Free plan allows up to {limit} saved scenarios.",
+  "@errorScenarioLimit": {
+    "placeholders": {
+      "limit": { "type": "int" }
+    }
+  },
+  "errorNoInternet": "No internet connection.",
+  "retry": "Retry",
+  "tryAgain": "Recalculate",
+  "scenariosTitle": "My Scenarios",
+  "scenariosEmpty": "No saved scenarios yet",
+  "scenariosEmptyHint": "You can save your scenarios after making a calculation.",
+  "saveScenario": "Save",
+  "scenarioSaved": "Scenario saved.",
+  "scenarioDeleted": "Scenario deleted.",
+  "deleteScenario": "Delete",
+  "undo": "Undo",
+  "tabCalculate": "Calculate",
+  "tabScenarios": "Scenarios",
+
+  "searchAsset": "Search asset...",
+  "categoryCurrency": "Currency",
+  "categoryPreciousMetal": "Precious Metal",
+  "categoryCrypto": "Cryptocurrency",
+  "categoryStock": "Stock",
+
+  "resultBuyPrice": "Buy Price",
+  "resultSellPrice": "Sell/Current Price",
+  "resultUnitsAcquired": "Units Acquired",
+  "resultDuration": "Duration",
+  "durationDays": "{count} days",
+  "@durationDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "durationMonths": "{count} months",
+  "@durationMonths": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "durationYearsMonths": "{years} years {months} months",
+  "@durationYearsMonths": {
+    "placeholders": {
+      "years": { "type": "int" },
+      "months": { "type": "int" }
+    }
+  },
+  "durationYears": "{count} years",
+  "@durationYears": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "dateAdjustedWarning": "Selected date is not available for this asset, adjusted to the nearest valid date.",
+  "scenarioDuplicate": "This scenario has already been saved.",
+  "priceDisclaimer": "Prices shown are approximate. Actual transaction amounts may vary due to institution fees, commissions, and exchange rate differences.",
+  "tabCompare": "Compare",
+  "compareTitle": "Asset Comparison",
+  "compareSelectAssets": "Select Assets (2-5)",
+  "compareMinAssets": "Please select at least 2 assets.",
+  "compareButton": "Compare",
+  "comparing": "Comparing...",
+  "compareResultTitle": "Comparison Results",
+  "compareRankLabel": "Rank {rank}",
+  "@compareRankLabel": {
+    "placeholders": { "rank": { "type": "int" } }
+  },
+  "compareAddAsset": "Add Asset",
+  "compareAllCategories": "All",
+  "compareNoAssetsFound": "No assets found",
+
+  "inflationAdjust": "Adjust for Inflation",
+  "inflationAdjustSubtitle": "Calculates real return based on CPI",
+  "premiumFeature": "Premium",
+  "realReturn": "Real Return",
+  "realProfitLoss": "Real Profit / Loss",
+  "cumulativeInflation": "Cumulative Inflation",
+  "inflationSectionTitle": "Inflation Adjustment",
+  "dateAdjustedNote": "Date adjustment applied",
+  "inflationDataAsOf": "Index base date: {date}",
+  "@inflationDataAsOf": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "priceDateAdjusted": "Price not found: {requested} ({reason}) — {actual} date used.",
+  "@priceDateAdjusted": {
+    "placeholders": {
+      "requested": { "type": "String" },
+      "reason":    { "type": "String" },
+      "actual":    { "type": "String" }
+    }
+  },
+  "reasonWeekend": "weekend",
+  "reasonHoliday": "public holiday or no price",
+  "labelBuyDate":  "Buy",
+  "labelSellDate": "Sell",
+
+  "shareResult": "Share",
+  "sharePreviewTitle": "Share Preview",
+  "sharingInProgress": "Preparing...",
+
+  "tabPortfolio": "Portfolio",
+  "portfolioTitle": "Portfolio Builder",
+  "portfolioDateSection": "Investment Period",
+  "portfolioAssetsSection": "Assets",
+  "portfolioAddAsset": "Add Asset",
+  "portfolioAddAssetTitle": "Add Asset to Portfolio",
+  "portfolioCalculate": "Calculate Portfolio",
+  "portfolioCalculating": "Calculating...",
+  "portfolioReset": "Reset",
+  "portfolioEmpty": "No assets added yet.",
+  "portfolioEmptyHint": "Add assets to calculate your portfolio's historical return.",
+  "portfolioQuotaInfo": "This calculation will use {count} calculation credits.",
+  "@portfolioQuotaInfo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "portfolioTotalInitial": "Total Investment",
+  "portfolioTotalFinal": "Total Final Value",
+  "portfolioTotalReturn": "Total Return",
+  "portfolioChartTitle": "Final Value Distribution",
+  "portfolioBuyDateRequired": "Please enter start date",
+  "portfolioMinItems": "Add at least 1 asset.",
+  "portfolioHistoryLimit": "Free plan allows dates within the last {months} months.",
+  "@portfolioHistoryLimit": {
+    "placeholders": {
+      "months": { "type": "int" }
+    }
+  },
+  "portfolioEditAssetTitle": "Edit Asset",
+  "portfolioSaveAsset": "Save",
+  "portfolioInflationLabel": "Adjust for Inflation",
+  "portfolioRealReturn": "Real Total Return",
+  "portfolioRealProfitLoss": "Real Profit / Loss",
+
+  "scenarioTypeWhatIf": "Calculation",
+  "scenarioTypeComparison": "Comparison",
+  "scenarioTypePortfolio": "Portfolio",
+  "scenarioTypeDca": "DCA",
+
+  "brandedTitlePrefix": "buy/sell ",
+  "brandedTitleSuffix": "saydın",
+
+  "settings": "Settings",
+  "settingsTheme": "Theme",
+  "settingsThemeSubtitle": "Choose app appearance",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "settingsVersion": "Version",
+
+  "categoryFavorites": "Favorites",
+  "favoritesMaxReached": "You can add up to {max} favorites.",
+  "@favoritesMaxReached": {
+    "placeholders": {
+      "max": { "type": "int" }
+    }
+  },
+
+  "settingsLanguage": "Language",
+  "settingsLanguageSubtitle": "Choose app language",
+  "languageTurkish": "Türkçe",
+  "languageEnglish": "English",
+  "languageSystem": "System",
+
+  "shareCardInitialValue": "Initial",
+  "shareCardFinalValue": "Final Value",
+  "shareCardNominalReturn": "Nominal Return",
+  "shareCardReturn": "Return",
+  "shareCardProfit": "profit",
+  "shareCardLoss": "loss",
+  "shareCardInflationTitle": "Inflation Adjustment (CPI)",
+  "shareCardCumulativeInflation": "Cumulative Inflation",
+  "shareCardRealReturn": "Real Return",
+  "shareCardWhatIfFooter": "What if I bought?",
+  "shareCardComparisonTitle": "Asset Comparison",
+  "shareCardComparisonFooter": "Which one made more?",
+  "shareCardPortfolioTitle": "Portfolio Return",
+  "shareCardPortfolioFooter": "What did my portfolio earn?",
+  "shareCardTotalInvestment": "Total Investment",
+  "shareCardTotalReturn": "Total Return",
+  "shareCardNominalTotalReturn": "Nominal Return",
+  "shareCardAssetCount": "{count} assets",
+  "@shareCardAssetCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "shareTextWhatIf": "If I had invested {initial} in {asset}, it would be worth {final_value} ({percent})! 📊 #saydın",
+  "@shareTextWhatIf": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "initial": { "type": "String" },
+      "final_value": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareTextComparison": "Which investment performed better? 🏆 {winner}: {percent} 📊 #saydın",
+  "@shareTextComparison": {
+    "placeholders": {
+      "winner": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareTextPortfolio": "My portfolio with {count} assets returned {percent}! 📊 #saydın",
+  "@shareTextPortfolio": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareDefaultText": "Calculated on saydın.app.",
+  "shareCta": "\n\n📱 Download Saydın — search \"saydın\" on App Store and Google Play.",
+
+  "scenarioNameComparison": "{count} Asset Comparison",
+  "@scenarioNameComparison": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "scenarioNamePortfolio": "Portfolio ({count} assets)",
+  "@scenarioNamePortfolio": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "realReturnPrefix": "Real: ",
+
+  "onboardingSkip": "Skip",
+  "onboardingNext": "Next",
+  "onboardingGetStarted": "Get Started",
+  "onboardingPage1Title": "What If I Bought?",
+  "onboardingPage1Body": "Calculate any investment retroactively. Dollar, gold, Bitcoin and more.",
+  "onboardingPage2Title": "Compare and Discover",
+  "onboardingPage2Body": "Compare assets side by side, build portfolios. Which one performed better?",
+  "onboardingPage3Title": "Build a Portfolio",
+  "onboardingPage3Body": "Create portfolios with multiple assets, calculate total returns and discover the best strategy.",
+  "onboardingPage4Title": "Regular Investing",
+  "onboardingPage4Body": "Simulate weekly or monthly recurring purchases, see average cost and total return.",
+  "onboardingPage5Title": "Reverse Scenario",
+  "onboardingPage5Body": "How much should you have invested to reach your goal? Find out with reverse calculation.",
+  "onboardingPage6Title": "Share and Save",
+  "onboardingPage6Body": "Share your results with friends, save your scenarios and come back anytime.",
+
+  "tabDca": "DCA",
+  "dcaTitle": "DCA Simulation",
+  "dcaStartDate": "Start Date",
+  "dcaEndDate": "End Date (optional)",
+  "dcaStartDateRequired": "Please enter start date",
+  "dcaPeriodWeekly": "Weekly",
+  "dcaPeriodMonthly": "Monthly",
+  "dcaPeriodLabel": "Period",
+  "dcaPeriodicAmountLabel": "Periodic Amount",
+  "dcaPeriodicAmount": "Periodic Amount",
+  "dcaCalculate": "Simulate",
+  "dcaTotalInvested": "Total Invested",
+  "dcaCurrentValue": "Current Value",
+  "dcaTotalPurchases": "Total Purchases",
+  "dcaAvgCost": "Average Cost",
+  "dcaTotalUnits": "Total Units",
+  "dcaCurrentPrice": "Current Price",
+  "dcaChartCost": "Cost",
+  "dcaChartValue": "Value",
+
+  "shareCardDcaFooter": "DCA — regular investing",
+  "shareTextDca": "DCA into {asset}: {count} purchases, return: {percent}! 📊 #saydın",
+  "@shareTextDca": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "count": { "type": "int" },
+      "percent": { "type": "String" }
+    }
+  },
+
+  "modeNormal": "Calculate",
+  "modeNormalHint": "How much would my investment be worth today?",
+  "modeReverse": "Reverse",
+  "modeReverseHint": "How much should I have invested to reach my target?",
+  "targetAmount": "Target Amount",
+  "enterTargetAmount": "Enter target amount",
+  "reverseCalculate": "Reverse Calculate",
+  "reverseCalculating": "Calculating...",
+  "requiredInvestment": "Required Investment",
+  "targetValue": "Target Value",
+  "reverseResultTitle": "Reverse Scenario Result",
+  "shareTextReverse": "To reach {target} with {asset}, I should have invested {required} ({percent})! 📊 #saydın",
+  "@shareTextReverse": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "target": { "type": "String" },
+      "required": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareCardReverseFooter": "How much should I have invested?",
+  "shareCardRequiredInvestment": "Required Investment",
+  "shareCardTargetValue": "Target Value",
+  "scenarioTypeReverse": "Reverse Calculation",
+  "compareHint": "Which asset would have earned more if you invested the same amount?",
+  "dcaHint": "Simulate regular purchases at fixed intervals to see average cost and total return."
+}

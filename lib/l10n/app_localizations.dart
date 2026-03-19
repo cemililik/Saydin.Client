@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_en.dart';
 import 'app_localizations_tr.dart';
 
 // ignore_for_file: type=lint
@@ -92,7 +93,10 @@ abstract class AppLocalizations {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('tr')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('tr'),
+  ];
 
   /// No description provided for @appTitle.
   ///
@@ -355,7 +359,7 @@ abstract class AppLocalizations {
   /// No description provided for @tabScenarios.
   ///
   /// In tr, this message translates to:
-  /// **'Senaryolarım'**
+  /// **'Kayıtlarım'**
   String get tabScenarios;
 
   /// No description provided for @searchAsset.
@@ -784,6 +788,12 @@ abstract class AppLocalizations {
   /// **'Portföy'**
   String get scenarioTypePortfolio;
 
+  /// No description provided for @scenarioTypeDca.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birikim'**
+  String get scenarioTypeDca;
+
   /// No description provided for @brandedTitlePrefix.
   ///
   /// In tr, this message translates to:
@@ -795,6 +805,580 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'saydın'**
   String get brandedTitleSuffix;
+
+  /// No description provided for @settings.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ayarlar'**
+  String get settings;
+
+  /// No description provided for @settingsTheme.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tema'**
+  String get settingsTheme;
+
+  /// No description provided for @settingsThemeSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulamanın görünümünü seçin'**
+  String get settingsThemeSubtitle;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In tr, this message translates to:
+  /// **'Açık'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In tr, this message translates to:
+  /// **'Koyu'**
+  String get themeDark;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sistem'**
+  String get themeSystem;
+
+  /// No description provided for @settingsVersion.
+  ///
+  /// In tr, this message translates to:
+  /// **'Versiyon'**
+  String get settingsVersion;
+
+  /// No description provided for @categoryFavorites.
+  ///
+  /// In tr, this message translates to:
+  /// **'Favoriler'**
+  String get categoryFavorites;
+
+  /// No description provided for @favoritesMaxReached.
+  ///
+  /// In tr, this message translates to:
+  /// **'En fazla {max} favori ekleyebilirsiniz.'**
+  String favoritesMaxReached(int max);
+
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dil'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsLanguageSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulama dilini seçin'**
+  String get settingsLanguageSubtitle;
+
+  /// No description provided for @languageTurkish.
+  ///
+  /// In tr, this message translates to:
+  /// **'Türkçe'**
+  String get languageTurkish;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In tr, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @languageSystem.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sistem'**
+  String get languageSystem;
+
+  /// No description provided for @shareCardInitialValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç'**
+  String get shareCardInitialValue;
+
+  /// No description provided for @shareCardFinalValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son Değer'**
+  String get shareCardFinalValue;
+
+  /// No description provided for @shareCardNominalReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Nominal Getiri'**
+  String get shareCardNominalReturn;
+
+  /// No description provided for @shareCardReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Getiri'**
+  String get shareCardReturn;
+
+  /// No description provided for @shareCardProfit.
+  ///
+  /// In tr, this message translates to:
+  /// **'kazanç'**
+  String get shareCardProfit;
+
+  /// No description provided for @shareCardLoss.
+  ///
+  /// In tr, this message translates to:
+  /// **'zarar'**
+  String get shareCardLoss;
+
+  /// No description provided for @shareCardInflationTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Enflasyon Düzeltmesi (TÜFE)'**
+  String get shareCardInflationTitle;
+
+  /// No description provided for @shareCardCumulativeInflation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birikimli Enflasyon'**
+  String get shareCardCumulativeInflation;
+
+  /// No description provided for @shareCardRealReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reel Getiri'**
+  String get shareCardRealReturn;
+
+  /// No description provided for @shareCardWhatIfFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ya alsaydın?'**
+  String get shareCardWhatIfFooter;
+
+  /// No description provided for @shareCardComparisonTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık Karşılaştırması'**
+  String get shareCardComparisonTitle;
+
+  /// No description provided for @shareCardComparisonFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hangisi daha kazandırdı?'**
+  String get shareCardComparisonFooter;
+
+  /// No description provided for @shareCardPortfolioTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföy Getirisi'**
+  String get shareCardPortfolioTitle;
+
+  /// No description provided for @shareCardPortfolioFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföyüm ne kazandırdı?'**
+  String get shareCardPortfolioFooter;
+
+  /// No description provided for @shareCardTotalInvestment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Yatırım'**
+  String get shareCardTotalInvestment;
+
+  /// No description provided for @shareCardTotalReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Getiri'**
+  String get shareCardTotalReturn;
+
+  /// No description provided for @shareCardNominalTotalReturn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Nominal Getiri'**
+  String get shareCardNominalTotalReturn;
+
+  /// No description provided for @shareCardAssetCount.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} varlık'**
+  String shareCardAssetCount(int count);
+
+  /// No description provided for @shareTextWhatIf.
+  ///
+  /// In tr, this message translates to:
+  /// **'{asset}\'e {initial} yatırsaydım {final_value} ederdi ({percent})! 📊 #saydın'**
+  String shareTextWhatIf(
+    String asset,
+    String initial,
+    String final_value,
+    String percent,
+  );
+
+  /// No description provided for @shareTextComparison.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hangi yatırım daha kazandırdı? 🏆 {winner}: {percent} 📊 #saydın'**
+  String shareTextComparison(String winner, String percent);
+
+  /// No description provided for @shareTextPortfolio.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföyüm {count} varlıkla {percent} getiri sağladı! 📊 #saydın'**
+  String shareTextPortfolio(int count, String percent);
+
+  /// No description provided for @shareDefaultText.
+  ///
+  /// In tr, this message translates to:
+  /// **'saydın.app üzerinden hesapladım.'**
+  String get shareDefaultText;
+
+  /// No description provided for @shareCta.
+  ///
+  /// In tr, this message translates to:
+  /// **'\n\n📱 Saydın uygulamasını indir — App Store ve Google Play\'de \"saydın\" ara.'**
+  String get shareCta;
+
+  /// No description provided for @scenarioNameComparison.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} Varlık Karşılaştırması'**
+  String scenarioNameComparison(int count);
+
+  /// No description provided for @scenarioNamePortfolio.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföy ({count} varlık)'**
+  String scenarioNamePortfolio(int count);
+
+  /// No description provided for @realReturnPrefix.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reel: '**
+  String get realReturnPrefix;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Atla'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In tr, this message translates to:
+  /// **'İleri'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingGetStarted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hemen Dene'**
+  String get onboardingGetStarted;
+
+  /// No description provided for @onboardingPage1Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ya Alsaydım?'**
+  String get onboardingPage1Title;
+
+  /// No description provided for @onboardingPage1Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.'**
+  String get onboardingPage1Body;
+
+  /// No description provided for @onboardingPage2Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Karşılaştır ve Keşfet'**
+  String get onboardingPage2Title;
+
+  /// No description provided for @onboardingPage2Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?'**
+  String get onboardingPage2Body;
+
+  /// No description provided for @onboardingPage3Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Portföy Oluştur'**
+  String get onboardingPage3Title;
+
+  /// No description provided for @onboardingPage3Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.'**
+  String get onboardingPage3Body;
+
+  /// No description provided for @onboardingPage4Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli Yatırım'**
+  String get onboardingPage4Title;
+
+  /// No description provided for @onboardingPage4Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.'**
+  String get onboardingPage4Body;
+
+  /// No description provided for @onboardingPage5Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ters Senaryo'**
+  String get onboardingPage5Title;
+
+  /// No description provided for @onboardingPage5Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedefine ulaşmak için ne kadar yatırmalıydın? Ters hesaplama ile gereken tutarı öğren.'**
+  String get onboardingPage5Body;
+
+  /// No description provided for @onboardingPage6Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaş ve Kaydet'**
+  String get onboardingPage6Title;
+
+  /// No description provided for @onboardingPage6Body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.'**
+  String get onboardingPage6Body;
+
+  /// No description provided for @tabDca.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birikim'**
+  String get tabDca;
+
+  /// No description provided for @dcaTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli Yatırım Simülasyonu'**
+  String get dcaTitle;
+
+  /// No description provided for @dcaStartDate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç Tarihi'**
+  String get dcaStartDate;
+
+  /// No description provided for @dcaEndDate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bitiş Tarihi (opsiyonel)'**
+  String get dcaEndDate;
+
+  /// No description provided for @dcaStartDateRequired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç tarihi giriniz'**
+  String get dcaStartDateRequired;
+
+  /// No description provided for @dcaPeriodWeekly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Haftalık'**
+  String get dcaPeriodWeekly;
+
+  /// No description provided for @dcaPeriodMonthly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aylık'**
+  String get dcaPeriodMonthly;
+
+  /// No description provided for @dcaPeriodLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Periyot'**
+  String get dcaPeriodLabel;
+
+  /// No description provided for @dcaPeriodicAmountLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Periyodik Tutar'**
+  String get dcaPeriodicAmountLabel;
+
+  /// No description provided for @dcaPeriodicAmount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Periyodik Tutar'**
+  String get dcaPeriodicAmount;
+
+  /// No description provided for @dcaCalculate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Simüle Et'**
+  String get dcaCalculate;
+
+  /// No description provided for @dcaTotalInvested.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Yatırım'**
+  String get dcaTotalInvested;
+
+  /// No description provided for @dcaCurrentValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güncel Değer'**
+  String get dcaCurrentValue;
+
+  /// No description provided for @dcaTotalPurchases.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Alım'**
+  String get dcaTotalPurchases;
+
+  /// No description provided for @dcaAvgCost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama Maliyet'**
+  String get dcaAvgCost;
+
+  /// No description provided for @dcaTotalUnits.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Adet'**
+  String get dcaTotalUnits;
+
+  /// No description provided for @dcaCurrentPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güncel Fiyat'**
+  String get dcaCurrentPrice;
+
+  /// No description provided for @dcaChartCost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Maliyet'**
+  String get dcaChartCost;
+
+  /// No description provided for @dcaChartValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Değer'**
+  String get dcaChartValue;
+
+  /// No description provided for @shareCardDcaFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli yatırım ile birikim'**
+  String get shareCardDcaFooter;
+
+  /// No description provided for @shareTextDca.
+  ///
+  /// In tr, this message translates to:
+  /// **'{asset} için {count} alım yaptım, getiri: {percent}! 📊 #saydın'**
+  String shareTextDca(String asset, int count, String percent);
+
+  /// No description provided for @modeNormal.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesapla'**
+  String get modeNormal;
+
+  /// No description provided for @modeNormalHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Belirli bir tutarı yatırsaydım bugün ne kadar ederdi?'**
+  String get modeNormalHint;
+
+  /// No description provided for @modeReverse.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ters Hesapla'**
+  String get modeReverse;
+
+  /// No description provided for @modeReverseHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef tutara ulaşmak için ne kadar yatırmalıydım?'**
+  String get modeReverseHint;
+
+  /// No description provided for @targetAmount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef Tutar'**
+  String get targetAmount;
+
+  /// No description provided for @enterTargetAmount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef tutarı giriniz'**
+  String get enterTargetAmount;
+
+  /// No description provided for @reverseCalculate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ters Hesapla'**
+  String get reverseCalculate;
+
+  /// No description provided for @reverseCalculating.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesaplanıyor...'**
+  String get reverseCalculating;
+
+  /// No description provided for @requiredInvestment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gereken Yatırım'**
+  String get requiredInvestment;
+
+  /// No description provided for @targetValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef Değer'**
+  String get targetValue;
+
+  /// No description provided for @reverseResultTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ters Senaryo Sonucu'**
+  String get reverseResultTitle;
+
+  /// No description provided for @shareTextReverse.
+  ///
+  /// In tr, this message translates to:
+  /// **'{asset} ile {target} hedefime ulaşmak için {required} yatırmalıydım ({percent})! 📊 #saydın'**
+  String shareTextReverse(
+    String asset,
+    String target,
+    String required,
+    String percent,
+  );
+
+  /// No description provided for @shareCardReverseFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ne kadar yatırmalıydım?'**
+  String get shareCardReverseFooter;
+
+  /// No description provided for @shareCardRequiredInvestment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gereken Yatırım'**
+  String get shareCardRequiredInvestment;
+
+  /// No description provided for @shareCardTargetValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef Değer'**
+  String get shareCardTargetValue;
+
+  /// No description provided for @scenarioTypeReverse.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ters Hesaplama'**
+  String get scenarioTypeReverse;
+
+  /// No description provided for @compareHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aynı tutarı farklı varlıklara yatırsaydınız hangisi daha çok kazandırırdı?'**
+  String get compareHint;
+
+  /// No description provided for @dcaHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli aralıklarla alım yaparak yatırım maliyetinizi ve getirinizi simüle edin.'**
+  String get dcaHint;
 }
 
 class _AppLocalizationsDelegate
@@ -808,7 +1392,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['tr'].contains(locale.languageCode);
+      <String>['en', 'tr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -817,6 +1401,8 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'en':
+      return AppLocalizationsEn();
     case 'tr':
       return AppLocalizationsTr();
   }

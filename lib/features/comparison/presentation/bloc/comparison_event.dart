@@ -53,6 +53,12 @@ class ComparisonCalculateRequested extends ComparisonEvent {
   const ComparisonCalculateRequested();
 }
 
+/// Dil değiştiğinde asset listesini yeniler, form state'i korur,
+/// eğer önceden hesaplama yapılmışsa otomatik yeniden hesaplar.
+class ComparisonLanguageChanged extends ComparisonEvent {
+  const ComparisonLanguageChanged();
+}
+
 class ComparisonReplayRequested extends ComparisonEvent {
   final List<String> symbols;
   final DateTime buyDate;

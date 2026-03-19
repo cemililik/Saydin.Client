@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
 
 abstract class WhatIfEvent extends Equatable {
   const WhatIfEvent();
@@ -46,6 +47,7 @@ class WhatIfReplayRequested extends WhatIfEvent {
   final num amount;
   final String amountType;
   final bool includeInflation;
+  final CalculationMode calculationMode;
 
   const WhatIfReplayRequested({
     required this.assetSymbol,
@@ -54,6 +56,7 @@ class WhatIfReplayRequested extends WhatIfEvent {
     required this.amount,
     required this.amountType,
     this.includeInflation = false,
+    this.calculationMode = CalculationMode.normal,
   });
 
   @override
@@ -64,11 +67,25 @@ class WhatIfReplayRequested extends WhatIfEvent {
     amount,
     amountType,
     includeInflation,
+    calculationMode,
   ];
 }
 
 class WhatIfInflationToggled extends WhatIfEvent {
   const WhatIfInflationToggled();
+}
+
+/// Dil değiştiğinde asset listesini yeniler, form state'i korur,
+/// eğer önceden hesaplama yapılmışsa otomatik yeniden hesaplar.
+class WhatIfLanguageChanged extends WhatIfEvent {
+  const WhatIfLanguageChanged();
+}
+
+class WhatIfModeChanged extends WhatIfEvent {
+  final CalculationMode mode;
+  const WhatIfModeChanged(this.mode);
+  @override
+  List<Object?> get props => [mode];
 }
 
 class WhatIfCalculateRequested extends WhatIfEvent {
@@ -95,6 +112,34 @@ class WhatIfCalculateRequested extends WhatIfEvent {
     sellDate,
     amount,
     amountType,
+    includeInflation,
+  ];
+}
+
+class WhatIfReverseCalculateRequested extends WhatIfEvent {
+  final String assetSymbol;
+  final DateTime buyDate;
+  final DateTime? sellDate;
+  final num targetAmount;
+  final String targetAmountType;
+  final bool includeInflation;
+
+  const WhatIfReverseCalculateRequested({
+    required this.assetSymbol,
+    required this.buyDate,
+    this.sellDate,
+    required this.targetAmount,
+    required this.targetAmountType,
+    this.includeInflation = false,
+  });
+
+  @override
+  List<Object?> get props => [
+    assetSymbol,
+    buyDate,
+    sellDate,
+    targetAmount,
+    targetAmountType,
     includeInflation,
   ];
 }

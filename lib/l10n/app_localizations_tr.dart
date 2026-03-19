@@ -141,7 +141,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tabCalculate => 'Hesapla';
 
   @override
-  String get tabScenarios => 'Senaryolarım';
+  String get tabScenarios => 'Kayıtlarım';
 
   @override
   String get searchAsset => 'Varlık ara...';
@@ -378,8 +378,332 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scenarioTypePortfolio => 'Portföy';
 
   @override
+  String get scenarioTypeDca => 'Birikim';
+
+  @override
   String get brandedTitlePrefix => 'al/sat ';
 
   @override
   String get brandedTitleSuffix => 'saydın';
+
+  @override
+  String get settings => 'Ayarlar';
+
+  @override
+  String get settingsTheme => 'Tema';
+
+  @override
+  String get settingsThemeSubtitle => 'Uygulamanın görünümünü seçin';
+
+  @override
+  String get themeLight => 'Açık';
+
+  @override
+  String get themeDark => 'Koyu';
+
+  @override
+  String get themeSystem => 'Sistem';
+
+  @override
+  String get settingsVersion => 'Versiyon';
+
+  @override
+  String get categoryFavorites => 'Favoriler';
+
+  @override
+  String favoritesMaxReached(int max) {
+    return 'En fazla $max favori ekleyebilirsiniz.';
+  }
+
+  @override
+  String get settingsLanguage => 'Dil';
+
+  @override
+  String get settingsLanguageSubtitle => 'Uygulama dilini seçin';
+
+  @override
+  String get languageTurkish => 'Türkçe';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageSystem => 'Sistem';
+
+  @override
+  String get shareCardInitialValue => 'Başlangıç';
+
+  @override
+  String get shareCardFinalValue => 'Son Değer';
+
+  @override
+  String get shareCardNominalReturn => 'Nominal Getiri';
+
+  @override
+  String get shareCardReturn => 'Getiri';
+
+  @override
+  String get shareCardProfit => 'kazanç';
+
+  @override
+  String get shareCardLoss => 'zarar';
+
+  @override
+  String get shareCardInflationTitle => 'Enflasyon Düzeltmesi (TÜFE)';
+
+  @override
+  String get shareCardCumulativeInflation => 'Birikimli Enflasyon';
+
+  @override
+  String get shareCardRealReturn => 'Reel Getiri';
+
+  @override
+  String get shareCardWhatIfFooter => 'Ya alsaydın?';
+
+  @override
+  String get shareCardComparisonTitle => 'Varlık Karşılaştırması';
+
+  @override
+  String get shareCardComparisonFooter => 'Hangisi daha kazandırdı?';
+
+  @override
+  String get shareCardPortfolioTitle => 'Portföy Getirisi';
+
+  @override
+  String get shareCardPortfolioFooter => 'Portföyüm ne kazandırdı?';
+
+  @override
+  String get shareCardTotalInvestment => 'Toplam Yatırım';
+
+  @override
+  String get shareCardTotalReturn => 'Toplam Getiri';
+
+  @override
+  String get shareCardNominalTotalReturn => 'Nominal Getiri';
+
+  @override
+  String shareCardAssetCount(int count) {
+    return '$count varlık';
+  }
+
+  @override
+  String shareTextWhatIf(
+    String asset,
+    String initial,
+    String final_value,
+    String percent,
+  ) {
+    return '$asset\'e $initial yatırsaydım $final_value ederdi ($percent)! 📊 #saydın';
+  }
+
+  @override
+  String shareTextComparison(String winner, String percent) {
+    return 'Hangi yatırım daha kazandırdı? 🏆 $winner: $percent 📊 #saydın';
+  }
+
+  @override
+  String shareTextPortfolio(int count, String percent) {
+    return 'Portföyüm $count varlıkla $percent getiri sağladı! 📊 #saydın';
+  }
+
+  @override
+  String get shareDefaultText => 'saydın.app üzerinden hesapladım.';
+
+  @override
+  String get shareCta =>
+      '\n\n📱 Saydın uygulamasını indir — App Store ve Google Play\'de \"saydın\" ara.';
+
+  @override
+  String scenarioNameComparison(int count) {
+    return '$count Varlık Karşılaştırması';
+  }
+
+  @override
+  String scenarioNamePortfolio(int count) {
+    return 'Portföy ($count varlık)';
+  }
+
+  @override
+  String get realReturnPrefix => 'Reel: ';
+
+  @override
+  String get onboardingSkip => 'Atla';
+
+  @override
+  String get onboardingNext => 'İleri';
+
+  @override
+  String get onboardingGetStarted => 'Hemen Dene';
+
+  @override
+  String get onboardingPage1Title => 'Ya Alsaydım?';
+
+  @override
+  String get onboardingPage1Body =>
+      'Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.';
+
+  @override
+  String get onboardingPage2Title => 'Karşılaştır ve Keşfet';
+
+  @override
+  String get onboardingPage2Body =>
+      'Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?';
+
+  @override
+  String get onboardingPage3Title => 'Portföy Oluştur';
+
+  @override
+  String get onboardingPage3Body =>
+      'Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.';
+
+  @override
+  String get onboardingPage4Title => 'Düzenli Yatırım';
+
+  @override
+  String get onboardingPage4Body =>
+      'Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.';
+
+  @override
+  String get onboardingPage5Title => 'Ters Senaryo';
+
+  @override
+  String get onboardingPage5Body =>
+      'Hedefine ulaşmak için ne kadar yatırmalıydın? Ters hesaplama ile gereken tutarı öğren.';
+
+  @override
+  String get onboardingPage6Title => 'Paylaş ve Kaydet';
+
+  @override
+  String get onboardingPage6Body =>
+      'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.';
+
+  @override
+  String get tabDca => 'Birikim';
+
+  @override
+  String get dcaTitle => 'Düzenli Yatırım Simülasyonu';
+
+  @override
+  String get dcaStartDate => 'Başlangıç Tarihi';
+
+  @override
+  String get dcaEndDate => 'Bitiş Tarihi (opsiyonel)';
+
+  @override
+  String get dcaStartDateRequired => 'Başlangıç tarihi giriniz';
+
+  @override
+  String get dcaPeriodWeekly => 'Haftalık';
+
+  @override
+  String get dcaPeriodMonthly => 'Aylık';
+
+  @override
+  String get dcaPeriodLabel => 'Periyot';
+
+  @override
+  String get dcaPeriodicAmountLabel => 'Periyodik Tutar';
+
+  @override
+  String get dcaPeriodicAmount => 'Periyodik Tutar';
+
+  @override
+  String get dcaCalculate => 'Simüle Et';
+
+  @override
+  String get dcaTotalInvested => 'Toplam Yatırım';
+
+  @override
+  String get dcaCurrentValue => 'Güncel Değer';
+
+  @override
+  String get dcaTotalPurchases => 'Toplam Alım';
+
+  @override
+  String get dcaAvgCost => 'Ortalama Maliyet';
+
+  @override
+  String get dcaTotalUnits => 'Toplam Adet';
+
+  @override
+  String get dcaCurrentPrice => 'Güncel Fiyat';
+
+  @override
+  String get dcaChartCost => 'Maliyet';
+
+  @override
+  String get dcaChartValue => 'Değer';
+
+  @override
+  String get shareCardDcaFooter => 'Düzenli yatırım ile birikim';
+
+  @override
+  String shareTextDca(String asset, int count, String percent) {
+    return '$asset için $count alım yaptım, getiri: $percent! 📊 #saydın';
+  }
+
+  @override
+  String get modeNormal => 'Hesapla';
+
+  @override
+  String get modeNormalHint =>
+      'Belirli bir tutarı yatırsaydım bugün ne kadar ederdi?';
+
+  @override
+  String get modeReverse => 'Ters Hesapla';
+
+  @override
+  String get modeReverseHint =>
+      'Hedef tutara ulaşmak için ne kadar yatırmalıydım?';
+
+  @override
+  String get targetAmount => 'Hedef Tutar';
+
+  @override
+  String get enterTargetAmount => 'Hedef tutarı giriniz';
+
+  @override
+  String get reverseCalculate => 'Ters Hesapla';
+
+  @override
+  String get reverseCalculating => 'Hesaplanıyor...';
+
+  @override
+  String get requiredInvestment => 'Gereken Yatırım';
+
+  @override
+  String get targetValue => 'Hedef Değer';
+
+  @override
+  String get reverseResultTitle => 'Ters Senaryo Sonucu';
+
+  @override
+  String shareTextReverse(
+    String asset,
+    String target,
+    String required,
+    String percent,
+  ) {
+    return '$asset ile $target hedefime ulaşmak için $required yatırmalıydım ($percent)! 📊 #saydın';
+  }
+
+  @override
+  String get shareCardReverseFooter => 'Ne kadar yatırmalıydım?';
+
+  @override
+  String get shareCardRequiredInvestment => 'Gereken Yatırım';
+
+  @override
+  String get shareCardTargetValue => 'Hedef Değer';
+
+  @override
+  String get scenarioTypeReverse => 'Ters Hesaplama';
+
+  @override
+  String get compareHint =>
+      'Aynı tutarı farklı varlıklara yatırsaydınız hangisi daha çok kazandırırdı?';
+
+  @override
+  String get dcaHint =>
+      'Düzenli aralıklarla alım yaparak yatırım maliyetinizi ve getirinizi simüle edin.';
 }

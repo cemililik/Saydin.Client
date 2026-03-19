@@ -1,7 +1,10 @@
 import 'package:equatable/equatable.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
+import 'package:saydin/features/what_if/domain/entities/reverse_what_if_result.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
+
+enum CalculationMode { normal, reverse }
 
 /// Form alanlarının BLoC içindeki anlık değerleri.
 class WhatIfFormInput extends Equatable {
@@ -11,6 +14,7 @@ class WhatIfFormInput extends Equatable {
   final String amountType;
   final num? amount;
   final bool includeInflation;
+  final CalculationMode calculationMode;
 
   /// Sembol değiştiğinde seçili tarihler asset aralığı dışındaysa
   /// otomatik sıkıştırıldı — bir kez gösterildikten sonra sıfırlanır.
@@ -23,6 +27,7 @@ class WhatIfFormInput extends Equatable {
     this.amountType = 'try',
     this.amount,
     this.includeInflation = false,
+    this.calculationMode = CalculationMode.normal,
     this.dateAdjusted = false,
   });
 
@@ -33,6 +38,7 @@ class WhatIfFormInput extends Equatable {
     String? amountType,
     Object? amount = _sentinel,
     bool? includeInflation,
+    CalculationMode? calculationMode,
     bool dateAdjusted = false,
   }) {
     return WhatIfFormInput(
@@ -48,6 +54,7 @@ class WhatIfFormInput extends Equatable {
       amountType: amountType ?? this.amountType,
       amount: identical(amount, _sentinel) ? this.amount : amount as num?,
       includeInflation: includeInflation ?? this.includeInflation,
+      calculationMode: calculationMode ?? this.calculationMode,
       dateAdjusted: dateAdjusted,
     );
   }
@@ -60,6 +67,7 @@ class WhatIfFormInput extends Equatable {
     amountType,
     amount,
     includeInflation,
+    calculationMode,
     dateAdjusted,
   ];
 }
@@ -121,24 +129,27 @@ class WhatIfCalculating extends WhatIfState {
 
 class WhatIfSuccess extends WhatIfState {
   final List<Asset> assets;
-  final WhatIfResult result;
+  final WhatIfResult? result;
+  final ReverseWhatIfResult? reverseResult;
   @override
   final WhatIfFormInput formInput;
 
   WhatIfSuccess({
     required List<Asset> assets,
-    required this.result,
+    this.result,
+    this.reverseResult,
     required this.formInput,
   }) : assets = List.unmodifiable(assets);
 
   WhatIfSuccess copyWith({WhatIfFormInput? formInput}) => WhatIfSuccess(
     assets: assets,
     result: result,
+    reverseResult: reverseResult,
     formInput: formInput ?? this.formInput,
   );
 
   @override
-  List<Object?> get props => [assets, result, formInput];
+  List<Object?> get props => [assets, result, reverseResult, formInput];
 }
 
 class WhatIfFailure extends WhatIfState {

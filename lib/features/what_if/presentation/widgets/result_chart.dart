@@ -12,9 +12,22 @@ final _priceFmt = NumberFormat.currency(
 final _dateFmt = DateFormat('dd.MM.yyyy', 'tr_TR');
 
 class ResultChart extends StatefulWidget {
-  final WhatIfResult result;
+  final List<ChartPoint> priceHistory;
+  final bool isProfit;
 
-  const ResultChart({super.key, required this.result});
+  const ResultChart({
+    super.key,
+    required this.priceHistory,
+    required this.isProfit,
+  });
+
+  /// WhatIfResult'tan kolayca oluşturmak için factory-benzeri constructor.
+  factory ResultChart.fromResult(WhatIfResult result, {Key? key}) =>
+      ResultChart(
+        key: key,
+        priceHistory: result.priceHistory,
+        isProfit: result.isProfit,
+      );
 
   @override
   State<ResultChart> createState() => _ResultChartState();
@@ -53,7 +66,7 @@ class _ResultChartState extends State<ResultChart> {
   @override
   void didUpdateWidget(ResultChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.result.priceHistory != widget.result.priceHistory) {
+    if (oldWidget.priceHistory != widget.priceHistory) {
       _isRangeMode = false;
       _fromIdx = null;
       _toIdx = null;
@@ -62,11 +75,11 @@ class _ResultChartState extends State<ResultChart> {
 
   @override
   Widget build(BuildContext context) {
-    final history = widget.result.priceHistory;
+    final history = widget.priceHistory;
     if (history.length < 2) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final color = widget.result.isProfit ? AppColors.profit : AppColors.loss;
+    final color = widget.isProfit ? AppColors.profit : AppColors.loss;
     final origin = history.first.date;
 
     final spots = history

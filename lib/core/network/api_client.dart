@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'device_id_interceptor.dart';
+import 'language_interceptor.dart';
 import 'retry_interceptor.dart';
 
 class ApiClient {
@@ -18,6 +19,7 @@ class ApiClient {
 
     _dio.interceptors.addAll([
       DeviceIdInterceptor(storage ?? const FlutterSecureStorage()),
+      LanguageInterceptor(),
       RetryInterceptor(dio: _dio),
     ]);
   }

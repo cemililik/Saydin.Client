@@ -7,6 +7,8 @@ class AmountInput extends StatelessWidget {
   final String amountType;
   final List<String> allowedTypes;
   final ValueChanged<String> onAmountTypeChanged;
+  final String? labelOverride;
+  final String? validatorOverride;
 
   const AmountInput({
     super.key,
@@ -14,6 +16,8 @@ class AmountInput extends StatelessWidget {
     required this.amountType,
     required this.allowedTypes,
     required this.onAmountTypeChanged,
+    this.labelOverride,
+    this.validatorOverride,
   });
 
   Widget _prefixIcon(String type) => switch (type) {
@@ -53,12 +57,13 @@ class AmountInput extends StatelessWidget {
               FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
             ],
             decoration: InputDecoration(
-              labelText: l10n.amount,
+              labelText: labelOverride ?? l10n.amount,
               border: const OutlineInputBorder(),
               prefixIcon: _prefixIcon(effectiveType),
             ),
-            validator: (v) =>
-                (v == null || v.isEmpty) ? l10n.enterAmount : null,
+            validator: (v) => (v == null || v.isEmpty)
+                ? (validatorOverride ?? l10n.enterAmount)
+                : null,
           ),
         ),
         const SizedBox(width: 8),

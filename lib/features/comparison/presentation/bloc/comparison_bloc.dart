@@ -31,6 +31,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     on<ComparisonInflationToggled>(_onInflationToggled);
     on<ComparisonCalculateRequested>(_onCalculateRequested);
     on<ComparisonReplayRequested>(_onReplayRequested);
+    on<ComparisonLanguageChanged>(_onLanguageChanged);
   }
 
   ComparisonAssetsLoaded? get _loaded {
@@ -232,5 +233,77 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
       ),
     );
     await _onCalculateRequested(const ComparisonCalculateRequested(), emit);
+  }
+
+  Future<void> _onLanguageChanged(
+    ComparisonLanguageChanged event,
+    Emitter<ComparisonState> emit,
+  ) async {
+    // Form state'i ve önceki hesaplama sonucunu kaydet
+    final savedSymbols = state.selectedSymbols;
+    final savedBuyDate = state.buyDate;
+    final savedSellDate = state.sellDate;
+    final savedAmount = state.amount;
+    final savedAmountType = state.amountType;
+    final savedInflation = state.includeInflation;
+    final hadResult = state is ComparisonSuccess;
+
+    try {
+      final assets = await _getAssets();
+      final restored = ComparisonAssetsLoaded(
+        assets: assets,
+        selectedSymbols: savedSymbols,
+        buyDate: savedBuyDate,
+        sellDate: savedSellDate,
+        amount: savedAmount,
+        amountType: savedAmountType,
+        includeInflation: savedInflation,
+      );
+
+      if (hadResult &&
+          savedSymbols.length >= 2 &&
+          savedBuyDate != null &&
+          savedAmount != null) {
+        emit(
+          ComparisonCalculating(
+            assets: assets,
+            selectedSymbols: savedSymbols,
+            buyDate: savedBuyDate,
+            sellDate: savedSellDate,
+            amount: savedAmount,
+            amountType: savedAmountType,
+            includeInflation: savedInflation,
+          ),
+        );
+        try {
+          final result = await _compareWhatIf(
+            assetSymbols: savedSymbols,
+            buyDate: savedBuyDate,
+            sellDate: savedSellDate,
+            amount: savedAmount,
+            amountType: savedAmountType,
+            includeInflation: savedInflation,
+          );
+          emit(
+            ComparisonSuccess(
+              assets: assets,
+              selectedSymbols: savedSymbols,
+              buyDate: savedBuyDate,
+              sellDate: savedSellDate,
+              amount: savedAmount,
+              amountType: savedAmountType,
+              includeInflation: savedInflation,
+              result: result,
+            ),
+          );
+        } catch (_) {
+          emit(restored);
+        }
+      } else {
+        emit(restored);
+      }
+    } catch (_) {
+      // Asset fetch başarısız — mevcut state'i koru
+    }
   }
 }

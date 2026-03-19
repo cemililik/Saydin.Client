@@ -48,7 +48,7 @@
   "deleteScenario": "Sil",
   "undo": "Geri Al",
   "tabCalculate": "Hesapla",
-  "tabScenarios": "Senaryolarım",
+  "tabScenarios": "Kayıtlarım",
 
   "searchAsset": "Varlık ara...",
   "categoryCurrency": "Döviz",
@@ -164,7 +164,162 @@
   "scenarioTypeWhatIf": "Hesaplama",
   "scenarioTypeComparison": "Karşılaştırma",
   "scenarioTypePortfolio": "Portföy",
+  "scenarioTypeDca": "Birikim",
 
   "brandedTitlePrefix": "al/sat ",
-  "brandedTitleSuffix": "saydın"
+  "brandedTitleSuffix": "saydın",
+
+  "settings": "Ayarlar",
+  "settingsTheme": "Tema",
+  "settingsThemeSubtitle": "Uygulamanın görünümünü seçin",
+  "themeLight": "Açık",
+  "themeDark": "Koyu",
+  "themeSystem": "Sistem",
+  "settingsVersion": "Versiyon",
+
+  "categoryFavorites": "Favoriler",
+  "favoritesMaxReached": "En fazla {max} favori ekleyebilirsiniz.",
+  "@favoritesMaxReached": {
+    "placeholders": {
+      "max": { "type": "int" }
+    }
+  },
+
+  "settingsLanguage": "Dil",
+  "settingsLanguageSubtitle": "Uygulama dilini seçin",
+  "languageTurkish": "Türkçe",
+  "languageEnglish": "English",
+  "languageSystem": "Sistem",
+
+  "shareCardInitialValue": "Başlangıç",
+  "shareCardFinalValue": "Son Değer",
+  "shareCardNominalReturn": "Nominal Getiri",
+  "shareCardReturn": "Getiri",
+  "shareCardProfit": "kazanç",
+  "shareCardLoss": "zarar",
+  "shareCardInflationTitle": "Enflasyon Düzeltmesi (TÜFE)",
+  "shareCardCumulativeInflation": "Birikimli Enflasyon",
+  "shareCardRealReturn": "Reel Getiri",
+  "shareCardWhatIfFooter": "Ya alsaydın?",
+  "shareCardComparisonTitle": "Varlık Karşılaştırması",
+  "shareCardComparisonFooter": "Hangisi daha kazandırdı?",
+  "shareCardPortfolioTitle": "Portföy Getirisi",
+  "shareCardPortfolioFooter": "Portföyüm ne kazandırdı?",
+  "shareCardTotalInvestment": "Toplam Yatırım",
+  "shareCardTotalReturn": "Toplam Getiri",
+  "shareCardNominalTotalReturn": "Nominal Getiri",
+  "shareCardAssetCount": "{count} varlık",
+  "@shareCardAssetCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "shareTextWhatIf": "{asset}'e {initial} yatırsaydım {final_value} ederdi ({percent})! 📊 #saydın",
+  "@shareTextWhatIf": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "initial": { "type": "String" },
+      "final_value": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareTextComparison": "Hangi yatırım daha kazandırdı? 🏆 {winner}: {percent} 📊 #saydın",
+  "@shareTextComparison": {
+    "placeholders": {
+      "winner": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareTextPortfolio": "Portföyüm {count} varlıkla {percent} getiri sağladı! 📊 #saydın",
+  "@shareTextPortfolio": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareDefaultText": "saydın.app üzerinden hesapladım.",
+  "shareCta": "\n\n📱 Saydın uygulamasını indir — App Store ve Google Play'de \"saydın\" ara.",
+
+  "scenarioNameComparison": "{count} Varlık Karşılaştırması",
+  "@scenarioNameComparison": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "scenarioNamePortfolio": "Portföy ({count} varlık)",
+  "@scenarioNamePortfolio": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "realReturnPrefix": "Reel: ",
+
+  "onboardingSkip": "Atla",
+  "onboardingNext": "İleri",
+  "onboardingGetStarted": "Hemen Dene",
+  "onboardingPage1Title": "Ya Alsaydım?",
+  "onboardingPage1Body": "Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.",
+  "onboardingPage2Title": "Karşılaştır ve Keşfet",
+  "onboardingPage2Body": "Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?",
+  "onboardingPage3Title": "Portföy Oluştur",
+  "onboardingPage3Body": "Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.",
+  "onboardingPage4Title": "Düzenli Yatırım",
+  "onboardingPage4Body": "Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.",
+  "onboardingPage5Title": "Ters Senaryo",
+  "onboardingPage5Body": "Hedefine ulaşmak için ne kadar yatırmalıydın? Ters hesaplama ile gereken tutarı öğren.",
+  "onboardingPage6Title": "Paylaş ve Kaydet",
+  "onboardingPage6Body": "Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.",
+
+  "tabDca": "Birikim",
+  "dcaTitle": "Düzenli Yatırım Simülasyonu",
+  "dcaStartDate": "Başlangıç Tarihi",
+  "dcaEndDate": "Bitiş Tarihi (opsiyonel)",
+  "dcaStartDateRequired": "Başlangıç tarihi giriniz",
+  "dcaPeriodWeekly": "Haftalık",
+  "dcaPeriodMonthly": "Aylık",
+  "dcaPeriodLabel": "Periyot",
+  "dcaPeriodicAmountLabel": "Periyodik Tutar",
+  "dcaPeriodicAmount": "Periyodik Tutar",
+  "dcaCalculate": "Simüle Et",
+  "dcaTotalInvested": "Toplam Yatırım",
+  "dcaCurrentValue": "Güncel Değer",
+  "dcaTotalPurchases": "Toplam Alım",
+  "dcaAvgCost": "Ortalama Maliyet",
+  "dcaTotalUnits": "Toplam Adet",
+  "dcaCurrentPrice": "Güncel Fiyat",
+  "dcaChartCost": "Maliyet",
+  "dcaChartValue": "Değer",
+
+  "shareCardDcaFooter": "Düzenli yatırım ile birikim",
+  "shareTextDca": "{asset} için {count} alım yaptım, getiri: {percent}! 📊 #saydın",
+  "@shareTextDca": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "count": { "type": "int" },
+      "percent": { "type": "String" }
+    }
+  },
+
+  "modeNormal": "Hesapla",
+  "modeNormalHint": "Belirli bir tutarı yatırsaydım bugün ne kadar ederdi?",
+  "modeReverse": "Ters Hesapla",
+  "modeReverseHint": "Hedef tutara ulaşmak için ne kadar yatırmalıydım?",
+  "targetAmount": "Hedef Tutar",
+  "enterTargetAmount": "Hedef tutarı giriniz",
+  "reverseCalculate": "Ters Hesapla",
+  "reverseCalculating": "Hesaplanıyor...",
+  "requiredInvestment": "Gereken Yatırım",
+  "targetValue": "Hedef Değer",
+  "reverseResultTitle": "Ters Senaryo Sonucu",
+  "shareTextReverse": "{asset} ile {target} hedefime ulaşmak için {required} yatırmalıydım ({percent})! 📊 #saydın",
+  "@shareTextReverse": {
+    "placeholders": {
+      "asset": { "type": "String" },
+      "target": { "type": "String" },
+      "required": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "shareCardReverseFooter": "Ne kadar yatırmalıydım?",
+  "shareCardRequiredInvestment": "Gereken Yatırım",
+  "shareCardTargetValue": "Hedef Değer",
+  "scenarioTypeReverse": "Ters Hesaplama",
+  "compareHint": "Aynı tutarı farklı varlıklara yatırsaydınız hangisi daha çok kazandırırdı?",
+  "dcaHint": "Düzenli aralıklarla alım yaparak yatırım maliyetinizi ve getirinizi simüle edin."
 }
