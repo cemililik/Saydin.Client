@@ -12,6 +12,7 @@ concurrency:
 
 env:
   FLUTTER_VERSION: "3.41.4"
+  IOS_BUNDLE_ID: "com.saydin.saydin"
 
 # ── Versiyon Yönetimi ─────────────────────────────────────────────────────────
 #
@@ -46,6 +47,7 @@ jobs:
       version_name: ${{ steps.ver.outputs.version_name }}
       build_number: ${{ github.run_number }}
       bumped: ${{ steps.ver.outputs.bumped }}
+      commits: ${{ steps.commits.outputs.log }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -108,6 +110,20 @@ jobs:
           echo "version_name=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "bumped=$( [ "$BUMP" != "none" ] && echo true || echo false )" >> $GITHUB_OUTPUT
 
+      - name: Collect commits since last tag
+        id: commits
+        run: |
+          LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
+          if [ -n "$LATEST_TAG" ]; then
+            LOG=$(git log "$LATEST_TAG"..HEAD --pretty=format:"- %s" 2>/dev/null | head -30)
+          else
+            LOG=$(git log --pretty=format:"- %s" -20 2>/dev/null)
+          fi
+          EOF_MARKER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+          echo "log<<$EOF_MARKER" >> $GITHUB_OUTPUT
+          echo "$LOG" >> $GITHUB_OUTPUT
+          echo "$EOF_MARKER" >> $GITHUB_OUTPUT
+
   # ── Analyze + Test ─────────────────────────────────────────────────────────
   analyze-and-test:
     name: Analyze & Test
@@ -137,6 +153,38 @@ jobs:
 
       - name: Flutter test
         run: flutter test --coverage
+
+      - name: Coverage özeti
+        if: always()
+        run: |
+          if [ ! -f coverage/lcov.info ]; then
+            echo "⚠️ coverage/lcov.info bulunamadı" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          # lcov.info'dan satır coverage hesapla
+          TOTAL_LINES=0
+          HIT_LINES=0
+          while IFS= read -r line; do
+            case "$line" in
+              LF:*) TOTAL_LINES=$((TOTAL_LINES + ${line#LF:})) ;;
+              LH:*) HIT_LINES=$((HIT_LINES + ${line#LH:})) ;;
+            esac
+          done < coverage/lcov.info
+
+          if [ "$TOTAL_LINES" -gt 0 ]; then
+            LINE_PCT=$(echo "scale=1; $HIT_LINES * 100 / $TOTAL_LINES" | bc)
+          else
+            LINE_PCT="0.0"
+          fi
+
+          echo "## 🧪 Saydin.Client — Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Line   | ${LINE_PCT}% ($HIT_LINES / $TOTAL_LINES) |" >> $GITHUB_STEP_SUMMARY
+
+          echo "✅ Line: ${LINE_PCT}% ($HIT_LINES / $TOTAL_LINES)"
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -224,11 +272,117 @@ jobs:
             --dart-define=API_BASE_URL=${{ vars.API_URL_STAGING }} \
             --dart-define=APP_ENV=development
 
+  # ── AI Release Notes (Gemini) ──────────────────────────────────────────────
+  release-notes:
+    name: Generate Release Notes
+    runs-on: ubuntu-latest
+    needs: version
+    if: >
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/test' || github.ref == 'refs/heads/main')
+    outputs:
+      notes_tr: ${{ steps.generate.outputs.notes_tr }}
+      notes_en: ${{ steps.generate.outputs.notes_en }}
+    steps:
+      - name: Generate release notes with Gemini
+        id: generate
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          COMMITS: ${{ needs.version.outputs.commits }}
+          VERSION: ${{ needs.version.outputs.version_name }}
+        run: |
+          # ── Gemini API key yoksa fallback ──────────────────────────────
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "⚠️  GEMINI_API_KEY yok, commit listesi kullanılacak"
+            FALLBACK=$(echo "$COMMITS" | head -10 | head -c 500)
+            EOF_MARKER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+            echo "notes_tr<<$EOF_MARKER" >> $GITHUB_OUTPUT
+            echo "$FALLBACK" >> $GITHUB_OUTPUT
+            echo "$EOF_MARKER" >> $GITHUB_OUTPUT
+            echo "notes_en<<$EOF_MARKER" >> $GITHUB_OUTPUT
+            echo "$FALLBACK" >> $GITHUB_OUTPUT
+            echo "$EOF_MARKER" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # ── Gemini'ye istek gönder ─────────────────────────────────────
+          SEPARATOR="=====LANG_SEPARATOR====="
+          read -r -d '' PROMPT << 'PROMPT_END' || true
+          Asagidaki git commit mesajlarindan mobil uygulama icin kisa ve kullanici dostu release note olustur.
+
+          Kurallar:
+          - Teknik detay yazma (commit hash, refactor, chore gibi seyler yazma)
+          - Kullanicinin anlayacagi dilde yaz
+          - Maksimum 500 karakter (Play Store limiti)
+          - Her maddeyi yeni satirda yaz
+          - Emoji kullan (yeni ozellik icin yildiz, hata duzeltme icin bocek, iyilestirme icin parildama emojisi)
+          - chore, docs, ci, style, refactor, test tipindeki commitleri ATLA
+          - Sadece feat ve fix commitleri dahil et
+          - Eger hic feat/fix yoksa genel bir iyilestirme notu yaz
+
+          Once TURKCE versiyonu yaz, sonra tam olarak su ayiraci yaz: =====LANG_SEPARATOR=====
+          Sonra INGILIZCE versiyonu yaz.
+          PROMPT_END
+          PROMPT="${PROMPT}
+
+          Versiyon: v${VERSION}
+
+          Commitler:
+          ${COMMITS}"
+
+          PAYLOAD=$(jq -n \
+            --arg prompt "$PROMPT" \
+            '{contents: [{parts: [{text: $prompt}]}], generationConfig: {temperature: 0.7, maxOutputTokens: 1024}}')
+
+          RESPONSE=$(curl -s -X POST \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          # ── Yanıtı parse et ────────────────────────────────────────────
+          FULL_TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
+
+          if [ -z "$FULL_TEXT" ]; then
+            echo "⚠️  Gemini yanıt vermedi, fallback kullanılıyor"
+            FALLBACK=$(echo "$COMMITS" | head -10 | head -c 500)
+            EOF_MARKER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+            echo "notes_tr<<$EOF_MARKER" >> $GITHUB_OUTPUT
+            echo "$FALLBACK" >> $GITHUB_OUTPUT
+            echo "$EOF_MARKER" >> $GITHUB_OUTPUT
+            echo "notes_en<<$EOF_MARKER" >> $GITHUB_OUTPUT
+            echo "$FALLBACK" >> $GITHUB_OUTPUT
+            echo "$EOF_MARKER" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # TR ve EN'yi ayır
+          NOTES_TR=$(echo "$FULL_TEXT" | sed "/${SEPARATOR}/,\$d" | head -c 500)
+          NOTES_EN=$(echo "$FULL_TEXT" | sed "1,/${SEPARATOR}/d" | head -c 500)
+
+          # EN boşsa TR'yi kullan
+          [ -z "$NOTES_EN" ] && NOTES_EN="$NOTES_TR"
+
+          EOF_MARKER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+          echo "notes_tr<<$EOF_MARKER" >> $GITHUB_OUTPUT
+          echo "$NOTES_TR" >> $GITHUB_OUTPUT
+          echo "$EOF_MARKER" >> $GITHUB_OUTPUT
+
+          EOF_MARKER2=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+          echo "notes_en<<$EOF_MARKER2" >> $GITHUB_OUTPUT
+          echo "$NOTES_EN" >> $GITHUB_OUTPUT
+          echo "$EOF_MARKER2" >> $GITHUB_OUTPUT
+
+          echo "✅ Release notes oluşturuldu"
+          echo "--- TR ---"
+          echo "$NOTES_TR"
+          echo "--- EN ---"
+          echo "$NOTES_EN"
+
   # ── Android Release AAB (test + main push) ────────────────────────────────
   release-android:
     name: Release Android AAB
     runs-on: ubuntu-latest
-    needs: [version, analyze-and-test]
+    needs: [version, analyze-and-test, release-notes]
     if: >
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/test' || github.ref == 'refs/heads/main')
@@ -341,6 +495,12 @@ jobs:
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
 
+      - name: Prepare release notes for Play Store
+        run: |
+          mkdir -p whatsnew
+          echo "${{ needs.release-notes.outputs.notes_tr }}" > whatsnew/whatsnew-tr-TR
+          echo "${{ needs.release-notes.outputs.notes_en }}" > whatsnew/whatsnew-en-US
+
       - name: Upload to Play Store
         uses: r0adkll/upload-google-play@v1.1.3
         with:
@@ -349,12 +509,13 @@ jobs:
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
           track: ${{ github.ref == 'refs/heads/main' && 'production' || 'internal' }}
           status: ${{ github.ref == 'refs/heads/main' && 'completed' || 'draft' }}
+          whatsNewDirectory: whatsnew
 
   # ── iOS Release IPA + TestFlight (test + main push) ───────────────────────
   release-ios:
     name: Release iOS + TestFlight
     runs-on: macos-15
-    needs: [version, analyze-and-test]
+    needs: [version, analyze-and-test, release-notes]
     if: >
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/test' || github.ref == 'refs/heads/main')
@@ -427,6 +588,96 @@ jobs:
           api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
+      - name: Set TestFlight release notes
+        env:
+          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          NOTES_TR: ${{ needs.release-notes.outputs.notes_tr }}
+          NOTES_EN: ${{ needs.release-notes.outputs.notes_en }}
+          VERSION: ${{ needs.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+        run: |
+          # ── 1. JWT token oluştur (App Store Connect API) ───────────────
+          HEADER=$(printf '{"alg":"ES256","kid":"%s","typ":"JWT"}' "$KEY_ID" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          NOW=$(date +%s)
+          EXP=$((NOW + 1200))
+          CLAIMS=$(printf '{"iss":"%s","iat":%d,"exp":%d,"aud":"appstoreconnect-v1"}' "$ISSUER_ID" "$NOW" "$EXP" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          UNSIGNED="${HEADER}.${CLAIMS}"
+
+          echo "$PRIVATE_KEY" > /tmp/asc_key.p8
+          SIGNATURE=$(printf '%s' "$UNSIGNED" | openssl dgst -sha256 -sign /tmp/asc_key.p8 | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          rm /tmp/asc_key.p8
+          JWT="${UNSIGNED}.${SIGNATURE}"
+
+          # ── 2. Build'i bul (processing bitene kadar bekle) ─────────────
+          BUNDLE_ID="${IOS_BUNDLE_ID}"
+          APP_ID=$(curl -s \
+            -H "Authorization: Bearer $JWT" \
+            "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}" \
+            | jq -r '.data[0].id')
+          echo "⏳ Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te aranıyor..."
+
+          for i in $(seq 1 30); do
+            BUILDS=$(curl -s \
+              -H "Authorization: Bearer $JWT" \
+              "https://api.appstoreconnect.apple.com/v1/builds?filter[version]=${BUILD_NUMBER}&filter[app]=${APP_ID}&limit=1")
+
+            BUILD_ID=$(echo "$BUILDS" | jq -r '.data[0].id // empty')
+            PROCESSING=$(echo "$BUILDS" | jq -r '.data[0].attributes.processingState // empty')
+
+            if [ -n "$BUILD_ID" ] && [ "$PROCESSING" = "VALID" ]; then
+              echo "✅ Build bulundu: $BUILD_ID"
+              break
+            fi
+            echo "  Deneme $i/30 — durum: ${PROCESSING:-bulunamadı}, 30s bekleniyor..."
+            sleep 30
+          done
+
+          if [ -z "$BUILD_ID" ]; then
+            echo "⚠️  Build bulunamadı, release notes atlanıyor"
+            exit 0
+          fi
+
+          # ── 3. Mevcut lokalizasyonları kontrol et ──────────────────────
+          LOCALIZATIONS=$(curl -s \
+            -H "Authorization: Bearer $JWT" \
+            "https://api.appstoreconnect.apple.com/v1/builds/${BUILD_ID}/betaBuildLocalizations")
+
+          # ── 4. TR lokalizasyonu ekle/güncelle ──────────────────────────
+          TR_ID=$(echo "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="tr") | .id // empty')
+          if [ -n "$TR_ID" ]; then
+            curl -s -X PATCH \
+              -H "Authorization: Bearer $JWT" \
+              -H "Content-Type: application/json" \
+              "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations/${TR_ID}" \
+              -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"id\":\"${TR_ID}\",\"attributes\":{\"whatsNew\":$(echo "$NOTES_TR" | jq -Rs .)}}}"
+          else
+            curl -s -X POST \
+              -H "Authorization: Bearer $JWT" \
+              -H "Content-Type: application/json" \
+              "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations" \
+              -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"${BUILD_ID}\"}}},\"attributes\":{\"locale\":\"tr\",\"whatsNew\":$(echo "$NOTES_TR" | jq -Rs .)}}}"
+          fi
+
+          # ── 5. EN lokalizasyonu ekle/güncelle ──────────────────────────
+          EN_ID=$(echo "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="en-US") | .id // empty')
+          if [ -n "$EN_ID" ]; then
+            curl -s -X PATCH \
+              -H "Authorization: Bearer $JWT" \
+              -H "Content-Type: application/json" \
+              "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations/${EN_ID}" \
+              -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"id\":\"${EN_ID}\",\"attributes\":{\"whatsNew\":$(echo "$NOTES_EN" | jq -Rs .)}}}"
+          else
+            curl -s -X POST \
+              -H "Authorization: Bearer $JWT" \
+              -H "Content-Type: application/json" \
+              "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations" \
+              -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"${BUILD_ID}\"}}},\"attributes\":{\"locale\":\"en-US\",\"whatsNew\":$(echo "$NOTES_EN" | jq -Rs .)}}}"
+          fi
+
+          echo "✅ TestFlight release notes eklendi (TR + EN)"
+
   # ── GitHub Release (test + main push, release'ler başarıyla tamamlandıktan sonra)
   # test  → v1.0.0-rc.42   (pre-release)
   # main  → v1.0.0         (production release)
@@ -434,7 +685,7 @@ jobs:
   github-release:
     name: GitHub Release
     runs-on: ubuntu-latest
-    needs: [version, release-android, release-ios]
+    needs: [version, release-notes, release-android, release-ios]
     if: >
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/test' || github.ref == 'refs/heads/main')
@@ -478,7 +729,14 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: ${{ steps.tag.outputs.tag }}
           prerelease: ${{ steps.tag.outputs.prerelease }}
-          generate_release_notes: true
+          body: |
+            ## Release Notes
+
+            ### 🇹🇷 Türkçe
+            ${{ needs.release-notes.outputs.notes_tr }}
+
+            ### 🇬🇧 English
+            ${{ needs.release-notes.outputs.notes_en }}
           files: |
             release-assets/saydin-${{ steps.tag.outputs.tag }}.aab
             release-assets/saydin-${{ steps.tag.outputs.tag }}.ipa
