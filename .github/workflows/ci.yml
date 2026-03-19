@@ -153,6 +153,38 @@ jobs:
       - name: Flutter test
         run: flutter test --coverage
 
+      - name: Coverage özeti
+        if: always()
+        run: |
+          if [ ! -f coverage/lcov.info ]; then
+            echo "⚠️ coverage/lcov.info bulunamadı" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          # lcov.info'dan satır coverage hesapla
+          TOTAL_LINES=0
+          HIT_LINES=0
+          while IFS= read -r line; do
+            case "$line" in
+              LF:*) TOTAL_LINES=$((TOTAL_LINES + ${line#LF:})) ;;
+              LH:*) HIT_LINES=$((HIT_LINES + ${line#LH:})) ;;
+            esac
+          done < coverage/lcov.info
+
+          if [ "$TOTAL_LINES" -gt 0 ]; then
+            LINE_PCT=$(echo "scale=1; $HIT_LINES * 100 / $TOTAL_LINES" | bc)
+          else
+            LINE_PCT="0.0"
+          fi
+
+          echo "## 🧪 Saydin.Client — Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Line   | ${LINE_PCT}% ($HIT_LINES / $TOTAL_LINES) |" >> $GITHUB_STEP_SUMMARY
+
+          echo "✅ Line: ${LINE_PCT}% ($HIT_LINES / $TOTAL_LINES)"
+
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
