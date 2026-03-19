@@ -17,17 +17,18 @@ lib/
 ├── features/
 │   ├── what_if/                   ← Ana özellik: "ya alsaydım" hesaplama
 │   │   ├── data/
-│   │   │   ├── models/            ← AssetModel, WhatIfResultModel (fromJson)
+│   │   │   ├── models/            ← AssetModel, WhatIfResultModel, ReverseWhatIfResponseModel (fromJson)
 │   │   │   └── repositories/     ← WhatIfRepositoryImpl (Dio çağrıları burada)
 │   │   ├── domain/
-│   │   │   ├── entities/          ← Asset (allowedAmountTypes getter dahil), WhatIfResult
+│   │   │   ├── entities/          ← Asset (allowedAmountTypes getter dahil), WhatIfResult, ReverseWhatIfResult
 │   │   │   ├── repositories/     ← WhatIfRepository (abstract interface)
-│   │   │   └── usecases/         ← GetAssets, CalculateWhatIf
+│   │   │   └── usecases/         ← GetAssets, CalculateWhatIf, CalculateReverseWhatIf
 │   │   └── presentation/
 │   │       ├── bloc/              ← WhatIfBloc, WhatIfEvent, WhatIfState, WhatIfFormInput
 │   │       ├── pages/             ← WhatIfPage
 │   │       └── widgets/           ← AssetSelector (bottom sheet + arama), DateInput (asset tarih aralığı),
-│   │                                 AmountInput (dinamik tip/ikon), ResultCard, ResultChart (fl_chart)
+│   │                                 AmountInput (dinamik tip/ikon), ResultCard, ReverseResultCard,
+│   │                                 ResultChart (fl_chart), ReverseShareCardWidget
 │   ├── scenarios/                 ← Kaydedilen senaryolar
 │   │   ├── data/
 │   │   │   ├── models/            ← SavedScenarioModel (fromJson)
@@ -76,7 +77,7 @@ presentation → domain ← data
 | Kayıt Tipi | Kullanıldığı Yer | Gerekçe |
 |---|---|---|
 | `registerLazySingleton` | ApiClient, Repository, UseCase, DioErrorMapper, ErrorReporter, SettingsCubit | Bir kez oluşturulur, tüm uygulama boyunca paylaşılır |
-| `registerFactory` | WhatIfBloc, ComparisonBloc, PortfolioBloc, ScenariosBloc | Her sayfa açılışında yeni instance — eski state sızmaz |
+| `registerFactory` | WhatIfBloc, ComparisonBloc, PortfolioBloc, DcaBloc, ScenariosBloc | Her sayfa açılışında yeni instance — eski state sızmaz |
 
 ```dart
 // Sayfa açılırken BLoC sağlanır
@@ -91,6 +92,8 @@ BlocProvider(
 ### WhatIfBloc
 
 Form alanları `WhatIfFormInput` veri sınıfında taşınır ve tüm state'lere gömülüdür. Bu sayede hesaplama başarısız olsa bile form değerleri kaybolmaz.
+
+**Hesaplama Modu:** `CalculationMode` enum'u (`normal` | `reverse`) ile iki hesaplama modu desteklenir. `SegmentedButton` ile kullanıcı mod değiştirebilir.
 
 ```
 WhatIfInitial
@@ -110,16 +113,29 @@ WhatIfAssetsLoaded / WhatIfSuccess / WhatIfFailure
     • buyDate/sellDate asset'in [firstDate, lastDate] dışındaysa → sıkıştırılır,
       formInput.dateAdjusted = true (tek seferlik flag — UI snackbar gösterir, sonra false olur)
 
+    │ WhatIfModeChanged(CalculationMode)
+    ▼
+    formInput.calculationMode güncellenir.
+    Ters modda amountType otomatik 'try'e zorlanır (hedef tutar yalnızca TL).
+
     │ WhatIfBuyDateChanged / WhatIfSellDateChanged / WhatIfAmountTypeChanged
     ▼
     Aynı state, formInput güncellenerek yeniden emit edilir
 
-    │ WhatIfCalculateRequested
+    │ WhatIfCalculateRequested (normal mod)
     ▼
 WhatIfCalculating(assets, formInput)
-    ├─ başarı ──► WhatIfSuccess(assets, result, formInput)
+    ├─ başarı ──► WhatIfSuccess(assets, result: WhatIfResult, formInput)
+    └─ hata ───► WhatIfFailure(assets, error, formInput)
+
+    │ WhatIfReverseCalculateRequested (ters mod)
+    ▼
+WhatIfCalculating(assets, formInput)
+    ├─ başarı ──► WhatIfSuccess(assets, reverseResult: ReverseWhatIfResult, formInput)
     └─ hata ───► WhatIfFailure(assets, error, formInput)
 ```
+
+**`WhatIfSuccess` state'i:** `result` (nullable `WhatIfResult`) ve `reverseResult` (nullable `ReverseWhatIfResult`) taşır. Mod'a göre yalnızca biri dolu olur.
 
 **`WhatIfFormInput` alanları:**
 
@@ -130,6 +146,8 @@ WhatIfCalculating(assets, formInput)
 | `sellDate` | `DateTime?` | Satış tarihi (opsiyonel) |
 | `amountType` | `String` | `try` \| `units` \| `grams` |
 | `amount` | `num?` | Tutar (replay/senaryo yüklemede doldurulur) |
+| `calculationMode` | `CalculationMode` | `normal` veya `reverse` — hesaplama modunu belirler |
+| `includeInflation` | `bool` | Enflasyon düzeltmesi dahil mi |
 | `dateAdjusted` | `bool` | Sembol değişince tarih sıkıştırıldıysa `true` — bir kez UI'a iletildikten sonra `copyWith` ile otomatik `false`'a döner (one-shot flag) |
 
 **State kuralları:**
