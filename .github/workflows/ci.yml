@@ -12,6 +12,7 @@ concurrency:
 
 env:
   FLUTTER_VERSION: "3.41.4"
+  IOS_BUNDLE_ID: "com.saydin.saydin"
 
 # ── Versiyon Yönetimi ─────────────────────────────────────────────────────────
 #
@@ -293,7 +294,7 @@ jobs:
           # ── Gemini API key yoksa fallback ──────────────────────────────
           if [ -z "$GEMINI_API_KEY" ]; then
             echo "⚠️  GEMINI_API_KEY yok, commit listesi kullanılacak"
-            FALLBACK=$(echo "$COMMITS" | head -10)
+            FALLBACK=$(echo "$COMMITS" | head -10 | head -c 500)
             EOF_MARKER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
             echo "notes_tr<<$EOF_MARKER" >> $GITHUB_OUTPUT
             echo "$FALLBACK" >> $GITHUB_OUTPUT
@@ -343,13 +344,13 @@ jobs:
 
           if [ -z "$FULL_TEXT" ]; then
             echo "⚠️  Gemini yanıt vermedi, fallback kullanılıyor"
-            FULL_TEXT=$(echo "$COMMITS" | head -10)
+            FALLBACK=$(echo "$COMMITS" | head -10 | head -c 500)
             EOF_MARKER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
             echo "notes_tr<<$EOF_MARKER" >> $GITHUB_OUTPUT
-            echo "$FULL_TEXT" >> $GITHUB_OUTPUT
+            echo "$FALLBACK" >> $GITHUB_OUTPUT
             echo "$EOF_MARKER" >> $GITHUB_OUTPUT
             echo "notes_en<<$EOF_MARKER" >> $GITHUB_OUTPUT
-            echo "$FULL_TEXT" >> $GITHUB_OUTPUT
+            echo "$FALLBACK" >> $GITHUB_OUTPUT
             echo "$EOF_MARKER" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -610,17 +611,17 @@ jobs:
           JWT="${UNSIGNED}.${SIGNATURE}"
 
           # ── 2. Build'i bul (processing bitene kadar bekle) ─────────────
-          BUNDLE_ID="com.saydin.saydin"
+          BUNDLE_ID="${IOS_BUNDLE_ID}"
+          APP_ID=$(curl -s \
+            -H "Authorization: Bearer $JWT" \
+            "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}" \
+            | jq -r '.data[0].id')
           echo "⏳ Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te aranıyor..."
 
           for i in $(seq 1 30); do
             BUILDS=$(curl -s \
               -H "Authorization: Bearer $JWT" \
-              "https://api.appstoreconnect.apple.com/v1/builds?filter[version]=${BUILD_NUMBER}&filter[app]=$(
-                curl -s -H "Authorization: Bearer $JWT" \
-                  "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}" \
-                | jq -r '.data[0].id'
-              )&limit=1")
+              "https://api.appstoreconnect.apple.com/v1/builds?filter[version]=${BUILD_NUMBER}&filter[app]=${APP_ID}&limit=1")
 
             BUILD_ID=$(echo "$BUILDS" | jq -r '.data[0].id // empty')
             PROCESSING=$(echo "$BUILDS" | jq -r '.data[0].attributes.processingState // empty')
@@ -644,7 +645,7 @@ jobs:
             "https://api.appstoreconnect.apple.com/v1/builds/${BUILD_ID}/betaBuildLocalizations")
 
           # ── 4. TR lokalizasyonu ekle/güncelle ──────────────────────────
-          TR_ID=$(echo "$LOCALIZATIONS" | jq -r '.data[] | select(.attributes.locale=="tr") | .id // empty')
+          TR_ID=$(echo "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="tr") | .id // empty')
           if [ -n "$TR_ID" ]; then
             curl -s -X PATCH \
               -H "Authorization: Bearer $JWT" \
@@ -660,7 +661,7 @@ jobs:
           fi
 
           # ── 5. EN lokalizasyonu ekle/güncelle ──────────────────────────
-          EN_ID=$(echo "$LOCALIZATIONS" | jq -r '.data[] | select(.attributes.locale=="en-US") | .id // empty')
+          EN_ID=$(echo "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="en-US") | .id // empty')
           if [ -n "$EN_ID" ]; then
             curl -s -X PATCH \
               -H "Authorization: Bearer $JWT" \

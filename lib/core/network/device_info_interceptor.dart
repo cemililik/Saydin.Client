@@ -6,16 +6,20 @@ import 'package:package_info_plus/package_info_plus.dart';
 /// Her istekte cihaz ve uygulama bilgisi header'larını ekler.
 /// Backend activity logging sistemi bu bilgileri kullanır.
 class DeviceInfoInterceptor extends Interceptor {
-  final PackageInfo _packageInfo;
+  final String _os;
+  final String _osVersion;
+  final String _appVersion;
 
-  DeviceInfoInterceptor(this._packageInfo);
+  DeviceInfoInterceptor(PackageInfo packageInfo)
+    : _os = Platform.operatingSystem,
+      _osVersion = Platform.operatingSystemVersion,
+      _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    options.headers['X-Device-OS'] = Platform.operatingSystem;
-    options.headers['X-Device-OS-Version'] = Platform.operatingSystemVersion;
-    options.headers['X-App-Version'] =
-        '${_packageInfo.version}+${_packageInfo.buildNumber}';
+    options.headers['X-Device-OS'] = _os;
+    options.headers['X-Device-OS-Version'] = _osVersion;
+    options.headers['X-App-Version'] = _appVersion;
     handler.next(options);
   }
 }
