@@ -348,7 +348,7 @@ jobs:
           packageName: com.saydin.saydin
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
           track: ${{ github.ref == 'refs/heads/main' && 'production' || 'internal' }}
-          status: completed
+          status: ${{ github.ref == 'refs/heads/main' && 'completed' || 'draft' }}
 
   # ── iOS Release IPA + TestFlight (test + main push) ───────────────────────
   release-ios:
