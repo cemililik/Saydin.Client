@@ -344,6 +344,7 @@ jobs:
 
           if [ -z "$FULL_TEXT" ]; then
             echo "⚠️  Gemini yanıt vermedi, fallback kullanılıyor"
+            echo "    Gemini yanıtı: $(echo "$RESPONSE" | jq -c '.error // .candidates[0].finishReason // "bilinmeyen hata"' 2>/dev/null || echo "$RESPONSE" | head -c 300)"
             FALLBACK=$(echo "$COMMITS" | head -10 | head -c 500)
             EOF_MARKER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
             echo "notes_tr<<$EOF_MARKER" >> $GITHUB_OUTPUT
@@ -612,11 +613,18 @@ jobs:
 
           # ── 2. Build'i bul (processing bitene kadar bekle) ─────────────
           BUNDLE_ID="${IOS_BUNDLE_ID}"
-          APP_ID=$(curl -s \
+          APP_RESPONSE=$(curl -s \
             -H "Authorization: Bearer $JWT" \
-            "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}" \
-            | jq -r '.data[0].id')
-          echo "⏳ Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te aranıyor..."
+            "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}")
+          APP_ID=$(echo "$APP_RESPONSE" | jq -r '.data[0].id // empty')
+
+          if [ -z "$APP_ID" ]; then
+            echo "⚠️  App bulunamadı (bundleId=${BUNDLE_ID}), release notes atlanıyor"
+            echo "    API yanıtı: $APP_RESPONSE"
+            exit 0
+          fi
+
+          echo "⏳ Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te aranıyor (app=$APP_ID)..."
 
           for i in $(seq 1 30); do
             BUILDS=$(curl -s \
