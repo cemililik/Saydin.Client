@@ -252,6 +252,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Apple ITMS-90725: 28 Nisan 2026'dan itibaren App Store Connect
+      # iOS 26 SDK altında derlenmiş build'leri reddediyor. Runner üzerinde
+      # mevcut en güncel Xcode'u seçiyoruz; macos-15 image'ı Xcode 26'yı
+      # taşımaya başladığında otomatik olarak ona geçer.
+      - name: Pin Xcode version for iOS 26 SDK (ITMS-90725)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -523,6 +532,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # Apple ITMS-90725: 28 Nisan 2026'dan itibaren App Store Connect
+      # iOS 26 SDK altında derlenmiş build'leri reddediyor. Runner üzerinde
+      # mevcut en güncel Xcode'u seçiyoruz; macos-15 image'ı Xcode 26'yı
+      # taşımaya başladığında otomatik olarak ona geçer.
+      - name: Pin Xcode version for iOS 26 SDK (ITMS-90725)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
