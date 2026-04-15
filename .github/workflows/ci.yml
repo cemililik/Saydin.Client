@@ -630,8 +630,12 @@ jobs:
           JWT="${UNSIGNED}.${SIGNATURE}"
 
           # ── 2. Build'i bul (processing bitene kadar bekle) ─────────────
+          # NOT: curl'a -g (--globoff) flag'i ZORUNLU. App Store Connect API
+          # filter[xxx] query param'lari kullaniyor; curl varsayilan olarak
+          # URL'lerdeki [...] ifadesini URL globbing (range syntax) olarak
+          # parse ediyor ve "URL malformed" diye exit 3 firlatiyor.
           BUNDLE_ID="${IOS_BUNDLE_ID}"
-          APP_RESPONSE=$(curl -s \
+          APP_RESPONSE=$(curl -sg \
             -H "Authorization: Bearer $JWT" \
             "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}")
           APP_ID=$(echo "$APP_RESPONSE" | jq -r '.data[0].id // empty')
@@ -645,7 +649,7 @@ jobs:
           echo "⏳ Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te aranıyor (app=$APP_ID)..."
 
           for i in $(seq 1 30); do
-            BUILDS=$(curl -s \
+            BUILDS=$(curl -sg \
               -H "Authorization: Bearer $JWT" \
               "https://api.appstoreconnect.apple.com/v1/builds?filter[version]=${BUILD_NUMBER}&filter[app]=${APP_ID}&limit=1")
 
