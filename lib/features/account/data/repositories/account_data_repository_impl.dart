@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:saydin/core/network/device_id_interceptor.dart';
 import 'package:saydin/features/account/domain/repositories/account_data_repository.dart';
 
 class AccountDataRepositoryImpl implements AccountDataRepository {
@@ -9,17 +13,20 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
     required SharedPreferencesAsync prefs,
     required FlutterSecureStorage secureStorage,
     required Dio dio,
+    required DeviceIdInterceptor deviceIdInterceptor,
   }) : _prefs = prefs,
        _secureStorage = secureStorage,
-       _dio = dio;
+       _dio = dio,
+       _deviceIdInterceptor = deviceIdInterceptor;
 
   final SharedPreferencesAsync _prefs;
   final FlutterSecureStorage _secureStorage;
   final Dio _dio;
+  final DeviceIdInterceptor _deviceIdInterceptor;
 
   /// Bilinmeyen depo başarısızlığını yutmamak için tek bir collector kullanıyoruz:
-  /// SharedPreferences/SecureStorage'ın bir kısmı düşse bile diğer adımlar
-  /// devam etmelidir.
+  /// SharedPreferences/SecureStorage/cache'in bir kısmı düşse bile diğer
+  /// adımlar devam etmelidir. Tüm hatalar `AccountWipeException` ile fırlatılır.
   @override
   Future<void> wipeLocalData() async {
     final errors = <Object>[];
@@ -36,10 +43,38 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
       errors.add(e);
     }
 
+    try {
+      await _wipeShareCardCache();
+    } catch (e) {
+      errors.add(e);
+    }
+
+    // In-memory cache'leri sıfırla — aynı oturumda eski device ID
+    // kullanılmasını önler (KVKK Madde 11 ihlali).
+    _deviceIdInterceptor.resetCache();
+
     if (errors.isNotEmpty) {
-      // Tüm hatalar collector'a düştü; en az biri geçmiş olduğu için silme
-      // kısmen başarılı sayılır. Cubit bu durumu kullanıcıya bildirir.
       throw AccountWipeException(errors);
+    }
+  }
+
+  /// `ShareCardRenderer`'ın `getTemporaryDirectory()/saydin_share_*.png`
+  /// dosyalarını siler. Paylaşım kartları finansal sonuç ekranının görsel
+  /// kopyası olduğu için cihazda kalmamalıdır.
+  Future<void> _wipeShareCardCache() async {
+    final tempDir = await getTemporaryDirectory();
+    if (!tempDir.existsSync()) return;
+    final entries = tempDir.listSync(followLinks: false);
+    for (final entry in entries) {
+      if (entry is! File) continue;
+      final name = entry.uri.pathSegments.last;
+      if (name.startsWith('saydin_share_') && name.endsWith('.png')) {
+        try {
+          await entry.delete();
+        } catch (_) {
+          // Tek dosya silinemese de geri kalanı silmeye devam et.
+        }
+      }
     }
   }
 

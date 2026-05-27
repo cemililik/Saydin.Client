@@ -4,7 +4,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 /// (asset sembolü, tutar, tarih, kullanıcı tanımlayıcı) sansürleyen savunma katmanı.
 ///
 /// İki kullanım noktası:
-/// - `Sentry.init(options.beforeSend)` ve `options.beforeBreadcrumb` —
+/// - `Sentry.init(options.beforeSend / beforeBreadcrumb / beforeSendTransaction)` —
 ///   Sentry içine giren her şey için son hat.
 /// - `ErrorReporter` içinde `extras` allowlist — call-site'ta erken filtre.
 ///
@@ -34,6 +34,7 @@ class SentryPiiScrubber {
     'durationMs',
     'platform',
     'appVersion',
+    'backendOk',
     // Sentry framework ürettiği güvenli anahtarlar
     'level',
     'type',
@@ -63,15 +64,19 @@ class SentryPiiScrubber {
     r'\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?',
   );
 
-  /// 4 ve daha fazla haneli sayılar (tutar / fiyat kalıbı).
-  /// 3 haneli sayılar (HTTP status, retry sayısı vb.) korunur.
-  static final RegExp _largeNumber = RegExp(r'\b\d{4,}([.,]\d+)?\b');
+  /// Tutar / fiyat pattern'i. İki kalıbı OR ile birleştirir:
+  ///   - Türkçe binlik formatı: `47.010,34` veya `1.250.500` (`d{1,3}` + en az bir
+  ///     `[.,]ddd` grubu + opsiyonel `[.,]dd`).
+  ///   - Binlik ayraçsız 4+ haneli sayı: `47010` veya `47010.34`.
+  /// 3 haneli ve daha küçük rakamlar (HTTP status, retry sayısı vb.) korunur.
+  static final RegExp _largeNumber = RegExp(
+    r'\b(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,4})?|\d{4,}(?:[.,]\d+)?)\b',
+  );
 
-  /// Asset sembolü kalıbı: ALL_CAPS 2-6 harf (BTC, USDTRY, XAU, ETH, THYAO).
-  /// Yanlış pozitif riski: TR, US, EN gibi sabitler. Bu nedenle güvenli liste:
-  /// `[A-Z]{2,}` sadece kelime sınırında ve diğer büyük harf tokenlerinden uzakta.
-  /// Yan kalıp olarak: `[A-Z]{3,6}/[A-Z]{3}` (USDTRY, ETHUSD) ve isolated symbols.
-  static final RegExp _assetSymbol = RegExp(r'\b[A-Z]{3,6}([/-][A-Z]{2,4})?\b');
+  /// Asset sembolü kalıbı (sadece pair): `USD/TRY`, `BTC-USD`, `ETH/USDT`.
+  /// Tek sembol (BTC) `_safeAllCaps` dictionary'sine çarptığı için yakalanmaz;
+  /// breadcrumb mesajı allowlist'i bu boşluğu kapatır.
+  static final RegExp _assetSymbol = RegExp(r'\b[A-Z]{3,6}[/-][A-Z]{2,6}\b');
 
   /// UUID/cihaz tanımlayıcı kalıbı.
   static final RegExp _uuid = RegExp(
@@ -86,19 +91,13 @@ class SentryPiiScrubber {
   /// Sentry [event]'i için tam scrub. `null` döndürmek event'in atılmasını sağlar
   /// (örn telemetri tamamen reddediliyorsa). Şu an reddetme yok, sadece scrub.
   SentryEvent? scrubEvent(SentryEvent event, Hint hint) {
-    // Screenshots'ı zorla kaldır (defensive — options.attachScreenshot=false olsa da).
-    hint.attachments.clear();
+    _stripScreenshotAndViewHierarchy(hint);
 
     return event.copyWith(
-      message: event.message == null
+      message: _scrubMessage(event.message),
+      transaction: event.transaction == null
           ? null
-          : SentryMessage(
-              redactText(event.message!.formatted),
-              template: event.message!.template,
-              params: event.message!.params
-                  ?.map((p) => redactText(p.toString()))
-                  .toList(growable: false),
-            ),
+          : redactText(event.transaction!),
       breadcrumbs: event.breadcrumbs
           ?.map((b) => scrubBreadcrumb(b, hint))
           .whereType<Breadcrumb>()
@@ -107,7 +106,17 @@ class SentryPiiScrubber {
       tags: _scrubMap(
         event.tags,
       )?.map((k, v) => MapEntry(k, v?.toString() ?? '')),
+      // `extra` SDK tarafından deprecated ama mevcut sürümde hâlâ
+      // serialize edilir. Eski kod (örn 3rd party plugin) bu alanı
+      // doldurabilir; defense-in-depth scrub'ı kapatamayız.
+      // ignore: deprecated_member_use
+      extra: _scrubMap(event.extra),
+      fingerprint: event.fingerprint?.map(redactText).toList(growable: false),
+      user: _scrubUser(event.user),
       request: event.request == null ? null : _scrubRequest(event.request!),
+      exceptions: event.exceptions
+          ?.map(_scrubException)
+          .toList(growable: false),
     );
   }
 
@@ -142,12 +151,8 @@ class SentryPiiScrubber {
         .replaceAll(_email, '<EMAIL>')
         .replaceAll(_isoDate, '<DATE>')
         .replaceAll(_largeNumber, '<NUMBER>')
-        // Asset sembolü pattern'i çok agresif olmasın; sadece "/" veya "-" içeren
-        // pair'ları sansürle. Tek sembol (BTC) ne yazık ki ALL_CAPS sözlük
-        // sözcükleriyle çakışıyor; breadcrumb mesajı allowlist'i bu boşluğu kapatır.
         .replaceAllMapped(_assetSymbol, (m) {
           final s = m.group(0)!;
-          // Bilinen güvenli ALL_CAPS: HTTP, JSON, API, vs.
           if (_safeAllCaps.contains(s)) return s;
           return '<SYMBOL>';
         });
@@ -205,6 +210,52 @@ class SentryPiiScrubber {
     'US',
   };
 
+  /// Defense-in-depth: `options.attachScreenshot=false` olsa bile,
+  /// `beforeSend` çağrıldığında bu Hint alanlarının dolu olabileceği SDK
+  /// dahili akışları (manuel `Sentry.captureUserFeedback`, plugin'ler) var.
+  /// Burada zorla null'larız.
+  void _stripScreenshotAndViewHierarchy(Hint hint) {
+    hint.attachments.clear();
+    hint.screenshot = null;
+    hint.viewHierarchy = null;
+  }
+
+  SentryMessage? _scrubMessage(SentryMessage? message) {
+    if (message == null) return null;
+    return SentryMessage(
+      redactText(message.formatted),
+      template: message.template,
+      params: message.params
+          ?.map((p) => redactText(p.toString()))
+          .toList(growable: false),
+    );
+  }
+
+  /// Exception type+value scrub. `Sentry.captureException(e)` `e.toString()` ile
+  /// `value` alanına PII'yi dolaylı olarak yazabilir (örn
+  /// `FormatException("Invalid date 2020-01-15")` → value: `Invalid date 2020-01-15`).
+  /// Stack trace dosya yolu vs. teknik bilgi; scrub etmiyoruz.
+  SentryException _scrubException(SentryException ex) {
+    return SentryException(
+      type: ex.type == null ? null : redactText(ex.type!),
+      value: ex.value == null ? null : redactText(ex.value!),
+      module: ex.module,
+      stackTrace: ex.stackTrace,
+      mechanism: ex.mechanism,
+      threadId: ex.threadId,
+      throwable: ex.throwable,
+    );
+  }
+
+  /// `SentryUser` tüm PII alanları sansürlenir. Anonim bir id placeholder
+  /// (`<REDACTED>`) bırakılır — SDK `SentryUser()` boş constructor'ı assert
+  /// ile reddediyor, bu yüzden en az bir alan dolmalı. Bu placeholder
+  /// kullanıcıyı tanımlayamaz; sadece "user objesi vardı" sinyalidir.
+  SentryUser? _scrubUser(SentryUser? user) {
+    if (user == null) return null;
+    return SentryUser(id: '<REDACTED>');
+  }
+
   Map<String, Object?>? _scrubMap(Map<String, Object?>? input) {
     if (input == null) return null;
     final out = <String, Object?>{};
@@ -231,7 +282,7 @@ class SentryPiiScrubber {
     final isAllowed = allowedMessagePrefixes.any(message.startsWith);
     if (!isAllowed) return '<REDACTED>';
     // Allowlist prefix ile başlasa bile ek serbest metin redaksiyona tabi.
-    // Örn: 'what_if.calculated: BTC 2020-01-01' → 'what_if.calculated: <SYMBOL> <DATE>'
+    // Örn: 'what_if.calculated: BTC 2020-01-15' → 'what_if.calculated: <SYMBOL> <DATE>'
     return redactText(message);
   }
 
@@ -253,13 +304,22 @@ class SentryPiiScrubber {
     return scrubbed;
   }
 
+  /// SDK `copyWith` semantiği: `null` ⇒ "değiştirme, eski değeri koru" anlamına
+  /// gelir (`queryString ?? this.queryString`). Bu nedenle `copyWith` ile
+  /// `null` geçmek query/body/cookie temizliği SAĞLAMAZ. Bunun yerine
+  /// constructor'ı doğrudan çağırarak temiz bir `SentryRequest` üretiriz.
   SentryRequest _scrubRequest(SentryRequest request) {
     final url = request.url;
-    return request.copyWith(
+    return SentryRequest(
       url: url == null ? null : _scrubUrl(url),
-      queryString: null, // query string yutulur, asla loglanmaz
+      method: request.method,
+      // Body/query/cookie tamamen yutulur — finansal payload sızıntısını engelle.
+      queryString: null,
       cookies: null,
       data: null,
+      fragment: null,
+      apiTarget: request.apiTarget,
+      env: null,
       headers: Map.fromEntries(
         request.headers.entries.where(
           (e) => _safeHeaders.contains(e.key.toLowerCase()),

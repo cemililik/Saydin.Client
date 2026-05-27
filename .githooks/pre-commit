@@ -9,7 +9,9 @@ set -euo pipefail
 # Aciliyet durumunda atlamak için: git commit --no-verify
 # (kullanıcının açıkça istemediği sürece kullanılmaz)
 
-# Flutter SDK yolunu bul
+# Flutter SDK yolunu bul. Foundation hedefi sözleşmeyi makinede zorlamak
+# olduğu için fail-CLOSED: SDK yoksa commit reddedilir. Aciliyet için
+# kullanıcı `git commit --no-verify` ile bypass edebilir.
 if command -v flutter &>/dev/null; then
   FLUTTER="flutter"
   DART="dart"
@@ -17,8 +19,14 @@ elif [ -f "$HOME/development/flutter/bin/flutter" ]; then
   FLUTTER="$HOME/development/flutter/bin/flutter"
   DART="$HOME/development/flutter/bin/dart"
 else
-  echo "⚠️  Flutter SDK bulunamadı, pre-commit hook atlandı."
-  exit 0
+  echo ""
+  echo "✗ Flutter SDK bulunamadı. Kurulum:"
+  echo "  https://docs.flutter.dev/get-started/install"
+  echo ""
+  echo "  Aciliyet durumunda bu kontrolü atlamak için:"
+  echo "  git commit --no-verify"
+  echo ""
+  exit 1
 fi
 
 echo "→ dart format kontrolü..."

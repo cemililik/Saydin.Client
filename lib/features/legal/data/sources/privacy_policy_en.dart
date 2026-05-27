@@ -56,9 +56,10 @@ final LegalDocument privacyPolicyEn = LegalDocument(
       heading: '6. Security',
       body:
           '• All network traffic is encrypted via HTTPS (TLS 1.2+).\n'
-          '• Device identifier is stored in encrypted local storage '
-          '(Keychain / EncryptedSharedPreferences).\n'
-          '• Screenshots are never sent in error reports.',
+          '• The device identifier is stored using the operating system\'s '
+          'secure local storage interface (iOS Keychain, Android Keystore).\n'
+          '• Screenshots are never sent in error reports; amount, date and '
+          'asset information is scrubbed.',
     ),
     LegalSection(
       heading: '7. Children\'s Privacy',

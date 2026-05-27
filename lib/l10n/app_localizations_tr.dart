@@ -478,6 +478,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get deleteAccountSuccess => 'Hesabınız ve tüm verileriniz silindi.';
 
   @override
+  String get deleteAccountPartialSuccess =>
+      'Cihazınızdaki tüm veriler silindi. Ancak sunucu silme talebimiz şu an iletilemedi; iletisim@saydin.app adresinden silme talebinizi takip edin.';
+
+  @override
   String get deleteAccountFailed =>
       'Hesap silme tamamlanamadı. Tekrar deneyin veya iletişime geçin.';
 
@@ -585,6 +589,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get onboardingGetStarted => 'Hemen Dene';
+
+  @override
+  String onboardingLegalConsent(String privacy, String kvkk) {
+    return 'Devam ederek $privacy ve $kvkk metinlerini okuduğumu ve kabul ettiğimi onaylıyorum.';
+  }
+
+  @override
+  String get onboardingPrivacyPolicyLink => 'Gizlilik Politikası';
+
+  @override
+  String get onboardingKvkkLink => 'KVKK Aydınlatma Metni';
 
   @override
   String get onboardingPage1Title => 'Ya Alsaydım?';

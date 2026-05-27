@@ -1,8 +1,15 @@
 import 'dart:math' as math;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:saydin/core/di/injection.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/features/legal/domain/entities/legal_document.dart';
+import 'package:saydin/features/legal/domain/repositories/legal_repository.dart';
+import 'package:saydin/features/legal/presentation/pages/legal_document_page.dart';
+import 'package:saydin/features/onboarding/domain/repositories/onboarding_repository.dart';
 
 class OnboardingPage extends StatefulWidget {
   final VoidCallback onComplete;
@@ -50,10 +57,28 @@ class _OnboardingPageState extends State<OnboardingPage>
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
       );
-    } else {
-      HapticFeedback.mediumImpact();
-      widget.onComplete();
+      return;
     }
+    HapticFeedback.mediumImpact();
+    unawaited(_completeWithLegalAcceptance());
+  }
+
+  Future<void> _completeWithLegalAcceptance() async {
+    // Son sayfada "Hemen Dene" → implicit KVKK / Gizlilik Politikası kabul.
+    // Yasal metinler ekranda link olarak gösterilmektedir; butona basmak
+    // KVKK Madde 5/2(c) "açık rıza" kapsamında kabul sayılır.
+    await sl<OnboardingRepository>().recordLegalAcceptance(
+      LegalAcceptanceVersion.current,
+    );
+    widget.onComplete();
+  }
+
+  void _openLegalDocument(LegalDocumentType type) {
+    final locale = Localizations.localeOf(context).toString();
+    final document = sl<LegalRepository>().load(type, locale);
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => LegalDocumentPage(document: document)),
+    );
   }
 
   void _onPageChanged(int index) {
@@ -300,6 +325,19 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                       const SizedBox(height: 28),
 
+                      // Yasal onay metni — sadece son sayfada (CTA = implicit consent)
+                      if (isLastPage) ...[
+                        _LegalConsentNote(
+                          onOpenPrivacy: () => _openLegalDocument(
+                            LegalDocumentType.privacyPolicy,
+                          ),
+                          onOpenKvkk: () => _openLegalDocument(
+                            LegalDocumentType.kvkkDisclosure,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
                       // Ana buton
                       SizedBox(
                         width: double.infinity,
@@ -368,6 +406,81 @@ class _OnboardingPageState extends State<OnboardingPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Yasal onay metni (son sayfa) ─────────────────────────────────────────────
+
+class _LegalConsentNote extends StatelessWidget {
+  const _LegalConsentNote({
+    required this.onOpenPrivacy,
+    required this.onOpenKvkk,
+  });
+
+  final VoidCallback onOpenPrivacy;
+  final VoidCallback onOpenKvkk;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    // ARB anahtarındaki `{privacy}` ve `{kvkk}` placeholder'larını sentinel
+    // ile yerleştirip InlineSpan'lara böleriz. Bu hem `intl` formatına saygı
+    // gösterir hem her dilde linklerin doğru yerde olmasını sağlar.
+    final placeholderPrivacy = '__P__';
+    final placeholderKvkk = '__K__';
+    final template = l10n.onboardingLegalConsent(
+      placeholderPrivacy,
+      placeholderKvkk,
+    );
+
+    final spans = <InlineSpan>[];
+    var cursor = 0;
+    final pattern = RegExp(
+      '${RegExp.escape(placeholderPrivacy)}|${RegExp.escape(placeholderKvkk)}',
+    );
+    for (final match in pattern.allMatches(template)) {
+      if (match.start > cursor) {
+        spans.add(TextSpan(text: template.substring(cursor, match.start)));
+      }
+      final isPrivacy = match.group(0) == placeholderPrivacy;
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: GestureDetector(
+            onTap: isPrivacy ? onOpenPrivacy : onOpenKvkk,
+            child: Text(
+              isPrivacy
+                  ? l10n.onboardingPrivacyPolicyLink
+                  : l10n.onboardingKvkkLink,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ),
+      );
+      cursor = match.end;
+    }
+    if (cursor < template.length) {
+      spans.add(TextSpan(text: template.substring(cursor)));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text.rich(
+        TextSpan(
+          children: spans,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            height: 1.4,
+          ),
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }

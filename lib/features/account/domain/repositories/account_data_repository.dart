@@ -6,11 +6,15 @@
 /// hazırlandığında [requestBackendDeletion] gerçek bir endpoint çağıracak.
 abstract class AccountDataRepository {
   /// Cihaz üzerindeki TÜM kullanıcı verilerini siler:
-  /// - SharedPreferences (tüm anahtarlar)
-  /// - SecureStorage (cihaz UUID'si dahil)
-  /// - Uygulama cache dizini (paylaşılan PNG snapshot'lar vs.)
+  /// - `SharedPreferences` (tüm anahtarlar — tercihler, onboarding flag,
+  ///   KVKK acceptance, vs.)
+  /// - `FlutterSecureStorage` (cihaz UUID'si dahil tüm anahtarlar)
+  /// - `getTemporaryDirectory()/saydin_share_*.png` paylaşım kart kopyaları
+  /// - In-memory device ID cache (`DeviceIdInterceptor._cachedDeviceId`)
   ///
   /// Geri dönüşsüzdür. Çağıran taraf onay almalıdır.
+  /// Kısmen başarısızsa `AccountWipeException` fırlatır; çağıran kısmi
+  /// başarıyı kullanıcıya bildirmelidir.
   Future<void> wipeLocalData();
 
   /// Backend'e en iyi-çaba (best-effort) hesap silme talebi gönderir.

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:saydin/app.dart' show appHomeKey;
 import 'package:saydin/core/di/injection.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/turkish_text.dart';
 import 'package:saydin/features/account/presentation/cubit/account_deletion_cubit.dart';
 import 'package:saydin/features/account/presentation/cubit/account_deletion_state.dart';
 
@@ -54,7 +54,13 @@ class _DeleteAccountViewState extends State<_DeleteAccountView> {
         listener: (context, state) {
           switch (state) {
             case AccountDeletionSuccess():
-              _onDeletionSuccess(context);
+              _onDeletionSuccess(context, message: l10n.deleteAccountSuccess);
+            case AccountDeletionPartialSuccess():
+              _onDeletionSuccess(
+                context,
+                message: l10n.deleteAccountPartialSuccess,
+                durationSeconds: 8,
+              );
             case AccountDeletionFailure():
               _showFailureSnackbar(context, l10n.deleteAccountFailed);
             case AccountDeletionIdle() || AccountDeletionInProgress():
@@ -86,7 +92,10 @@ class _DeleteAccountViewState extends State<_DeleteAccountView> {
                       border: const OutlineInputBorder(),
                     ),
                     onChanged: (value) {
-                      final ok = value.trim().toUpperCase() == confirmWord;
+                      // Türkçe-aware compare: `'sil'.toUpperCase()` Dart'ta
+                      // `'SIL'` (dotless I) döner, `confirmWord` ARB'de `'SİL'`
+                      // (dotted İ). `eqIgnoreCaseTr` doğru normalizasyonu yapar.
+                      final ok = eqIgnoreCaseTr(value, confirmWord);
                       if (ok != _confirmed) {
                         setState(() => _confirmed = ok);
                       }
@@ -120,16 +129,22 @@ class _DeleteAccountViewState extends State<_DeleteAccountView> {
     );
   }
 
-  void _onDeletionSuccess(BuildContext context) {
-    final l10n = context.l10n;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l10n.deleteAccountSuccess)));
-    // Tüm route stack'i temizleyip root'a dön, ardından AppHome state'ini
-    // sıfırla. SharedPreferences silindiği için `isOnboardingCompleted` false
-    // dönecek ve kullanıcı onboarding'e yeniden yönlenecek.
+  void _onDeletionSuccess(
+    BuildContext context, {
+    required String message,
+    int durationSeconds = 4,
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: Duration(seconds: durationSeconds),
+      ),
+    );
+    // Tüm route stack'i temizleyip root'a dön. `AppHome` zaten
+    // `AppLifecycleEvents.resetStream` üzerinden cubit'in yayınladığı
+    // reset event'ini dinleyip kendi onboarding state'ini sıfırlayacak.
+    // Bu page artık app.dart'a doğrudan bağımlı değil.
     Navigator.of(context).popUntil((route) => route.isFirst);
-    appHomeKey.currentState?.restartFromOnboarding();
   }
 
   void _showFailureSnackbar(BuildContext context, String message) {

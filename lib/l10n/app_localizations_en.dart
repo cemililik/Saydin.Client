@@ -479,6 +479,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your account and all data have been deleted.';
 
   @override
+  String get deleteAccountPartialSuccess =>
+      'All your local data has been deleted. However, our server deletion request could not be sent right now; please follow up via iletisim@saydin.app.';
+
+  @override
   String get deleteAccountFailed =>
       'Account deletion could not be completed. Please try again or contact support.';
 
@@ -586,6 +590,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingGetStarted => 'Get Started';
+
+  @override
+  String onboardingLegalConsent(String privacy, String kvkk) {
+    return 'By continuing I confirm that I have read and accept the $privacy and $kvkk.';
+  }
+
+  @override
+  String get onboardingPrivacyPolicyLink => 'Privacy Policy';
+
+  @override
+  String get onboardingKvkkLink => 'KVKK Disclosure';
 
   @override
   String get onboardingPage1Title => 'What If I Bought?';

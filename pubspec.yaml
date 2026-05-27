@@ -7,6 +7,11 @@ version: 0.1.1+1
 
 environment:
   sdk: ^3.11.0
+  # Flutter sürümü single source of truth — CI subosito/flutter-action
+  # `flutter-version-file: pubspec.yaml` ile bu değeri okur. Yerel dev
+  # ortamı ile CI'ın aynı sürümü kullanmasını garanti eder. Constraint
+  # değil EXACT pin: subosito action range string'leri reddeder.
+  flutter: 3.41.4
 
 dependencies:
   flutter:

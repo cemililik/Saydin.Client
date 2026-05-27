@@ -2,6 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:saydin/core/error/error_reporter.dart';
+import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
 import 'package:saydin/features/account/data/repositories/account_data_repository_impl.dart';
 import 'package:saydin/features/account/domain/repositories/account_data_repository.dart';
 import 'package:saydin/features/account/presentation/cubit/account_deletion_cubit.dart';
@@ -42,28 +43,42 @@ class _FakeErrorReporter implements ErrorReporter {
 void main() {
   late _MockRepository repository;
   late _FakeErrorReporter reporter;
+  late AppLifecycleEvents lifecycleEvents;
+  late int resetCount;
 
   setUp(() {
     repository = _MockRepository();
     reporter = _FakeErrorReporter();
+    lifecycleEvents = AppLifecycleEvents();
+    resetCount = 0;
+    lifecycleEvents.resetStream.listen((_) => resetCount++);
   });
 
+  tearDown(() async {
+    await lifecycleEvents.dispose();
+  });
+
+  AccountDeletionCubit build() => AccountDeletionCubit(
+    repository: repository,
+    reporter: reporter,
+    lifecycleEvents: lifecycleEvents,
+  );
+
   blocTest<AccountDeletionCubit, AccountDeletionState>(
-    'happy path: backend OK + wipe başarılı → InProgress, Success',
+    'happy path: backend OK + wipe başarılı → Success + lifecycle reset event',
     setUp: () {
       when(
         () => repository.requestBackendDeletion(),
       ).thenAnswer((_) async => true);
       when(() => repository.wipeLocalData()).thenAnswer((_) async {});
     },
-    build: () =>
-        AccountDeletionCubit(repository: repository, reporter: reporter),
+    build: build,
     act: (cubit) => cubit.requestDeletion(),
     expect: () => [
       isA<AccountDeletionInProgress>(),
       isA<AccountDeletionSuccess>(),
     ],
-    verify: (_) {
+    verify: (_) async {
       verify(() => repository.requestBackendDeletion()).called(1);
       verify(() => repository.wipeLocalData()).called(1);
       expect(reporter.actions, [
@@ -71,28 +86,38 @@ void main() {
         'settings.account_deleted',
       ]);
       expect(reporter.reports, isEmpty);
+      // Stream listener async; broadcast'i drain etmek için pump.
+      await Future<void>.delayed(Duration.zero);
+      expect(resetCount, 1);
     },
   );
 
   blocTest<AccountDeletionCubit, AccountDeletionState>(
-    'backend hatası verse bile yerel wipe başarılıysa Success emit edilir',
+    'backend hatası + yerel wipe başarılı → PartialSuccess (Success değil)',
     setUp: () {
       when(
         () => repository.requestBackendDeletion(),
       ).thenAnswer((_) async => false);
       when(() => repository.wipeLocalData()).thenAnswer((_) async {});
     },
-    build: () =>
-        AccountDeletionCubit(repository: repository, reporter: reporter),
+    build: build,
     act: (cubit) => cubit.requestDeletion(),
     expect: () => [
       isA<AccountDeletionInProgress>(),
-      isA<AccountDeletionSuccess>(),
+      isA<AccountDeletionPartialSuccess>(),
     ],
+    verify: (_) async {
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        resetCount,
+        1,
+        reason: 'Yerel veri silindi → reset event yine de yayılmalı',
+      );
+    },
   );
 
   blocTest<AccountDeletionCubit, AccountDeletionState>(
-    'wipe başarısızlığı Failure state\'i ve Sentry raporu üretir',
+    'wipe başarısızlığı Failure state ve Sentry raporu üretir',
     setUp: () {
       when(
         () => repository.requestBackendDeletion(),
@@ -101,23 +126,23 @@ void main() {
         () => repository.wipeLocalData(),
       ).thenThrow(AccountWipeException(['io']));
     },
-    build: () =>
-        AccountDeletionCubit(repository: repository, reporter: reporter),
+    build: build,
     act: (cubit) => cubit.requestDeletion(),
     expect: () => [
       isA<AccountDeletionInProgress>(),
       isA<AccountDeletionFailure>(),
     ],
-    verify: (_) {
+    verify: (_) async {
       expect(reporter.reports, hasLength(1));
       expect(reporter.reports.first, isA<AccountWipeException>());
+      await Future<void>.delayed(Duration.zero);
+      expect(resetCount, 0, reason: 'Wipe başarısız → reset event yayılmamalı');
     },
   );
 
   blocTest<AccountDeletionCubit, AccountDeletionState>(
     'InProgress sırasında ikinci tetikleme ignore edilir',
-    build: () =>
-        AccountDeletionCubit(repository: repository, reporter: reporter),
+    build: build,
     seed: () => const AccountDeletionInProgress(),
     act: (cubit) => cubit.requestDeletion(),
     expect: () => const <AccountDeletionState>[],

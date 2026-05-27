@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
+import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
 import 'package:saydin/core/network/api_client.dart';
 import 'package:saydin/features/account/data/repositories/account_data_repository_impl.dart';
 import 'package:saydin/features/account/domain/repositories/account_data_repository.dart';
@@ -71,6 +72,9 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton(() => const DioErrorMapper());
   sl.registerLazySingleton(() => const ErrorReporter());
 
+  // Lifecycle events (cross-feature publish/subscribe: hesap silme → reset)
+  sl.registerLazySingleton(AppLifecycleEvents.new);
+
   // Onboarding
   sl.registerLazySingleton<OnboardingRepository>(
     () => OnboardingRepositoryImpl(SharedPreferencesAsync()),
@@ -91,10 +95,15 @@ Future<void> configureDependencies() async {
       prefs: SharedPreferencesAsync(),
       secureStorage: const FlutterSecureStorage(),
       dio: sl<ApiClient>().dio,
+      deviceIdInterceptor: sl<ApiClient>().deviceIdInterceptor,
     ),
   );
   sl.registerFactory(
-    () => AccountDeletionCubit(repository: sl(), reporter: sl()),
+    () => AccountDeletionCubit(
+      repository: sl(),
+      reporter: sl(),
+      lifecycleEvents: sl(),
+    ),
   );
 
   // Favorites

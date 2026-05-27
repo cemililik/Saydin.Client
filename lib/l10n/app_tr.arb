@@ -217,6 +217,7 @@
   "deleteAccountConfirmButton": "Hesabımı Kalıcı Olarak Sil",
   "deleteAccountInProgress": "Veriler siliniyor...",
   "deleteAccountSuccess": "Hesabınız ve tüm verileriniz silindi.",
+  "deleteAccountPartialSuccess": "Cihazınızdaki tüm veriler silindi. Ancak sunucu silme talebimiz şu an iletilemedi; iletisim@saydin.app adresinden silme talebinizi takip edin.",
   "deleteAccountFailed": "Hesap silme tamamlanamadı. Tekrar deneyin veya iletişime geçin.",
 
   "shareCardInitialValue": "Başlangıç",
@@ -281,6 +282,15 @@
   "onboardingSkip": "Atla",
   "onboardingNext": "İleri",
   "onboardingGetStarted": "Hemen Dene",
+  "onboardingLegalConsent": "Devam ederek {privacy} ve {kvkk} metinlerini okuduğumu ve kabul ettiğimi onaylıyorum.",
+  "@onboardingLegalConsent": {
+    "placeholders": {
+      "privacy": { "type": "String" },
+      "kvkk": { "type": "String" }
+    }
+  },
+  "onboardingPrivacyPolicyLink": "Gizlilik Politikası",
+  "onboardingKvkkLink": "KVKK Aydınlatma Metni",
   "onboardingPage1Title": "Ya Alsaydım?",
   "onboardingPage1Body": "Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.",
   "onboardingPage2Title": "Karşılaştır ve Keşfet",

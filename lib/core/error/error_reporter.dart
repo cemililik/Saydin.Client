@@ -54,6 +54,11 @@ class ErrorReporter {
     String? category,
     Map<String, Object?>? data,
   }) async {
+    // Geliştirici uyarısı: release modda assert devre dışıdır ama
+    // güvenlik garantisi `SentryPiiScrubber._scrubBreadcrumbMessage`
+    // tarafından her iki modda da uygulanır: allowlist prefix'te olmayan
+    // her mesaj `<REDACTED>` olur. Yani burada bypass riski yok; assert
+    // sadece debug sırasında geliştiriciye yanlış prefix'i bildirir.
     assert(
       SentryPiiScrubber.allowedMessagePrefixes.any(action.startsWith),
       "Breadcrumb action must start with a known feature prefix "

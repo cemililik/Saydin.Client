@@ -217,6 +217,7 @@
   "deleteAccountConfirmButton": "Permanently Delete My Account",
   "deleteAccountInProgress": "Deleting your data...",
   "deleteAccountSuccess": "Your account and all data have been deleted.",
+  "deleteAccountPartialSuccess": "All your local data has been deleted. However, our server deletion request could not be sent right now; please follow up via iletisim@saydin.app.",
   "deleteAccountFailed": "Account deletion could not be completed. Please try again or contact support.",
 
   "shareCardInitialValue": "Initial",
@@ -281,6 +282,15 @@
   "onboardingSkip": "Skip",
   "onboardingNext": "Next",
   "onboardingGetStarted": "Get Started",
+  "onboardingLegalConsent": "By continuing I confirm that I have read and accept the {privacy} and {kvkk}.",
+  "@onboardingLegalConsent": {
+    "placeholders": {
+      "privacy": { "type": "String" },
+      "kvkk": { "type": "String" }
+    }
+  },
+  "onboardingPrivacyPolicyLink": "Privacy Policy",
+  "onboardingKvkkLink": "KVKK Disclosure",
   "onboardingPage1Title": "What If I Bought?",
   "onboardingPage1Body": "Calculate any investment retroactively. Dollar, gold, Bitcoin and more.",
   "onboardingPage2Title": "Compare and Discover",

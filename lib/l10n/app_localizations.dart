@@ -974,6 +974,12 @@ abstract class AppLocalizations {
   /// **'Hesabınız ve tüm verileriniz silindi.'**
   String get deleteAccountSuccess;
 
+  /// No description provided for @deleteAccountPartialSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cihazınızdaki tüm veriler silindi. Ancak sunucu silme talebimiz şu an iletilemedi; iletisim@saydin.app adresinden silme talebinizi takip edin.'**
+  String get deleteAccountPartialSuccess;
+
   /// No description provided for @deleteAccountFailed.
   ///
   /// In tr, this message translates to:
@@ -1158,6 +1164,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Hemen Dene'**
   String get onboardingGetStarted;
+
+  /// No description provided for @onboardingLegalConsent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Devam ederek {privacy} ve {kvkk} metinlerini okuduğumu ve kabul ettiğimi onaylıyorum.'**
+  String onboardingLegalConsent(String privacy, String kvkk);
+
+  /// No description provided for @onboardingPrivacyPolicyLink.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gizlilik Politikası'**
+  String get onboardingPrivacyPolicyLink;
+
+  /// No description provided for @onboardingKvkkLink.
+  ///
+  /// In tr, this message translates to:
+  /// **'KVKK Aydınlatma Metni'**
+  String get onboardingKvkkLink;
 
   /// No description provided for @onboardingPage1Title.
   ///

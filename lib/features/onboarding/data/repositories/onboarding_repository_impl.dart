@@ -3,6 +3,7 @@ import 'package:saydin/features/onboarding/domain/repositories/onboarding_reposi
 
 class OnboardingRepositoryImpl implements OnboardingRepository {
   static const _keyOnboardingCompleted = 'onboarding_completed';
+  static const _keyLegalAcceptanceVersion = 'legal_acceptance_version';
 
   final SharedPreferencesAsync _prefs;
 
@@ -16,5 +17,15 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
   @override
   Future<void> completeOnboarding() async {
     await _prefs.setBool(_keyOnboardingCompleted, true);
+  }
+
+  @override
+  Future<void> recordLegalAcceptance(int version) async {
+    await _prefs.setInt(_keyLegalAcceptanceVersion, version);
+  }
+
+  @override
+  Future<int?> getAcceptedLegalVersion() async {
+    return _prefs.getInt(_keyLegalAcceptanceVersion);
   }
 }

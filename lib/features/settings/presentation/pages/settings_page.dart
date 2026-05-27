@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/turkish_text.dart';
 import 'package:saydin/features/account/presentation/widgets/delete_account_tile.dart';
 import 'package:saydin/features/legal/domain/entities/legal_document.dart';
 import 'package:saydin/features/legal/presentation/widgets/legal_tile.dart';
@@ -58,7 +59,9 @@ class _SectionHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
-        label.toUpperCase(),
+        // Türkçe-aware uppercase: `'Tercihler'.toUpperCase()` Dart'ta
+        // `'TERCIHLER'` (dotless I) döner; doğru karşılık `'TERCİHLER'`.
+        toUpperCaseTr(label),
         style: theme.textTheme.labelSmall?.copyWith(
           color: theme.colorScheme.primary,
           fontWeight: FontWeight.w700,

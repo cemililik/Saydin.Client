@@ -16,6 +16,14 @@ void main() {
       expect(scrubber.redactText('price=120000,50'), 'price=<NUMBER>');
     });
 
+    test('Türkçe binlik ayraçlı tutarları yakalar', () {
+      expect(scrubber.redactText('tutar=47.010,34'), 'tutar=<NUMBER>');
+      expect(scrubber.redactText('tutar=1.250.500'), 'tutar=<NUMBER>');
+      expect(scrubber.redactText('tutar=1.250.500,99'), 'tutar=<NUMBER>');
+      // EN format de yakalanır
+      expect(scrubber.redactText('amount=1,250,500.99'), 'amount=<NUMBER>');
+    });
+
     test('3 haneli sayıları korur (HTTP status vb.)', () {
       expect(scrubber.redactText('http=404'), 'http=404');
       expect(scrubber.redactText('retry=3 status=503'), 'retry=3 status=503');
@@ -167,12 +175,100 @@ void main() {
       expect(scrubbed.message!.formatted, contains('<NUMBER>'));
     });
 
-    test('Attachments (screenshot) zorla kaldırılır', () {
+    test('Attachments + Hint.screenshot/viewHierarchy zorla kaldırılır', () {
       final hint = Hint();
       hint.attachments.add(SentryAttachment.fromIntList([1, 2, 3], 'shot.png'));
+      hint.screenshot = SentryAttachment.fromIntList([9], 's.png');
+      hint.viewHierarchy = SentryAttachment.fromIntList([9], 'vh.json');
       final event = SentryEvent();
       scrubber.scrubEvent(event, hint);
       expect(hint.attachments, isEmpty);
+      expect(hint.screenshot, isNull);
+      expect(hint.viewHierarchy, isNull);
     });
+
+    test('SentryException.value PII\'den temizlenir', () {
+      final hint = Hint();
+      final event = SentryEvent(
+        exceptions: const [
+          SentryException(
+            type: 'FormatException',
+            value: 'Invalid date 2020-01-15 amount=47010,34',
+          ),
+        ],
+      );
+      final scrubbed = scrubber.scrubEvent(event, hint);
+      final ex = scrubbed!.exceptions!.first;
+      expect(ex.type, 'FormatException');
+      expect(ex.value, contains('<DATE>'));
+      expect(ex.value, contains('<NUMBER>'));
+      expect(ex.value, isNot(contains('2020-01-15')));
+      expect(ex.value, isNot(contains('47010,34')));
+    });
+
+    test('SentryUser PII alanları sansürlenir (privacy by default)', () {
+      final hint = Hint();
+      final event = SentryEvent(
+        user: SentryUser(
+          id: 'user-123',
+          email: 'a@b.com',
+          username: 'alice',
+          ipAddress: '1.2.3.4',
+        ),
+      );
+      final scrubbed = scrubber.scrubEvent(event, hint);
+      final user = scrubbed!.user!;
+      // SentryUser boş constructor reddedildiği için anonim placeholder bırakılır.
+      expect(user.id, '<REDACTED>');
+      expect(user.email, isNull);
+      expect(user.username, isNull);
+      expect(user.ipAddress, isNull);
+    });
+
+    test('fingerprint elemanları redactText\'ten geçer', () {
+      final hint = Hint();
+      final event = SentryEvent(
+        fingerprint: const ['error-BTC/USD-2020-01-15'],
+      );
+      final scrubbed = scrubber.scrubEvent(event, hint);
+      expect(scrubbed!.fingerprint!.first, contains('<SYMBOL>'));
+      expect(scrubbed.fingerprint!.first, contains('<DATE>'));
+    });
+
+    test('transaction adı redact edilir', () {
+      final hint = Hint();
+      final event = SentryEvent(transaction: 'GET /v1/quotes/BTC/USD');
+      final scrubbed = scrubber.scrubEvent(event, hint);
+      expect(scrubbed!.transaction, contains('<SYMBOL>'));
+    });
+
+    test(
+      'SentryRequest constructor ile query/body/cookie GERÇEKTEN temizlenir',
+      () {
+        // SDK `copyWith(queryString: null)` "değiştirme" anlamına gelir → bypass.
+        // `_scrubRequest` constructor kullanmalı.
+        final hint = Hint();
+        final event = SentryEvent(
+          request: SentryRequest(
+            url: 'https://api.example.com/v1/what-if/calculate',
+            method: 'POST',
+            queryString: 'date=2020-01-15&amount=47010',
+            cookies: 'session=secret',
+            data: const {'asset': 'BTC', 'amount': 47010},
+            headers: const {
+              'Authorization': 'Bearer secret-token',
+              'Content-Type': 'application/json',
+            },
+          ),
+        );
+        final scrubbed = scrubber.scrubEvent(event, hint);
+        final req = scrubbed!.request!;
+        expect(req.queryString, isNull);
+        expect(req.cookies, isNull);
+        expect(req.data, isNull);
+        expect(req.headers, isNot(contains('Authorization')));
+        expect(req.headers, contains('Content-Type'));
+      },
+    );
   });
 }

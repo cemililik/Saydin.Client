@@ -55,9 +55,10 @@ final LegalDocument privacyPolicyTr = LegalDocument(
       heading: '6. Güvenlik',
       body:
           '• Tüm ağ trafiği HTTPS (TLS 1.2+) üzerinden şifrelenir.\n'
-          '• Cihaz tanımlayıcısı şifreli yerel depoda saklanır (Keychain / '
-          'EncryptedSharedPreferences).\n'
-          '• Hata raporlarında ekran görüntüsü asla gönderilmez.',
+          '• Cihaz tanımlayıcısı işletim sisteminin sunduğu güvenli yerel '
+          'depo arayüzü ile (iOS Keychain, Android Keystore) saklanır.\n'
+          '• Hata raporlarında ekran görüntüsü asla gönderilmez; tutar, '
+          'tarih ve varlık bilgisi sansürlenir.',
     ),
     LegalSection(
       heading: '7. Çocukların Gizliliği',

@@ -41,6 +41,14 @@ void main() async {
 
       options.beforeSend = (event, hint) async =>
           scrubber.scrubEvent(event, hint);
+      // `tracesSampleRate > 0` olduğu için transaction event'leri de Sentry'ye
+      // gider — bunlar `SentryTransaction extends SentryEvent` olduğundan
+      // aynı scrub yolundan geçirilir. Bu callback `Hint` almaz; boş Hint
+      // oluşturup geçeriz.
+      options.beforeSendTransaction = (transaction) async {
+        final scrubbed = scrubber.scrubEvent(transaction, Hint());
+        return scrubbed is SentryTransaction ? scrubbed : null;
+      };
       options.beforeBreadcrumb = (breadcrumb, hint) {
         if (breadcrumb == null) return null;
         return scrubber.scrubBreadcrumb(breadcrumb, hint);
