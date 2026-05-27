@@ -191,6 +191,34 @@
   "languageEnglish": "English",
   "languageSystem": "System",
 
+  "settingsSectionPreferences": "Preferences",
+  "settingsSectionLegal": "Legal",
+  "settingsSectionAccount": "Account",
+  "settingsPrivacyPolicy": "Privacy Policy",
+  "settingsKvkkDisclosure": "KVKK Disclosure (TR PDPA)",
+  "settingsDeleteAccount": "Delete My Account",
+
+  "legalLastUpdated": "Last updated: {date}",
+  "@legalLastUpdated": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+
+  "deleteAccountTitle": "Delete My Account",
+  "deleteAccountWarning": "This action cannot be undone. All your preferences, saved scenarios, and favorites on this device will be permanently deleted. Under KVKK Article 11 / GDPR Article 17, your data erasure request will be completed within 30 days.",
+  "deleteAccountConfirmHint": "To confirm, please type \"{word}\" below.",
+  "@deleteAccountConfirmHint": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
+  "deleteAccountConfirmWord": "DELETE",
+  "deleteAccountConfirmButton": "Permanently Delete My Account",
+  "deleteAccountInProgress": "Deleting your data...",
+  "deleteAccountSuccess": "Your account and all data have been deleted.",
+  "deleteAccountFailed": "Account deletion could not be completed. Please try again or contact support.",
+
   "shareCardInitialValue": "Initial",
   "shareCardFinalValue": "Final Value",
   "shareCardNominalReturn": "Nominal Return",

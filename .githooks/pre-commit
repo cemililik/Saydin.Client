@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# CLAUDE.md "Build Öncesi Kontrol" sözleşmesi:
+#   flutter analyze --fatal-infos
+#   flutter test
+# Bu hook her commit öncesi tam set'i çalıştırır.
+#
+# Aciliyet durumunda atlamak için: git commit --no-verify
+# (kullanıcının açıkça istemediği sürece kullanılmaz)
+
 # Flutter SDK yolunu bul
 if command -v flutter &>/dev/null; then
   FLUTTER="flutter"
@@ -22,12 +30,22 @@ if ! $DART format --output=none --set-exit-if-changed lib/ test/ 2>&1; then
   exit 1
 fi
 
-echo "→ flutter analyze..."
-if ! $FLUTTER analyze --no-pub 2>&1; then
+echo "→ flutter analyze --fatal-infos..."
+if ! $FLUTTER analyze --no-pub --fatal-infos 2>&1; then
   echo ""
   echo "✗ Analiz hatası. Yukarıdaki sorunları düzeltin."
+  echo "  (info seviyesi de fail eder — '--fatal-infos' sözleşme gereği)"
   echo ""
   exit 1
 fi
 
-echo "✓ Tüm kontroller geçti."
+echo "→ flutter test..."
+if ! $FLUTTER test --no-pub --reporter=compact 2>&1; then
+  echo ""
+  echo "✗ Test hatası. Yukarıdaki testleri düzeltin."
+  echo "  (Tek dosya çalıştırmak için: flutter test <path>)"
+  echo ""
+  exit 1
+fi
+
+echo "✓ Tüm kontroller geçti (format + analyze --fatal-infos + test)."

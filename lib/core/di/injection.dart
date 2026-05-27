@@ -1,9 +1,15 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/network/api_client.dart';
+import 'package:saydin/features/account/data/repositories/account_data_repository_impl.dart';
+import 'package:saydin/features/account/domain/repositories/account_data_repository.dart';
+import 'package:saydin/features/account/presentation/cubit/account_deletion_cubit.dart';
+import 'package:saydin/features/legal/data/repositories/legal_repository_impl.dart';
+import 'package:saydin/features/legal/domain/repositories/legal_repository.dart';
 import 'package:saydin/features/comparison/data/repositories/comparison_repository_impl.dart';
 import 'package:saydin/features/comparison/domain/repositories/comparison_repository.dart';
 import 'package:saydin/features/comparison/domain/usecases/compare_what_if.dart';
@@ -75,6 +81,21 @@ Future<void> configureDependencies() async {
     () => SettingsRepositoryImpl(SharedPreferencesAsync()),
   );
   sl.registerLazySingleton(() => SettingsCubit(sl()));
+
+  // Legal — statik içerik, network çağrısı yok
+  sl.registerLazySingleton<LegalRepository>(() => const LegalRepositoryImpl());
+
+  // Account (KVKK Madde 11 / GDPR Madde 17 — hesap silme)
+  sl.registerLazySingleton<AccountDataRepository>(
+    () => AccountDataRepositoryImpl(
+      prefs: SharedPreferencesAsync(),
+      secureStorage: const FlutterSecureStorage(),
+      dio: sl<ApiClient>().dio,
+    ),
+  );
+  sl.registerFactory(
+    () => AccountDeletionCubit(repository: sl(), reporter: sl()),
+  );
 
   // Favorites
   sl.registerLazySingleton<FavoritesRepository>(

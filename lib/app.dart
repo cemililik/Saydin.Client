@@ -78,7 +78,7 @@ class SaydinApp extends StatelessWidget {
                 BlocProvider(create: (_) => sl<PortfolioBloc>()),
                 BlocProvider(create: (_) => sl<DcaBloc>()),
               ],
-              child: const _AppHome(),
+              child: AppHome(key: appHomeKey),
             ),
           );
         },
@@ -87,14 +87,19 @@ class SaydinApp extends StatelessWidget {
   }
 }
 
-class _AppHome extends StatefulWidget {
-  const _AppHome();
+/// Hesap silme akışı sonrası kullanıcıyı onboarding'e geri döndürmek için
+/// app root state'ine erişim sağlar. Cross-feature side-effect olmasını
+/// engelliyor — sadece `AccountDeletionCubit` UI listener'ı kullanır.
+final GlobalKey<AppHomeState> appHomeKey = GlobalKey<AppHomeState>();
+
+class AppHome extends StatefulWidget {
+  const AppHome({super.key});
 
   @override
-  State<_AppHome> createState() => _AppHomeState();
+  State<AppHome> createState() => AppHomeState();
 }
 
-class _AppHomeState extends State<_AppHome> {
+class AppHomeState extends State<AppHome> {
   bool? _onboardingCompleted;
 
   @override
@@ -112,6 +117,15 @@ class _AppHomeState extends State<_AppHome> {
   Future<void> _completeOnboarding() async {
     await sl<OnboardingRepository>().completeOnboarding();
     if (mounted) setState(() => _onboardingCompleted = true);
+  }
+
+  /// Hesap silme sonrası kullanıcıyı onboarding'e geri döndürmek için
+  /// `AccountDeletionCubit` listener'ı tarafından çağrılır. SharedPreferences
+  /// zaten silindiği için `isOnboardingCompleted` `false` döner.
+  Future<void> restartFromOnboarding() async {
+    if (!mounted) return;
+    setState(() => _onboardingCompleted = null);
+    await _checkOnboarding();
   }
 
   @override

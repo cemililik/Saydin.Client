@@ -431,6 +431,57 @@ class AppLocalizationsTr extends AppLocalizations {
   String get languageSystem => 'Sistem';
 
   @override
+  String get settingsSectionPreferences => 'Tercihler';
+
+  @override
+  String get settingsSectionLegal => 'Yasal';
+
+  @override
+  String get settingsSectionAccount => 'Hesap';
+
+  @override
+  String get settingsPrivacyPolicy => 'Gizlilik Politikası';
+
+  @override
+  String get settingsKvkkDisclosure => 'KVKK Aydınlatma Metni';
+
+  @override
+  String get settingsDeleteAccount => 'Hesabımı Sil';
+
+  @override
+  String legalLastUpdated(String date) {
+    return 'Son güncelleme: $date';
+  }
+
+  @override
+  String get deleteAccountTitle => 'Hesabımı Sil';
+
+  @override
+  String get deleteAccountWarning =>
+      'Bu işlem geri alınamaz. Cihazınızdaki tüm tercihleriniz, kaydedilen senaryolarınız ve favorileriniz kalıcı olarak silinir. KVKK Madde 11 / GDPR Madde 17 kapsamında verilerinizin silinmesi 30 gün içinde sonuçlandırılır.';
+
+  @override
+  String deleteAccountConfirmHint(String word) {
+    return 'Onaylamak için aşağıya \"$word\" yazınız.';
+  }
+
+  @override
+  String get deleteAccountConfirmWord => 'SİL';
+
+  @override
+  String get deleteAccountConfirmButton => 'Hesabımı Kalıcı Olarak Sil';
+
+  @override
+  String get deleteAccountInProgress => 'Veriler siliniyor...';
+
+  @override
+  String get deleteAccountSuccess => 'Hesabınız ve tüm verileriniz silindi.';
+
+  @override
+  String get deleteAccountFailed =>
+      'Hesap silme tamamlanamadı. Tekrar deneyin veya iletişime geçin.';
+
+  @override
   String get shareCardInitialValue => 'Başlangıç';
 
   @override

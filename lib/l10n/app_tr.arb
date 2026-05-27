@@ -191,6 +191,34 @@
   "languageEnglish": "English",
   "languageSystem": "Sistem",
 
+  "settingsSectionPreferences": "Tercihler",
+  "settingsSectionLegal": "Yasal",
+  "settingsSectionAccount": "Hesap",
+  "settingsPrivacyPolicy": "Gizlilik Politikası",
+  "settingsKvkkDisclosure": "KVKK Aydınlatma Metni",
+  "settingsDeleteAccount": "Hesabımı Sil",
+
+  "legalLastUpdated": "Son güncelleme: {date}",
+  "@legalLastUpdated": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+
+  "deleteAccountTitle": "Hesabımı Sil",
+  "deleteAccountWarning": "Bu işlem geri alınamaz. Cihazınızdaki tüm tercihleriniz, kaydedilen senaryolarınız ve favorileriniz kalıcı olarak silinir. KVKK Madde 11 / GDPR Madde 17 kapsamında verilerinizin silinmesi 30 gün içinde sonuçlandırılır.",
+  "deleteAccountConfirmHint": "Onaylamak için aşağıya \"{word}\" yazınız.",
+  "@deleteAccountConfirmHint": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
+  "deleteAccountConfirmWord": "SİL",
+  "deleteAccountConfirmButton": "Hesabımı Kalıcı Olarak Sil",
+  "deleteAccountInProgress": "Veriler siliniyor...",
+  "deleteAccountSuccess": "Hesabınız ve tüm verileriniz silindi.",
+  "deleteAccountFailed": "Hesap silme tamamlanamadı. Tekrar deneyin veya iletişime geçin.",
+
   "shareCardInitialValue": "Başlangıç",
   "shareCardFinalValue": "Son Değer",
   "shareCardNominalReturn": "Nominal Getiri",

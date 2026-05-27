@@ -431,6 +431,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageSystem => 'System';
 
   @override
+  String get settingsSectionPreferences => 'Preferences';
+
+  @override
+  String get settingsSectionLegal => 'Legal';
+
+  @override
+  String get settingsSectionAccount => 'Account';
+
+  @override
+  String get settingsPrivacyPolicy => 'Privacy Policy';
+
+  @override
+  String get settingsKvkkDisclosure => 'KVKK Disclosure (TR PDPA)';
+
+  @override
+  String get settingsDeleteAccount => 'Delete My Account';
+
+  @override
+  String legalLastUpdated(String date) {
+    return 'Last updated: $date';
+  }
+
+  @override
+  String get deleteAccountTitle => 'Delete My Account';
+
+  @override
+  String get deleteAccountWarning =>
+      'This action cannot be undone. All your preferences, saved scenarios, and favorites on this device will be permanently deleted. Under KVKK Article 11 / GDPR Article 17, your data erasure request will be completed within 30 days.';
+
+  @override
+  String deleteAccountConfirmHint(String word) {
+    return 'To confirm, please type \"$word\" below.';
+  }
+
+  @override
+  String get deleteAccountConfirmWord => 'DELETE';
+
+  @override
+  String get deleteAccountConfirmButton => 'Permanently Delete My Account';
+
+  @override
+  String get deleteAccountInProgress => 'Deleting your data...';
+
+  @override
+  String get deleteAccountSuccess =>
+      'Your account and all data have been deleted.';
+
+  @override
+  String get deleteAccountFailed =>
+      'Account deletion could not be completed. Please try again or contact support.';
+
+  @override
   String get shareCardInitialValue => 'Initial';
 
   @override

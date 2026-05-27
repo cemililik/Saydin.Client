@@ -11,7 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION: "3.41.4"
+  # Flutter sürümü: .flutter-version dosyasından okunur (single source of truth).
+  # Yerel geliştirme, CI ve dokümantasyon aynı sürümü kullansın diye repo köküne taşındı.
   IOS_BUNDLE_ID: "com.saydin.saydin"
 
 # ── Versiyon Yönetimi ─────────────────────────────────────────────────────────
@@ -136,7 +137,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: .flutter-version
           cache: true
 
       - name: Install dependencies
@@ -213,7 +214,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: .flutter-version
           cache: true
 
       - name: Install dependencies
@@ -264,7 +265,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: .flutter-version
           cache: true
 
       - name: Install dependencies
@@ -409,7 +410,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: .flutter-version
           cache: true
 
       - name: Install dependencies
@@ -545,7 +546,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: .flutter-version
           cache: true
 
       - name: Install dependencies
