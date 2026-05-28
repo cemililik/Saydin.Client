@@ -232,7 +232,7 @@ flowchart TD
 
 - **CertificatePinning** sertifika doğrulama katmanıdır — interceptor değil,
   Dio'nun `IOHttpClientAdapter`'i üzerinde TLS handshake aşamasında çalışır.
-  Detay: [ADR-013](../../../docs/decisions/ADR-013-certificate-pinning-strategy.md).
+  Detay: ADR-013 — Saydın meta repo: `docs/decisions/ADR-013-certificate-pinning-strategy.md` (komşu repo; göreceli link GitHub'da çözülmez).
 
 ### DeviceIdInterceptor
 
@@ -380,11 +380,14 @@ Range modunda tooltip devre dışı kalır (`handleBuiltInTouches: !_isRangeMode
 ## Sonuç Gösterimi Kuralları
 
 ```dart
-// Para birimi — Türkçe locale
+// Para birimi — Türkçe locale (Decimal → .toDouble() sadece gösterimde)
 NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(47010.34)  // ₺47.010,34
 
-// Yüzde
-NumberFormat.decimalPercentPattern(locale: 'tr_TR', decimalDigits: 2).format(3.70) // %370,00
+// Yüzde — merkezi PercentageFormatter (işaret + locale + binlik ayracı)
+PercentageFormatter.signed(3.70)    // "+%3,70"   (lib/core/utils/percentage_formatter.dart)
+PercentageFormatter.unsigned(3.70)  // "%3,70"    (başlık / pasta dilim etiketi)
+// Ham NumberFormat.decimalPercentPattern doğrudan KULLANILMAZ — binlik
+// ayracını atlar ve EN locale'inde ters ayraç verir; PercentageFormatter sarar.
 
 // Tarih
 DateFormat('dd.MM.yyyy', 'tr_TR').format(date)  // 01.03.2020
@@ -432,7 +435,7 @@ ya da Decimal'a yeniden cast yapılır.
 
 ## Tema Sistemi
 
-> ADR: [ADR-012](../../../docs/decisions/ADR-012-client-settings-architecture.md)
+> ADR: ADR-012 — Saydın meta repo: `docs/decisions/ADR-012-client-settings-architecture.md` (komşu repo; göreceli link GitHub'da çözülmez)
 
 ### ThemeData Yapısı
 

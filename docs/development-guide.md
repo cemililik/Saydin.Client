@@ -4,7 +4,7 @@
 
 | Araç | Versiyon | Kontrol |
 |---|---|---|
-| Flutter | 3.41.0 | `flutter --version` |
+| Flutter | 3.41.4 (kaynak: `pubspec.yaml` `environment.flutter`) | `flutter --version` |
 | Dart | 3.x (Flutter ile gelir) | `dart --version` |
 | Xcode | 16+ (iOS için) | `xcode-select --print-path` |
 | Android Studio | Ladybug+ (Android için) | AVD Manager için |

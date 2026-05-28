@@ -37,10 +37,12 @@ features/<feature_name>/
 ### Domain Katmanı Kuralları
 
 ```dart
-// DOĞRU ✓ — domain entity saf Dart, para alanı num
+// DOĞRU ✓ — domain entity saf Dart, para alanı Decimal (Faz 3)
+import 'package:decimal/decimal.dart';
 class WhatIfResult {
   final String assetSymbol;
-  final num finalValueTry;    // num: int veya double — para için double yerine num
+  final Decimal finalValueTry;   // para → Decimal (double/num YASAK); JSON'dan MoneyParser.requireDecimal
+  final double profitLossPercent; // yüzde/oran display-only → double serbest
   final DateTime calculatedAt;
 }
 
@@ -154,17 +156,19 @@ blocTest<WhatIfBloc, WhatIfState>(
 ### Finansal Değer Gösterimi
 
 ```dart
-// DOĞRU ✓ — Türkçe locale ile formatla
+// DOĞRU ✓ — para Decimal'da tutulur, gösterimde Türkçe locale ile formatla
 import 'package:intl/intl.dart';
+import 'package:decimal/decimal.dart';
 final formatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
-final num amount = 47010.34;                  // num — entity'de double değil num
-final display = formatter.format(amount);     // "₺47.010,34"
+final Decimal amount = Decimal.parse('47010.34');  // para → Decimal (double/num YASAK)
+final display = formatter.format(amount.toDouble()); // "₺47.010,34" — .toDouble() SADECE gösterimde
 
-// Yüzde
-final pctFormatter = NumberFormat.decimalPercentPattern(locale: 'tr_TR', decimalDigits: 2);
+// Yüzde — merkezi PercentageFormatter kullan (işaret + tr_TR locale)
+final display = PercentageFormatter.signed(3.70);   // "+%3,70"  (lib/core/utils/percentage_formatter.dart)
 
 // YANLIŞ ✗
 "\$${amount.toStringAsFixed(2)}"  // Dolar işareti, nokta separator
+final num price = 47010.34;        // para için num/double — Decimal kullan
 ```
 
 ### Kar/Zarar Renk Kodu
@@ -493,7 +497,7 @@ Tüm yasaklar tek bakışta. Her kategori için detay yukarıdaki ilgili bölüm
 - Hardcoded Türkçe string (kullan: `context.l10n.<key>`)
 - Hardcoded renk widget içinde (kullan: `Theme.of(context)` veya `AppColors.*`)
 - Hardcoded API URL (kullan: `--dart-define=API_BASE_URL`)
-- `double` / `float` para tutarı için (kullan: `num` veya server-string parse)
+- `double` / `float` / `num` para tutarı için (kullan: `Decimal` — JSON'dan `MoneyParser.requireDecimal`; gösterimde `.toDouble()`)
 - BLoC state'inde hata mesajı string (kullan: `AppError` tipi)
 - `Equatable.props` içinde function field (callback'ler parent widget'tan parametre olur)
 

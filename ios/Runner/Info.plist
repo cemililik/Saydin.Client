@@ -45,8 +45,9 @@
 	  bazı yan-yollarda (örn. `NSAllowsArbitraryLoadsInWebContent`) gizli
 	  istisnalar olmadığından emin olmak için explicit politikayı tercih
 	  ediyor. `NSAllowsArbitraryLoads=false` ile tüm HTTP istekleri reddedilir
-	  ve `NSExceptionDomains` sadece dev tünelleri için minimum tanımlanır
-	  (debug build'te bile prod sürümünde override yoktur).
+	  ve `NSExceptionDomains` yalnızca HTTP localhost (yerel geliştirme) için
+	  tanımlanır; ngrok/cloudflared tünelleri HTTPS sunduğundan ATS istisnası
+	  gerektirmez (debug build'te bile prod sürümünde override yoktur).
 
 	  Üçüncü taraf SDK'lar (Sentry, share_plus) zaten HTTPS kullanır, ATS
 	  istisnası gerektirmez.
