@@ -35,7 +35,11 @@ class SavedScenarioModel extends SavedScenario {
     );
   }
 
+  /// `ScenariosRepositoryImpl._typeToString` ile **simetrik** olmalı.
+  /// `'what_if'` case'i explicit; default'a düşmek backend'in bilinmeyen
+  /// bir type döndürmesini sessiz veri kaybına dönüştürürdü.
   static ScenarioType _parseType(String? value) => switch (value) {
+    'what_if' => ScenarioType.whatIf,
     'comparison' => ScenarioType.comparison,
     'portfolio' => ScenarioType.portfolio,
     'dca' => ScenarioType.dca,

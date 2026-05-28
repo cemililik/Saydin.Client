@@ -51,10 +51,23 @@ class SaydinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // KRİTİK: Tüm BLoC/Cubit'ler MaterialApp'in ÜSTÜNDE sağlanır. Dark mode
+    // veya dil değişiminde `SettingsCubit` yeni state emit eder ve
+    // `BlocBuilder` tetiklenip MaterialApp'i yeniden kurar. Provider'lar
+    // MaterialApp'in `home:` parametresinin altında olsaydı, her rebuild'de
+    // alt-ağaç yeniden inşa edilir ve form/sonuç state'leri (WhatIf,
+    // Comparison, Portfolio, Dca, Scenarios) kullanıcının gözü önünde
+    // sıfırlanırdı.
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => sl<SettingsCubit>()..load()),
         BlocProvider(create: (_) => sl<FavoritesCubit>()..load()),
+        BlocProvider(create: (_) => sl<AppConfigCubit>()..load()),
+        BlocProvider(create: (_) => sl<WhatIfBloc>()),
+        BlocProvider(create: (_) => sl<ScenariosBloc>()),
+        BlocProvider(create: (_) => sl<ComparisonBloc>()),
+        BlocProvider(create: (_) => sl<PortfolioBloc>()),
+        BlocProvider(create: (_) => sl<DcaBloc>()),
       ],
       child: BlocBuilder<SettingsCubit, AppSettings>(
         builder: (context, settings) {
@@ -72,17 +85,7 @@ class SaydinApp extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: toFlutterThemeMode(settings.themeMode),
-            home: MultiBlocProvider(
-              providers: [
-                BlocProvider(create: (_) => sl<AppConfigCubit>()..load()),
-                BlocProvider(create: (_) => sl<WhatIfBloc>()),
-                BlocProvider(create: (_) => sl<ScenariosBloc>()),
-                BlocProvider(create: (_) => sl<ComparisonBloc>()),
-                BlocProvider(create: (_) => sl<PortfolioBloc>()),
-                BlocProvider(create: (_) => sl<DcaBloc>()),
-              ],
-              child: const AppHome(),
-            ),
+            home: const AppHome(),
           );
         },
       ),
@@ -194,17 +197,37 @@ class _MainShellState extends State<MainShell> {
       case ScenarioType.portfolio:
         const uuid = Uuid();
         final extraData = scenario.extraData;
-        final rawItems = extraData?['items'] as List<dynamic>? ?? [];
-        final items = rawItems.map((e) {
-          final map = e as Map<String, dynamic>;
-          return PortfolioItem(
-            id: uuid.v4(),
-            assetSymbol: map['assetSymbol'] as String,
-            assetDisplayName: map['assetDisplayName'] as String,
-            amount: map['amount'] as num,
-            amountType: map['amountType'] as String,
-          );
-        }).toList();
+        final rawItems = extraData?['items'];
+        // Defensive parse: extraData eski/migre edilmemiş senaryolar için
+        // beklediğimiz şekilde gelmeyebilir. Tipi sıkı assert etmek yerine
+        // güvenli accessor'lar kullan ve hatalı item'ları sessizce atla —
+        // tek bir bozuk kayıt yüzünden uygulama çökmesini engelle.
+        final items = <PortfolioItem>[];
+        if (rawItems is List) {
+          for (final raw in rawItems) {
+            if (raw is! Map) continue;
+            final assetSymbol = raw['assetSymbol'];
+            final assetDisplayName = raw['assetDisplayName'];
+            final amount = raw['amount'];
+            final amountType = raw['amountType'];
+            if (assetSymbol is! String ||
+                assetDisplayName is! String ||
+                amount is! num ||
+                amountType is! String) {
+              continue;
+            }
+            items.add(
+              PortfolioItem(
+                id: uuid.v4(),
+                assetSymbol: assetSymbol,
+                assetDisplayName: assetDisplayName,
+                amount: amount,
+                amountType: amountType,
+              ),
+            );
+          }
+        }
+        if (items.isEmpty) return; // Geçerli item yok — replay iptal.
         context.read<PortfolioBloc>().add(
           PortfolioReplayRequested(
             buyDate: scenario.buyDate,

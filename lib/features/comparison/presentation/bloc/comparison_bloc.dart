@@ -14,6 +14,13 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   final DioErrorMapper _errorMapper;
   final ErrorReporter _reporter;
 
+  /// Monotonik istek sayacı. Her `_onCalculateRequested` başlangıcında
+  /// artar; uçuştaki istek tamamlanırken form mutasyonu yapıldıysa
+  /// (`_invalidateInflightRequests`) sayaç ileri taşınır ve eski cevap
+  /// `emit` etmeden atılır. Bu, kullanıcının ekrandaki seçimleriyle
+  /// uyuşmayan bir `Success` snapshot'ın bastırılmasını önler.
+  int _requestSeq = 0;
+
   ComparisonBloc(
     this._getAssets,
     this._compareWhatIf, {
@@ -33,6 +40,10 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     on<ComparisonReplayRequested>(_onReplayRequested);
     on<ComparisonLanguageChanged>(_onLanguageChanged);
   }
+
+  /// Form alanlarından biri değiştiğinde çağrılır; uçuşta olan
+  /// `_onCalculateRequested` cevabını geçersiz kılar.
+  void _invalidateInflightRequests() => _requestSeq++;
 
   ComparisonAssetsLoaded? get _loaded {
     final s = state;
@@ -95,6 +106,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     } else if (current.length < 5) {
       current.add(event.symbol);
     }
+    _invalidateInflightRequests();
     emit(loaded.copyWith(selectedSymbols: current));
   }
 
@@ -104,6 +116,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   ) {
     final loaded = _loaded;
     if (loaded == null) return;
+    _invalidateInflightRequests();
     emit(loaded.copyWith(buyDate: event.date));
   }
 
@@ -113,6 +126,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   ) {
     final loaded = _loaded;
     if (loaded == null) return;
+    _invalidateInflightRequests();
     emit(loaded.copyWith(sellDate: event.date));
   }
 
@@ -122,6 +136,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   ) {
     final loaded = _loaded;
     if (loaded == null) return;
+    _invalidateInflightRequests();
     emit(loaded.copyWith(amount: event.amount));
   }
 
@@ -131,6 +146,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   ) {
     final loaded = _loaded;
     if (loaded == null) return;
+    _invalidateInflightRequests();
     emit(loaded.copyWith(amountType: event.amountType));
   }
 
@@ -140,6 +156,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   ) {
     final loaded = _loaded;
     if (loaded == null) return;
+    _invalidateInflightRequests();
     emit(loaded.copyWith(includeInflation: !loaded.includeInflation));
   }
 
@@ -149,6 +166,10 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   ) async {
     final loaded = _loaded;
     if (loaded == null) return;
+
+    // Bu istek için anlık snapshot. `_invalidateInflightRequests` (form
+    // mutasyon handler'ları) sayacı ileri taşırsa uçuştaki cevap atılır.
+    final requestSeq = ++_requestSeq;
 
     emit(
       ComparisonCalculating(
@@ -171,6 +192,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
         amountType: loaded.amountType,
         includeInflation: loaded.includeInflation,
       );
+      if (requestSeq != _requestSeq) return;
       emit(
         ComparisonSuccess(
           assets: loaded.assets,
@@ -184,6 +206,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
         ),
       );
     } on DioException catch (e, st) {
+      if (requestSeq != _requestSeq) return;
       final error = _errorMapper.map(e);
       if (error is UnknownError || error is ServerError) {
         await _reporter.report(e, st, context: 'comparison_calculate');
@@ -201,6 +224,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
         ),
       );
     } catch (e, st) {
+      if (requestSeq != _requestSeq) return;
       await _reporter.report(e, st, context: 'comparison_calculate');
       emit(
         ComparisonFailure(

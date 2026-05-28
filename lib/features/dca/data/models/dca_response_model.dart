@@ -25,54 +25,140 @@ class DcaResponseModel extends DcaResult {
   });
 
   factory DcaResponseModel.fromJson(Map<String, dynamic> json) {
-    final rawPurchases = json['purchases'] as List<dynamic>? ?? [];
-    final purchases = rawPurchases.map((e) {
-      final map = e as Map<String, dynamic>;
-      return DcaPurchase(
-        date: DateTime.parse(map['date'] as String),
-        price: (map['price'] as num).toDouble(),
-        unitsAcquired: (map['unitsAcquired'] as num).toDouble(),
-        cumulativeUnits: (map['cumulativeUnits'] as num).toDouble(),
-        cumulativeCostTry: (map['cumulativeCostTry'] as num).toDouble(),
-        cumulativeValueTry: (map['cumulativeValueTry'] as num).toDouble(),
-      );
-    }).toList();
+    final rawPurchases = json['purchases'];
+    final purchases = rawPurchases is List
+        ? rawPurchases.map((e) {
+            if (e is! Map) {
+              throw const FormatException('dca purchase: map değil');
+            }
+            return DcaPurchase(
+              date: _parseDate(e['date'], 'purchase.date'),
+              price: _requireNum(e['price'], 'purchase.price').toDouble(),
+              unitsAcquired: _requireNum(
+                e['unitsAcquired'],
+                'purchase.unitsAcquired',
+              ).toDouble(),
+              cumulativeUnits: _requireNum(
+                e['cumulativeUnits'],
+                'purchase.cumulativeUnits',
+              ).toDouble(),
+              cumulativeCostTry: _requireNum(
+                e['cumulativeCostTry'],
+                'purchase.cumulativeCostTry',
+              ).toDouble(),
+              cumulativeValueTry: _requireNum(
+                e['cumulativeValueTry'],
+                'purchase.cumulativeValueTry',
+              ).toDouble(),
+            );
+          }).toList()
+        : <DcaPurchase>[];
 
-    final rawChart = json['chartData'] as List<dynamic>? ?? [];
-    final chartData = rawChart.map((e) {
-      final map = e as Map<String, dynamic>;
-      return DcaChartPoint(
-        date: DateTime.parse(map['date'] as String),
-        cumulativeCost: (map['cumulativeCost'] as num).toDouble(),
-        cumulativeValue: (map['cumulativeValue'] as num).toDouble(),
-      );
-    }).toList();
+    final rawChart = json['chartData'];
+    final chartData = rawChart is List
+        ? rawChart.map((e) {
+            if (e is! Map) {
+              throw const FormatException('dca chart point: map değil');
+            }
+            return DcaChartPoint(
+              date: _parseDate(e['date'], 'chart.date'),
+              cumulativeCost: _requireNum(
+                e['cumulativeCost'],
+                'chart.cumulativeCost',
+              ).toDouble(),
+              cumulativeValue: _requireNum(
+                e['cumulativeValue'],
+                'chart.cumulativeValue',
+              ).toDouble(),
+            );
+          }).toList()
+        : <DcaChartPoint>[];
 
     return DcaResponseModel(
-      assetSymbol: json['assetSymbol'] as String,
-      assetDisplayName: json['assetDisplayName'] as String,
-      startDate: DateTime.parse(json['startDate'] as String),
-      endDate: DateTime.parse(json['endDate'] as String),
-      period: json['period'] as String,
-      periodicAmount: (json['periodicAmount'] as num).toDouble(),
-      totalPurchases: json['totalPurchases'] as int,
-      totalInvestedTry: (json['totalInvestedTry'] as num).toDouble(),
-      currentValueTry: (json['currentValueTry'] as num).toDouble(),
-      profitLossTry: (json['profitLossTry'] as num).toDouble(),
-      profitLossPercent: (json['profitLossPercent'] as num).toDouble(),
-      isProfit: json['isProfit'] as bool,
-      averageCostPerUnit: (json['averageCostPerUnit'] as num).toDouble(),
-      totalUnitsAcquired: (json['totalUnitsAcquired'] as num).toDouble(),
-      currentUnitPrice: (json['currentUnitPrice'] as num).toDouble(),
-      cumulativeInflationPercent: (json['cumulativeInflationPercent'] as num?)
-          ?.toDouble(),
-      realProfitLossPercent: (json['realProfitLossPercent'] as num?)
-          ?.toDouble(),
-      inflationDataAsOf: json['inflationDataAsOf'] != null
-          ? DateTime.parse(json['inflationDataAsOf'] as String)
-          : null,
+      assetSymbol: _requireString(json['assetSymbol'], 'assetSymbol'),
+      assetDisplayName: _requireString(
+        json['assetDisplayName'],
+        'assetDisplayName',
+      ),
+      startDate: _parseDate(json['startDate'], 'startDate'),
+      endDate: _parseDate(json['endDate'], 'endDate'),
+      period: _requireString(json['period'], 'period'),
+      periodicAmount: _requireNum(
+        json['periodicAmount'],
+        'periodicAmount',
+      ).toDouble(),
+      totalPurchases: _requireNum(
+        json['totalPurchases'],
+        'totalPurchases',
+      ).toInt(),
+      totalInvestedTry: _requireNum(
+        json['totalInvestedTry'],
+        'totalInvestedTry',
+      ).toDouble(),
+      currentValueTry: _requireNum(
+        json['currentValueTry'],
+        'currentValueTry',
+      ).toDouble(),
+      profitLossTry: _requireNum(
+        json['profitLossTry'],
+        'profitLossTry',
+      ).toDouble(),
+      profitLossPercent: _requireNum(
+        json['profitLossPercent'],
+        'profitLossPercent',
+      ).toDouble(),
+      isProfit: json['isProfit'] is bool ? json['isProfit'] as bool : false,
+      averageCostPerUnit: _requireNum(
+        json['averageCostPerUnit'],
+        'averageCostPerUnit',
+      ).toDouble(),
+      totalUnitsAcquired: _requireNum(
+        json['totalUnitsAcquired'],
+        'totalUnitsAcquired',
+      ).toDouble(),
+      currentUnitPrice: _requireNum(
+        json['currentUnitPrice'],
+        'currentUnitPrice',
+      ).toDouble(),
+      cumulativeInflationPercent: _optionalNum(
+        json['cumulativeInflationPercent'],
+      )?.toDouble(),
+      realProfitLossPercent: _optionalNum(
+        json['realProfitLossPercent'],
+      )?.toDouble(),
+      inflationDataAsOf: _optionalDate(json['inflationDataAsOf']),
       purchases: purchases,
       chartData: chartData,
     );
+  }
+
+  // ── Defensive parse yardımcıları ────────────────────────────────────────
+  // Backend kontratı değişirse (örn `totalPurchases` string'e döner)
+  // `as int` cast'i tüm sayfayı çökertirdi. Bunun yerine FormatException
+  // fırlatıp DioErrorMapper üzerinden tek bir BadResponseError'a çevrilir.
+
+  static num _requireNum(Object? value, String field) {
+    if (value is num) return value;
+    throw FormatException('dca response: $field sayı değil ($value)');
+  }
+
+  static num? _optionalNum(Object? value) => value is num ? value : null;
+
+  static String _requireString(Object? value, String field) {
+    if (value is String) return value;
+    throw FormatException('dca response: $field string değil ($value)');
+  }
+
+  static DateTime _parseDate(Object? value, String field) {
+    if (value is String) {
+      final parsed = DateTime.tryParse(value);
+      if (parsed != null) return parsed;
+    }
+    throw FormatException('dca response: $field tarih değil ($value)');
+  }
+
+  static DateTime? _optionalDate(Object? value) {
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 }
