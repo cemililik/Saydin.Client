@@ -1,3 +1,4 @@
+import 'package:saydin/core/utils/money_parser.dart';
 import '../../domain/entities/dca_result.dart';
 
 class DcaResponseModel extends DcaResult {
@@ -33,23 +34,23 @@ class DcaResponseModel extends DcaResult {
             }
             return DcaPurchase(
               date: _parseDate(e['date'], 'purchase.date'),
-              price: _requireNum(e['price'], 'purchase.price').toDouble(),
-              unitsAcquired: _requireNum(
+              price: MoneyParser.requireDecimal(e['price'], 'purchase.price'),
+              unitsAcquired: MoneyParser.requireDecimal(
                 e['unitsAcquired'],
                 'purchase.unitsAcquired',
-              ).toDouble(),
-              cumulativeUnits: _requireNum(
+              ),
+              cumulativeUnits: MoneyParser.requireDecimal(
                 e['cumulativeUnits'],
                 'purchase.cumulativeUnits',
-              ).toDouble(),
-              cumulativeCostTry: _requireNum(
+              ),
+              cumulativeCostTry: MoneyParser.requireDecimal(
                 e['cumulativeCostTry'],
                 'purchase.cumulativeCostTry',
-              ).toDouble(),
-              cumulativeValueTry: _requireNum(
+              ),
+              cumulativeValueTry: MoneyParser.requireDecimal(
                 e['cumulativeValueTry'],
                 'purchase.cumulativeValueTry',
-              ).toDouble(),
+              ),
             );
           }).toList()
         : <DcaPurchase>[];
@@ -62,14 +63,14 @@ class DcaResponseModel extends DcaResult {
             }
             return DcaChartPoint(
               date: _parseDate(e['date'], 'chart.date'),
-              cumulativeCost: _requireNum(
+              cumulativeCost: MoneyParser.requireDecimal(
                 e['cumulativeCost'],
                 'chart.cumulativeCost',
-              ).toDouble(),
-              cumulativeValue: _requireNum(
+              ),
+              cumulativeValue: MoneyParser.requireDecimal(
                 e['cumulativeValue'],
                 'chart.cumulativeValue',
-              ).toDouble(),
+              ),
             );
           }).toList()
         : <DcaChartPoint>[];
@@ -83,43 +84,43 @@ class DcaResponseModel extends DcaResult {
       startDate: _parseDate(json['startDate'], 'startDate'),
       endDate: _parseDate(json['endDate'], 'endDate'),
       period: _requireString(json['period'], 'period'),
-      periodicAmount: _requireNum(
+      periodicAmount: MoneyParser.requireDecimal(
         json['periodicAmount'],
         'periodicAmount',
-      ).toDouble(),
+      ),
       totalPurchases: _requireNum(
         json['totalPurchases'],
         'totalPurchases',
       ).toInt(),
-      totalInvestedTry: _requireNum(
+      totalInvestedTry: MoneyParser.requireDecimal(
         json['totalInvestedTry'],
         'totalInvestedTry',
-      ).toDouble(),
-      currentValueTry: _requireNum(
+      ),
+      currentValueTry: MoneyParser.requireDecimal(
         json['currentValueTry'],
         'currentValueTry',
-      ).toDouble(),
-      profitLossTry: _requireNum(
+      ),
+      profitLossTry: MoneyParser.requireDecimal(
         json['profitLossTry'],
         'profitLossTry',
-      ).toDouble(),
+      ),
       profitLossPercent: _requireNum(
         json['profitLossPercent'],
         'profitLossPercent',
       ).toDouble(),
       isProfit: json['isProfit'] is bool ? json['isProfit'] as bool : false,
-      averageCostPerUnit: _requireNum(
+      averageCostPerUnit: MoneyParser.requireDecimal(
         json['averageCostPerUnit'],
         'averageCostPerUnit',
-      ).toDouble(),
-      totalUnitsAcquired: _requireNum(
+      ),
+      totalUnitsAcquired: MoneyParser.requireDecimal(
         json['totalUnitsAcquired'],
         'totalUnitsAcquired',
-      ).toDouble(),
-      currentUnitPrice: _requireNum(
+      ),
+      currentUnitPrice: MoneyParser.requireDecimal(
         json['currentUnitPrice'],
         'currentUnitPrice',
-      ).toDouble(),
+      ),
       cumulativeInflationPercent: _optionalNum(
         json['cumulativeInflationPercent'],
       )?.toDouble(),

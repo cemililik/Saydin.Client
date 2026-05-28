@@ -1,3 +1,4 @@
+import 'package:saydin/core/utils/money_parser.dart';
 import '../../domain/entities/reverse_what_if_result.dart';
 import '../../domain/entities/what_if_result.dart';
 
@@ -32,7 +33,10 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
             }
             return ChartPoint(
               date: _parseDate(e['date'], 'priceHistory.date'),
-              price: _requireNum(e['price'], 'priceHistory.price').toDouble(),
+              price: MoneyParser.requireDecimal(
+                e['price'],
+                'priceHistory.price',
+              ),
             );
           }).toList()
         : <ChartPoint>[];
@@ -45,24 +49,24 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
       ),
       buyDate: _parseDate(json['buyDate'], 'buyDate'),
       sellDate: _optionalDate(json['sellDate']),
-      buyPrice: _requireNum(json['buyPrice'], 'buyPrice').toDouble(),
-      sellPrice: _requireNum(json['sellPrice'], 'sellPrice').toDouble(),
-      requiredInvestmentTry: _requireNum(
+      buyPrice: MoneyParser.requireDecimal(json['buyPrice'], 'buyPrice'),
+      sellPrice: MoneyParser.requireDecimal(json['sellPrice'], 'sellPrice'),
+      requiredInvestmentTry: MoneyParser.requireDecimal(
         json['requiredInvestmentTry'],
         'requiredInvestmentTry',
-      ).toDouble(),
-      unitsAcquired: _requireNum(
+      ),
+      unitsAcquired: MoneyParser.requireDecimal(
         json['unitsAcquired'],
         'unitsAcquired',
-      ).toDouble(),
-      targetValueTry: _requireNum(
+      ),
+      targetValueTry: MoneyParser.requireDecimal(
         json['targetValueTry'],
         'targetValueTry',
-      ).toDouble(),
-      profitLossTry: _requireNum(
+      ),
+      profitLossTry: MoneyParser.requireDecimal(
         json['profitLossTry'],
         'profitLossTry',
-      ).toDouble(),
+      ),
       profitLossPercent: _requireNum(
         json['profitLossPercent'],
         'profitLossPercent',
@@ -82,9 +86,6 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
   }
 
   // ── Defensive parse yardımcıları ────────────────────────────────────────
-  // Bkz. `dca_response_model.dart` — aynı mantık. Bir kontrat kırılması
-  // tüm sayfayı çökertmek yerine `FormatException` ile `DioErrorMapper`
-  // üzerinden `BadResponseError` olarak ele alınır.
 
   static num _requireNum(Object? value, String field) {
     if (value is num) return value;

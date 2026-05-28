@@ -385,6 +385,42 @@ Color: Colors.green.shade700 / Colors.red.shade700
 Icon:  Icons.trending_up / Icons.trending_down
 ```
 
+### Para Tutarı için `Decimal`
+
+CLAUDE.md "Yasak Listesi": **para için `double`/`float` YASAK**. IEEE-754
+binary representation `0.1 + 0.2 != 0.3` üretir; finansal toplamada
+kullanıcı 1 kuruşluk fark görür ve güven kaybı yaşar.
+
+Domain katmanı:
+- Tüm para alanları (`buyPrice`, `finalValueTry`, `profitLossTry`,
+  `totalInvestedTry`, `cumulativeCostTry`, vb.) ve birim sayıları
+  (`unitsAcquired`, `cumulativeUnits`) `Decimal` tipinde.
+- Yüzde alanları (`*Percent`) display-only oldukları için `double`
+  olarak kalır — aggregasyon precision'a hassas değil.
+
+Veri katmanı:
+- JSON'dan parse: [`MoneyParser.requireDecimal`](../lib/core/utils/money_parser.dart)
+  hem `num` (int/double) hem `String` ("47010.34") kabul eder; boş /
+  invalid / NaN değer için `null` veya `FormatException`.
+
+Sunum katmanı:
+- `NumberFormat.currency` `double` ister — `.toDouble()` SADECE
+  display sırasında çağrılır. Precision loss `NumberFormat`'ın 2
+  ondalık yuvarlamasıyla görsel olarak yutulur.
+
+```dart
+// DOĞRU ✓ — Decimal entity, double display
+final WhatIfResult r = ...;
+Text(_tryFormatter.format(r.finalValueTry.toDouble()));
+
+// YANLIŞ ✗ — double entity field
+final double finalValue = ...;  // CLAUDE.md ihlali, precision riski
+```
+
+`Decimal` aritmetiği (`+`, `-`, `*`) `Decimal` döner; `/` `Rational`
+döner — bölümün double display'e indirilmesi gerekiyorsa `.toDouble()`
+ya da Decimal'a yeniden cast yapılır.
+
 ## Tema Sistemi
 
 > ADR: [ADR-012](../../../docs/decisions/ADR-012-client-settings-architecture.md)

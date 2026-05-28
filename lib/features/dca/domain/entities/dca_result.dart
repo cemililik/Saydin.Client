@@ -1,12 +1,19 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 
+/// Bir DCA periyotunun satın alımı.
+///
+/// Para alanları (`price`, `cumulativeCostTry`, `cumulativeValueTry`) ve
+/// birim sayıları (`unitsAcquired`, `cumulativeUnits`) `Decimal` —
+/// CLAUDE.md "para için double YASAK". Birim sayıları da Decimal çünkü
+/// fiyatla çarpıldıklarında final TL tutarı belirlerler.
 class DcaPurchase extends Equatable {
   final DateTime date;
-  final double price;
-  final double unitsAcquired;
-  final double cumulativeUnits;
-  final double cumulativeCostTry;
-  final double cumulativeValueTry;
+  final Decimal price;
+  final Decimal unitsAcquired;
+  final Decimal cumulativeUnits;
+  final Decimal cumulativeCostTry;
+  final Decimal cumulativeValueTry;
 
   const DcaPurchase({
     required this.date,
@@ -28,10 +35,11 @@ class DcaPurchase extends Equatable {
   ];
 }
 
+/// DCA grafiği için bir noktadaki yatırım toplamı + değeri.
 class DcaChartPoint extends Equatable {
   final DateTime date;
-  final double cumulativeCost;
-  final double cumulativeValue;
+  final Decimal cumulativeCost;
+  final Decimal cumulativeValue;
 
   const DcaChartPoint({
     required this.date,
@@ -43,22 +51,26 @@ class DcaChartPoint extends Equatable {
   List<Object?> get props => [date, cumulativeCost, cumulativeValue];
 }
 
+/// "Düzenli yatırım simülasyonu" (Dollar-Cost Averaging) sonucu.
+///
+/// Yüzde alanları (`*Percent`) display-only olduğu için `double`; para
+/// ve birim alanları `Decimal`.
 class DcaResult extends Equatable {
   final String assetSymbol;
   final String assetDisplayName;
   final DateTime startDate;
   final DateTime endDate;
   final String period;
-  final double periodicAmount;
+  final Decimal periodicAmount;
   final int totalPurchases;
-  final double totalInvestedTry;
-  final double currentValueTry;
-  final double profitLossTry;
+  final Decimal totalInvestedTry;
+  final Decimal currentValueTry;
+  final Decimal profitLossTry;
   final double profitLossPercent;
   final bool isProfit;
-  final double averageCostPerUnit;
-  final double totalUnitsAcquired;
-  final double currentUnitPrice;
+  final Decimal averageCostPerUnit;
+  final Decimal totalUnitsAcquired;
+  final Decimal currentUnitPrice;
   // Enflasyon düzeltmesi — backend'den null gelirse özellik kapalıydı
   final double? cumulativeInflationPercent;
   final double? realProfitLossPercent;

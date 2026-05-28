@@ -223,15 +223,15 @@ class _ResultCardState extends State<ResultCard>
                 // ── Detaylar ──────────────────────────────────────────────
                 _Row(
                   l10n.resultBuyPrice,
-                  _tryFormatter.format(result.buyPrice),
+                  _tryFormatter.format(result.buyPrice.toDouble()),
                 ),
                 _Row(
                   l10n.resultSellPrice,
-                  _tryFormatter.format(result.sellPrice),
+                  _tryFormatter.format(result.sellPrice.toDouble()),
                 ),
                 _Row(
                   l10n.resultUnitsAcquired,
-                  _formatUnits(result.unitsAcquired),
+                  _formatUnits(result.unitsAcquired.toDouble()),
                 ),
                 _Row(l10n.resultDuration, _formatDuration(l10n)),
 
@@ -280,10 +280,12 @@ class _ResultCardState extends State<ResultCard>
                   ),
                   _AnimatedRow(
                     l10n.realProfitLoss,
-                    (result.initialValueTry *
-                            result.realProfitLossPercent! /
-                            100)
-                        .toDouble(),
+                    // Display'e geçmeden double'a çevir; precision loss
+                    // burada tolere edilir çünkü NumberFormat.currency
+                    // zaten 2 ondalık haneye yuvarlar.
+                    result.initialValueTry.toDouble() *
+                        result.realProfitLossPercent! /
+                        100,
                     formatter: _trySignedFormatter,
                     valueColor: result.realProfitLossPercent! >= 0
                         ? AppColors.profit

@@ -106,7 +106,10 @@ class _PortfolioPageState extends State<PortfolioPage> {
         ),
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
-        amount: state.result.totalInitialValueTry,
+        // ScenarioSaveRequested.amount num bekliyor; Decimal precision
+        // sadece display-side için kritik, save → backend yolunda zaten
+        // num üzerinden geçer.
+        amount: state.result.totalInitialValueTry.toDouble(),
         amountType: 'try',
         type: ScenarioType.portfolio,
         extraData: {

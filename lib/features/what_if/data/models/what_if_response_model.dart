@@ -1,3 +1,4 @@
+import 'package:saydin/core/utils/money_parser.dart';
 import '../../domain/entities/what_if_result.dart';
 
 class WhatIfResponseModel extends WhatIfResult {
@@ -28,7 +29,7 @@ class WhatIfResponseModel extends WhatIfResult {
       final map = e as Map<String, dynamic>;
       return ChartPoint(
         date: DateTime.parse(map['date'] as String),
-        price: (map['price'] as num).toDouble(),
+        price: MoneyParser.requireDecimal(map['price'], 'priceHistory.price'),
       );
     }).toList();
 
@@ -39,12 +40,24 @@ class WhatIfResponseModel extends WhatIfResult {
       sellDate: json['sellDate'] != null
           ? DateTime.parse(json['sellDate'] as String)
           : null,
-      buyPrice: (json['buyPrice'] as num).toDouble(),
-      sellPrice: (json['sellPrice'] as num).toDouble(),
-      unitsAcquired: (json['unitsAcquired'] as num).toDouble(),
-      initialValueTry: (json['initialValueTry'] as num).toDouble(),
-      finalValueTry: (json['finalValueTry'] as num).toDouble(),
-      profitLossTry: (json['profitLossTry'] as num).toDouble(),
+      buyPrice: MoneyParser.requireDecimal(json['buyPrice'], 'buyPrice'),
+      sellPrice: MoneyParser.requireDecimal(json['sellPrice'], 'sellPrice'),
+      unitsAcquired: MoneyParser.requireDecimal(
+        json['unitsAcquired'],
+        'unitsAcquired',
+      ),
+      initialValueTry: MoneyParser.requireDecimal(
+        json['initialValueTry'],
+        'initialValueTry',
+      ),
+      finalValueTry: MoneyParser.requireDecimal(
+        json['finalValueTry'],
+        'finalValueTry',
+      ),
+      profitLossTry: MoneyParser.requireDecimal(
+        json['profitLossTry'],
+        'profitLossTry',
+      ),
       profitLossPercent: (json['profitLossPercent'] as num).toDouble(),
       isProfit: json['isProfit'] as bool,
       priceHistory: priceHistory,

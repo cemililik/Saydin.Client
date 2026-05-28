@@ -67,7 +67,10 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
           s.assetSymbol == event.assetSymbol &&
           _isSameDay(s.buyDate, event.buyDate) &&
           _isSameDay(s.sellDate, event.sellDate) &&
-          s.amount == event.amount &&
+          // `s.amount` Decimal, `event.amount` num (form input).
+          // `.toDouble()` ile karşılaştır — kullanıcının girdiği tutar
+          // double-exact (örn. 47010.34) olduğu için precision farkı yok.
+          s.amount.toDouble() == event.amount &&
           s.amountType == event.amountType,
     );
     if (isDuplicate) {

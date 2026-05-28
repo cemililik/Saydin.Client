@@ -314,14 +314,18 @@ class _DcaPageState extends State<DcaPage> {
                                     assetDisplayName: result.assetDisplayName,
                                     buyDate: result.startDate,
                                     sellDate: result.endDate,
-                                    amount: result.periodicAmount,
+                                    // ScenarioSaveRequested num bekliyor;
+                                    // tutar zaten user-input boundary,
+                                    // Decimal → double burada güvenli.
+                                    amount: result.periodicAmount.toDouble(),
                                     amountType: 'try',
                                     type: ScenarioType.dca,
                                     extraData: {
                                       'includeInflation':
                                           formInput.includeInflation,
                                       'period': result.period,
-                                      'periodicAmount': result.periodicAmount,
+                                      'periodicAmount': result.periodicAmount
+                                          .toDouble(),
                                     },
                                   ),
                                 );

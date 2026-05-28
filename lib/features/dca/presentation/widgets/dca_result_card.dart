@@ -155,18 +155,18 @@ class _DcaResultCardState extends State<DcaResultCard>
                 // Ana metrikler
                 _AnimatedRow(
                   l10n.dcaTotalInvested,
-                  result.totalInvestedTry,
+                  result.totalInvestedTry.toDouble(),
                   formatter: _tryFormatter.format,
                 ),
                 _AnimatedRow(
                   l10n.dcaCurrentValue,
-                  result.currentValueTry,
+                  result.currentValueTry.toDouble(),
                   formatter: _tryFormatter.format,
                   bold: true,
                 ),
                 _AnimatedRow(
                   result.isProfit ? l10n.profitLabel : l10n.lossLabel,
-                  result.profitLossTry,
+                  result.profitLossTry.toDouble(),
                   formatter: _trySignedFormatter,
                   valueColor: color,
                 ),
@@ -184,20 +184,20 @@ class _DcaResultCardState extends State<DcaResultCard>
                 _Row(l10n.dcaPeriodLabel, periodLabel),
                 _Row(
                   l10n.dcaPeriodicAmount,
-                  _tryFormatter.format(result.periodicAmount),
+                  _tryFormatter.format(result.periodicAmount.toDouble()),
                 ),
                 _Row(l10n.dcaTotalPurchases, result.totalPurchases.toString()),
                 _Row(
                   l10n.dcaAvgCost,
-                  _tryFormatter.format(result.averageCostPerUnit),
+                  _tryFormatter.format(result.averageCostPerUnit.toDouble()),
                 ),
                 _Row(
                   l10n.dcaTotalUnits,
-                  _formatUnits(result.totalUnitsAcquired),
+                  _formatUnits(result.totalUnitsAcquired.toDouble()),
                 ),
                 _Row(
                   l10n.dcaCurrentPrice,
-                  _tryFormatter.format(result.currentUnitPrice),
+                  _tryFormatter.format(result.currentUnitPrice.toDouble()),
                 ),
                 _Row(l10n.resultDuration, _formatDuration(l10n)),
 

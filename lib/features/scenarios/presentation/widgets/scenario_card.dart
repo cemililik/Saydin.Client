@@ -121,11 +121,12 @@ class _WhatIfCard extends StatelessWidget {
   static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
 
   String _formatAmount() {
+    final amount = scenario.amount.toDouble();
     if (scenario.amountType == 'try') {
-      return _tryFormatter.format(scenario.amount);
+      return _tryFormatter.format(amount);
     }
     final suffix = scenario.amountType == 'grams' ? 'gram' : 'adet';
-    return '${NumberFormat.decimalPattern('tr_TR').format(scenario.amount)} $suffix';
+    return '${NumberFormat.decimalPattern('tr_TR').format(amount)} $suffix';
   }
 
   @override
@@ -317,7 +318,7 @@ class _DcaCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${_tryFormatter.format(scenario.amount)} / $periodLabel',
+                          '${_tryFormatter.format(scenario.amount.toDouble())} / $periodLabel',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -540,7 +541,7 @@ class _PortfolioCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _tryFormatter.format(scenario.amount),
+                          _tryFormatter.format(scenario.amount.toDouble()),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),

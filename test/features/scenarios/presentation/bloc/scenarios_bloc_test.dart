@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
@@ -33,7 +34,7 @@ void main() {
     assetDisplayName: 'Dolar/TL',
     buyDate: DateTime(2020, 1, 1),
     sellDate: DateTime(2021, 1, 1),
-    amount: 10000,
+    amount: Decimal.fromInt(10000),
     amountType: 'try',
     createdAt: DateTime(2026, 1, 1),
   );
@@ -113,7 +114,7 @@ void main() {
             assetDisplayName: 'Dolar/TL',
             buyDate: DateTime(2020, 1, 1),
             sellDate: DateTime(2021, 1, 1),
-            amount: 5000, // farklı miktar
+            amount: Decimal.fromInt(5000), // farklı miktar
             amountType: 'try',
             createdAt: DateTime(2026, 1, 1),
           ),
@@ -160,7 +161,7 @@ void main() {
             assetSymbol: 'BTC',
             assetDisplayName: 'Bitcoin',
             buyDate: DateTime(2021, 1, 1),
-            amount: 5000,
+            amount: Decimal.fromInt(5000),
             amountType: 'try',
             createdAt: DateTime(2026, 1, 1),
           ),

@@ -172,7 +172,10 @@ class _MainShellState extends State<MainShell> {
             assetSymbol: scenario.assetSymbol,
             buyDate: scenario.buyDate,
             sellDate: scenario.sellDate,
-            amount: scenario.amount,
+            // Replay event num bekliyor (form input num); kullanıcı
+            // tarafından girilmiş tutar zaten double-exact (örn. 47010.34)
+            // — Decimal → double burada precision farkı yaratmaz.
+            amount: scenario.amount.toDouble(),
             amountType: scenario.amountType,
             includeInflation:
                 (scenario.extraData?['includeInflation'] as bool?) ?? false,
@@ -188,7 +191,7 @@ class _MainShellState extends State<MainShell> {
             symbols: scenario.assetSymbol.split(','),
             buyDate: scenario.buyDate,
             sellDate: scenario.sellDate,
-            amount: scenario.amount,
+            amount: scenario.amount.toDouble(),
             includeInflation:
                 (scenario.extraData?['includeInflation'] as bool?) ?? false,
           ),
@@ -246,7 +249,8 @@ class _MainShellState extends State<MainShell> {
             startDate: scenario.buyDate,
             endDate: scenario.sellDate,
             periodicAmount:
-                (extra?['periodicAmount'] as num?) ?? scenario.amount,
+                (extra?['periodicAmount'] as num?) ??
+                scenario.amount.toDouble(),
             period: (extra?['period'] as String?) ?? 'monthly',
             amountType: scenario.amountType,
             includeInflation: (extra?['includeInflation'] as bool?) ?? false,
