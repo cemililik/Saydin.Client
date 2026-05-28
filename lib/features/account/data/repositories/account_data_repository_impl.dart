@@ -89,14 +89,20 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
   @override
   Future<bool> requestBackendDeletion() async {
     try {
-      await _dio.delete<void>('/v1/account');
-      return true;
+      final response = await _dio.delete<void>('/v1/account');
+      final status = response.statusCode ?? 0;
+      // Sadece 2xx → gerçekten silindi. 404 ("endpoint yok / kullanıcı yok"),
+      // 501 ("not implemented") veya başka non-2xx durumlarda backend hiçbir
+      // şey kaydetmediği için kullanıcıya "Success" demek KVKK Madde 7
+      // ("silme talebi 30 gün içinde sonuçlandırılmalı") ile uyumsuz olur.
+      // Kullanıcı PartialSuccess mesajı görmeli ve iletisim@saydin.app
+      // üzerinden takip etmeli.
+      return status >= 200 && status < 300;
     } on DioException catch (e) {
-      // Backend hazır değil (404) veya not implemented (501) ise yerel silme
-      // yeterlidir — sessizce başarısız say.
-      final status = e.response?.statusCode;
-      if (status == 404 || status == 501) return true;
-      return false;
+      // Dio response döndüyse status'a bak (interceptor/non-2xx exception'a
+      // çevirebilir). Yine sadece 2xx başarı sayılır.
+      final status = e.response?.statusCode ?? 0;
+      return status >= 200 && status < 300;
     } catch (_) {
       return false;
     }

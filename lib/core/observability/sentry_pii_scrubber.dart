@@ -114,6 +114,13 @@ class SentryPiiScrubber {
         )?.map((k, v) => MapEntry(k, v?.toString() ?? '')),
         // ignore: deprecated_member_use
         extra: _scrubMap(event.extra),
+        // SentryEvent branch'iyle simetri: transaction'larda da exception/
+        // fingerprint alanları PII içerebilir (örn child span'lerin error
+        // payload'ları, custom fingerprint stringleri).
+        fingerprint: event.fingerprint?.map(redactText).toList(growable: false),
+        exceptions: event.exceptions
+            ?.map(_scrubException)
+            .toList(growable: false),
         user: _scrubUser(event.user),
         request: event.request == null ? null : _scrubRequest(event.request!),
       );

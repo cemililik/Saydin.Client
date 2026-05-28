@@ -15,7 +15,7 @@ void main() {
   });
 
   group('OnboardingRepositoryImpl.recordLegalAcceptance', () {
-    test('version >= 1 ise prefs.setInt çağrılır', () async {
+    test('recordLegalAcceptance_validVersion_callsPrefsSetInt', () async {
       when(() => prefs.setInt(any(), any())).thenAnswer((_) async {});
 
       await repo.recordLegalAcceptance(1);
@@ -23,20 +23,26 @@ void main() {
       verify(() => prefs.setInt('legal_acceptance_version', 1)).called(1);
     });
 
-    test('version 0 → ArgumentError, prefs çağrılmaz', () async {
-      expect(
-        () => repo.recordLegalAcceptance(0),
-        throwsA(isA<ArgumentError>()),
-      );
-      verifyNever(() => prefs.setInt(any(), any()));
-    });
+    test(
+      'recordLegalAcceptance_zero_throwsArgumentError_noPrefsCall',
+      () async {
+        expect(
+          () => repo.recordLegalAcceptance(0),
+          throwsA(isA<ArgumentError>()),
+        );
+        verifyNever(() => prefs.setInt(any(), any()));
+      },
+    );
 
-    test('version negatif → ArgumentError, prefs çağrılmaz', () async {
-      expect(
-        () => repo.recordLegalAcceptance(-3),
-        throwsA(isA<ArgumentError>()),
-      );
-      verifyNever(() => prefs.setInt(any(), any()));
-    });
+    test(
+      'recordLegalAcceptance_negative_throwsArgumentError_noPrefsCall',
+      () async {
+        expect(
+          () => repo.recordLegalAcceptance(-3),
+          throwsA(isA<ArgumentError>()),
+        );
+        verifyNever(() => prefs.setInt(any(), any()));
+      },
+    );
   });
 }

@@ -18,9 +18,11 @@ abstract class AccountDataRepository {
   Future<void> wipeLocalData();
 
   /// Backend'e en iyi-çaba (best-effort) hesap silme talebi gönderir.
-  /// Backend hazır olmadığında veya `404`/`501` döndüğünde [Future]
-  /// sessizce `true` döner (silme zaten yapılmış / endpoint henüz yoksa
-  /// yerel wipe yeterli kabul edilir). Başka hata varsa `false` döner.
+  /// Sadece **2xx** yanıt için `true` döner ("kayıt gerçekten silindi").
+  /// 404, 501 veya başka non-2xx durumlarda (`backend hazır değil`,
+  /// `endpoint not implemented`, `network`) `false` döner — UI bunu
+  /// `AccountDeletionPartialSuccess` olarak gösterir ve kullanıcı
+  /// iletisim@saydin.app üzerinden takip eder.
   /// Hiçbir koşulda exception fırlatmaz — yerel silme her zaman
   /// önceliklidir.
   Future<bool> requestBackendDeletion();
