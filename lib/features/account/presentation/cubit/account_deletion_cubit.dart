@@ -36,8 +36,20 @@ class AccountDeletionCubit extends Cubit<AccountDeletionState> {
     if (state is AccountDeletionInProgress) return;
     emit(const AccountDeletionInProgress());
 
-    // 1) Backend best-effort (yerel silme her zaman kazanır)
-    final backendOk = await _repository.requestBackendDeletion();
+    // 1) Backend best-effort (yerel silme her zaman kazanır).
+    // Repository sözleşmesi throw etmemeyi garanti eder; yine de
+    // implementation değişikliklerine karşı defansif try/catch koyarız —
+    // beklenmedik bir exception yerel wipe'ı engellememeli.
+    var backendOk = false;
+    try {
+      backendOk = await _repository.requestBackendDeletion();
+    } catch (e, st) {
+      await _reporter.report(
+        e,
+        st,
+        context: 'account_deletion_backend_request',
+      );
+    }
     await _reporter.recordAction(
       'settings.account_delete_requested',
       category: 'settings',

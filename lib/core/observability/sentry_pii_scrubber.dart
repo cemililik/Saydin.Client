@@ -90,8 +90,34 @@ class SentryPiiScrubber {
 
   /// Sentry [event]'i için tam scrub. `null` döndürmek event'in atılmasını sağlar
   /// (örn telemetri tamamen reddediliyorsa). Şu an reddetme yok, sadece scrub.
+  ///
+  /// `SentryTransaction extends SentryEvent`; ancak `SentryEvent.copyWith` tip
+  /// slicing yapar (`SentryTransaction` runtime tipini korumaz). Bu nedenle
+  /// transaction'ları `SentryTransaction.copyWith` üzerinden scrub'larız ve
+  /// kendi tipinde döndürürüz — yoksa `beforeSendTransaction` tüm
+  /// transaction'ları sessizce drop eder ve performance tracing devre dışı kalır.
   SentryEvent? scrubEvent(SentryEvent event, Hint hint) {
     _stripScreenshotAndViewHierarchy(hint);
+
+    if (event is SentryTransaction) {
+      return event.copyWith(
+        transaction: event.transaction == null
+            ? null
+            : redactText(event.transaction!),
+        breadcrumbs: event.breadcrumbs
+            ?.map((b) => scrubBreadcrumb(b, hint))
+            .whereType<Breadcrumb>()
+            .toList(growable: false),
+        contexts: _scrubContexts(event.contexts),
+        tags: _scrubMap(
+          event.tags,
+        )?.map((k, v) => MapEntry(k, v?.toString() ?? '')),
+        // ignore: deprecated_member_use
+        extra: _scrubMap(event.extra),
+        user: _scrubUser(event.user),
+        request: event.request == null ? null : _scrubRequest(event.request!),
+      );
+    }
 
     return event.copyWith(
       message: _scrubMessage(event.message),
@@ -153,10 +179,18 @@ class SentryPiiScrubber {
         .replaceAll(_largeNumber, '<NUMBER>')
         .replaceAllMapped(_assetSymbol, (m) {
           final s = m.group(0)!;
-          if (_safeAllCaps.contains(s)) return s;
+          // Composite kontrolü: `USER-AGENT`, `HTTP-GET` gibi birleşik
+          // teknik terimler `_safeAllCaps`'te tek tek var ama birleşik
+          // hâlde yok. Pair'i `/` veya `-` üzerinden böl; tüm parçaları
+          // güvenli ise mesajı sansürleme.
+          final parts = s.split(_assetSymbolSeparator);
+          if (parts.every(_safeAllCaps.contains)) return s;
           return '<SYMBOL>';
         });
   }
+
+  /// `_assetSymbol` pattern'inde kullanılan ayraç (`/` veya `-`).
+  static final RegExp _assetSymbolSeparator = RegExp(r'[/-]');
 
   // ── İç implementasyon ────────────────────────────────────────────────────
 
@@ -208,6 +242,14 @@ class SentryPiiScrubber {
     'TR',
     'EN',
     'US',
+    // `User-Agent`, `X-Forwarded-For` gibi header isimlerinde sık geçen
+    // composite parça'lar. `_assetSymbol` regex'i tüm parçalar safe ise
+    // birleşiği de korur.
+    'USER',
+    'AGENT',
+    'X',
+    'FORWARDED',
+    'FOR',
   };
 
   /// Defense-in-depth: `options.attachScreenshot=false` olsa bile,
@@ -260,13 +302,36 @@ class SentryPiiScrubber {
     if (input == null) return null;
     final out = <String, Object?>{};
     for (final entry in input.entries) {
-      if (allowedKeys.contains(entry.key)) {
-        out[entry.key] = _scrubValue(entry.value);
-      } else {
+      if (!allowedKeys.contains(entry.key)) {
         out[entry.key] = '<REDACTED>';
+        continue;
       }
+      // `endpoint` özel davranış: scheme/host atılır, query/fragment
+      // tamamen kesilir. Call-site sözleşmesi "path-only" diyordu ama
+      // scrubber'da enforce etmek tek savunma hattı oluşturuyor — query
+      // string'in identifier sızdırma riskini elimine eder.
+      if (entry.key == 'endpoint') {
+        out[entry.key] = _scrubEndpoint(entry.value);
+        continue;
+      }
+      out[entry.key] = _scrubValue(entry.value);
     }
     return out;
+  }
+
+  /// `endpoint` allowlist anahtarı için path-only normalize:
+  /// - Query (`?...`) ve fragment (`#...`) tamamen kesilir.
+  /// - Absolute URL ise scheme/host atılır, sadece path döner.
+  /// - String olmayan değer için `<REDACTED>` (tip uyumsuzluğu zaten bug).
+  Object? _scrubEndpoint(Object? value) {
+    if (value is! String) return '<REDACTED>';
+    final withoutFragment = value.split('#').first;
+    final withoutQuery = withoutFragment.split('?').first;
+    final uri = Uri.tryParse(withoutQuery);
+    if (uri != null && (uri.hasScheme || uri.hasAuthority)) {
+      return uri.path.isEmpty ? '/' : uri.path;
+    }
+    return withoutQuery;
   }
 
   Object? _scrubValue(Object? value) {

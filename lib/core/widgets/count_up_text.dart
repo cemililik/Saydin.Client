@@ -18,7 +18,11 @@ class CountUpText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: value),
+      // Explicit `Tween<double>(begin: 0.0, ...)`: `Tween(begin: 0, end: value)`
+      // Dart inference'ına göre `Tween<num>` çıkarılabilir; `TweenAnimationBuilder<double>`
+      // bunu kabul etmez ve `strict-casts: true` altında derleme hatası
+      // riski taşır. Explicit tip defansiftir ve niyeti netleştirir.
+      tween: Tween<double>(begin: 0.0, end: value),
       duration: duration,
       curve: Curves.easeOutCubic,
       builder: (context, animatedValue, _) {

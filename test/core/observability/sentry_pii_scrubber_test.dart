@@ -34,6 +34,15 @@ void main() {
       expect(scrubber.redactText('pair=BTC-USD'), 'pair=<SYMBOL>');
     });
 
+    test('Composite teknik terim (USER-AGENT, HTTP-GET) korunur', () {
+      // `_assetSymbol` regex'i pair'i yakalar ama split sonra
+      // tüm parçalar `_safeAllCaps`'te olduğu için orijinal korunur.
+      // Önceki davranış: pair'in tamamı kümede olmadığı için sansürlenir
+      // (false positive). Şimdi split kontrolü ile düzeltildi.
+      expect(scrubber.redactText('header=USER-AGENT'), 'header=USER-AGENT');
+      expect(scrubber.redactText('verb=HTTP-GET'), 'verb=HTTP-GET');
+    });
+
     test('Güvenli ALL_CAPS sözcükleri korur', () {
       expect(
         scrubber.redactText('HTTP GET API JSON OK BLOC'),
@@ -96,17 +105,28 @@ void main() {
     });
 
     test(
-      'Allowlist anahtar değerlerinde PII pattern\'ları da scrub edilir',
+      'endpoint anahtarı için path-only enforcement (query/fragment yutulur)',
       () {
         final filtered = scrubber.filterAllowedKeys({
-          'endpoint': '/v1/what-if/calculate?date=2020-01-15&amount=47010',
+          'endpoint': '/v1/what-if/calculate?date=2020-01-15&amount=47010#x',
         });
-        // Query string scrubber tarafından korunmuyor; URL içindeki tarih ve
-        // sayı pattern'leri sansürlenir.
-        expect(filtered!['endpoint'], contains('<DATE>'));
-        expect(filtered['endpoint'], contains('<NUMBER>'));
+        // Query string ve fragment scrubber içinde tamamen kesilir; sadece
+        // path döner. Bu, identifier sızıntısına karşı in-depth savunma.
+        expect(filtered!['endpoint'], '/v1/what-if/calculate');
       },
     );
+
+    test('endpoint absolute URL\'de scheme + host atılır', () {
+      final filtered = scrubber.filterAllowedKeys({
+        'endpoint': 'https://api.saydin.app/v1/account?id=42',
+      });
+      expect(filtered!['endpoint'], '/v1/account');
+    });
+
+    test('endpoint non-string değer için <REDACTED>', () {
+      final filtered = scrubber.filterAllowedKeys({'endpoint': 42});
+      expect(filtered!['endpoint'], '<REDACTED>');
+    });
 
     test('null map için null döner', () {
       expect(scrubber.filterAllowedKeys(null), isNull);

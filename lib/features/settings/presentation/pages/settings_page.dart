@@ -56,12 +56,15 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Türkçe-aware uppercase yalnızca TR locale'de uygulanır. EN locale'de
+    // `toUpperCaseTr('Preferences')` → `'PREFERİNCES'` (yanlış dotted İ)
+    // üretir. Locale kontrolü ile sadece TR'de Türkçe büyütme kullanılır.
+    final isTurkish = Localizations.localeOf(context).languageCode == 'tr';
+    final upperLabel = isTurkish ? toUpperCaseTr(label) : label.toUpperCase();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
-        // Türkçe-aware uppercase: `'Tercihler'.toUpperCase()` Dart'ta
-        // `'TERCIHLER'` (dotless I) döner; doğru karşılık `'TERCİHLER'`.
-        toUpperCaseTr(label),
+        upperLabel,
         style: theme.textTheme.labelSmall?.copyWith(
           color: theme.colorScheme.primary,
           fontWeight: FontWeight.w700,

@@ -61,20 +61,28 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
   /// `ShareCardRenderer`'ın `getTemporaryDirectory()/saydin_share_*.png`
   /// dosyalarını siler. Paylaşım kartları finansal sonuç ekranının görsel
   /// kopyası olduğu için cihazda kalmamalıdır.
+  ///
+  /// "Attempt all deletes" politikası: bir dosya silinemese de geri kalanı
+  /// silmeye devam edilir. Ancak son raporlama dürüst olmak zorunda — bir
+  /// veya birden çok dosya başarısız olduysa toplu `AccountWipeException`
+  /// fırlatılır ki `wipeLocalData` partial-failure'ı kullanıcıya bildirebilsin.
   Future<void> _wipeShareCardCache() async {
     final tempDir = await getTemporaryDirectory();
     if (!tempDir.existsSync()) return;
-    final entries = tempDir.listSync(followLinks: false);
-    for (final entry in entries) {
+    final fileErrors = <Object>[];
+    await for (final entry in tempDir.list(followLinks: false)) {
       if (entry is! File) continue;
       final name = entry.uri.pathSegments.last;
       if (name.startsWith('saydin_share_') && name.endsWith('.png')) {
         try {
           await entry.delete();
-        } catch (_) {
-          // Tek dosya silinemese de geri kalanı silmeye devam et.
+        } catch (e) {
+          fileErrors.add(e);
         }
       }
+    }
+    if (fileErrors.isNotEmpty) {
+      throw AccountWipeException(fileErrors);
     }
   }
 

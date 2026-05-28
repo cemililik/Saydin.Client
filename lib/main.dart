@@ -7,7 +7,11 @@ import 'core/observability/sentry_pii_scrubber.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('tr_TR');
+  // `null` ile tüm desteklenen locale verilerini yükler. EN locale'de
+  // `DateFormat.yMMMMd('en_US')` çağrısı (örn `LegalDocumentPage`) data
+  // yüklenmemişse runtime'da çöker. Sadece `'tr_TR'` yüklemek bu nedenle
+  // EN tarafını kırıyordu.
+  await initializeDateFormatting();
   await configureDependencies();
 
   const scrubber = SentryPiiScrubber();

@@ -151,4 +151,35 @@ void main() {
       verifyNever(() => repository.wipeLocalData());
     },
   );
+
+  blocTest<AccountDeletionCubit, AccountDeletionState>(
+    'requestBackendDeletion BEKLENMEDİK ŞEKİLDE throw etse de yerel wipe çalışır',
+    setUp: () {
+      // Repository sözleşmesi throw etmemeyi söylüyor; cubit yine de
+      // defansif olmalı. Burada implementation'ın sözleşmeyi ihlal ettiği
+      // bir durumu simüle ediyoruz.
+      when(
+        () => repository.requestBackendDeletion(),
+      ).thenThrow(Exception('unexpected'));
+      when(() => repository.wipeLocalData()).thenAnswer((_) async {});
+    },
+    build: build,
+    act: (cubit) => cubit.requestDeletion(),
+    expect: () => [
+      isA<AccountDeletionInProgress>(),
+      // backendOk = false (exception sonrası); yerel wipe başarılı → Partial
+      isA<AccountDeletionPartialSuccess>(),
+    ],
+    verify: (_) async {
+      verify(() => repository.wipeLocalData()).called(1);
+      // Hem backend exception hem account_deletion context'leri raporlanır
+      expect(
+        reporter.reports.length,
+        1,
+        reason: 'Sadece beklenmedik backend exception raporlanır',
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(resetCount, 1);
+    },
+  );
 }

@@ -22,14 +22,20 @@ void main() {
       expect(doc.sections.first.body, contains('Data Controller'));
     });
 
-    test(
-      'Bilinmeyen locale için EN fallback değil — TR locale prefix kontrolü',
-      () {
-        // 'tr' prefix ile başlamayan her şey EN. Doğru davranış: 'fr' → EN.
-        final doc = repo.load(LegalDocumentType.privacyPolicy, 'fr_FR');
-        expect(doc.title, 'Privacy Policy');
-      },
-    );
+    test('Bilinmeyen locale için TR fallback (sözleşme: only en → EN)', () {
+      // Sözleşme: `en` prefix ile başlamayan her locale TR'ye düşer.
+      // 'fr_FR' → TR (Türkiye ana pazar; bilinmeyen locale'de yasal metin
+      // Türkçe daha doğru fallback).
+      final doc = repo.load(LegalDocumentType.privacyPolicy, 'fr_FR');
+      expect(doc.title, 'Gizlilik Politikası');
+    });
+
+    test('Sadece `en` prefix EN seçer (en, en_US, en_GB)', () {
+      for (final loc in ['en', 'en_US', 'en_GB', 'EN']) {
+        final doc = repo.load(LegalDocumentType.privacyPolicy, loc);
+        expect(doc.title, 'Privacy Policy', reason: 'locale=$loc');
+      }
+    });
 
     test('Türkçe locale için Türkçe Privacy döner', () {
       final doc = repo.load(LegalDocumentType.privacyPolicy, 'tr');

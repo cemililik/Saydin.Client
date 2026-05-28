@@ -10,12 +10,16 @@ class LegalRepositoryImpl implements LegalRepository {
 
   @override
   LegalDocument load(LegalDocumentType type, String locale) {
-    final isTr = locale.toLowerCase().startsWith('tr');
+    // Sözleşme: EN sadece açıkça `en` ile başladığında seçilir; geri kalan
+    // tüm locale'ler (TR, bilinmeyen, future locales) TR'ye düşer.
+    // Türkiye ana pazar olduğu için bilinmeyen bir locale'de KVKK metnini
+    // Türkçe göstermek hem yasal hem UX olarak doğru fallback.
+    final isEnglish = locale.toLowerCase().startsWith('en');
     return switch (type) {
       LegalDocumentType.kvkkDisclosure =>
-        isTr ? kvkkDisclosureTr : kvkkDisclosureEn,
+        isEnglish ? kvkkDisclosureEn : kvkkDisclosureTr,
       LegalDocumentType.privacyPolicy =>
-        isTr ? privacyPolicyTr : privacyPolicyEn,
+        isEnglish ? privacyPolicyEn : privacyPolicyTr,
     };
   }
 }

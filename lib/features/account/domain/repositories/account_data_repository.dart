@@ -18,8 +18,10 @@ abstract class AccountDataRepository {
   Future<void> wipeLocalData();
 
   /// Backend'e en iyi-çaba (best-effort) hesap silme talebi gönderir.
-  /// Backend hazır olmadığında veya 404 dönmediğinde [Future] sessizce
-  /// `true` döner; başka hata varsa `false` döner. Hiçbir koşulda
-  /// exception fırlatmaz — yerel silme her zaman önceliklidir.
+  /// Backend hazır olmadığında veya `404`/`501` döndüğünde [Future]
+  /// sessizce `true` döner (silme zaten yapılmış / endpoint henüz yoksa
+  /// yerel wipe yeterli kabul edilir). Başka hata varsa `false` döner.
+  /// Hiçbir koşulda exception fırlatmaz — yerel silme her zaman
+  /// önceliklidir.
   Future<bool> requestBackendDeletion();
 }

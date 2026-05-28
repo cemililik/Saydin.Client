@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:saydin/core/di/injection.dart';
+import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/features/legal/domain/entities/legal_document.dart';
 import 'package:saydin/features/legal/domain/repositories/legal_repository.dart';
@@ -24,6 +25,11 @@ class _OnboardingPageState extends State<OnboardingPage>
     with TickerProviderStateMixin {
   final _controller = PageController();
   int _currentPage = 0;
+
+  /// Onboarding tamamlama re-entrancy guard. Son sayfada "Hemen Dene"
+  /// butonu hızlı çift-tıklanırsa veya CTA `pop` öncesi tekrar tetiklenirse,
+  /// `recordLegalAcceptance` ve `widget.onComplete()` ikinci kez çalışmasın.
+  bool _isCompleting = false;
   static const _pageCount = 6;
 
   late final AnimationController _iconPulse;
@@ -51,26 +57,43 @@ class _OnboardingPageState extends State<OnboardingPage>
     super.dispose();
   }
 
-  void _nextPage() {
+  Future<void> _nextPage() async {
     if (_currentPage < _pageCount - 1) {
-      _controller.nextPage(
+      await _controller.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
       );
       return;
     }
-    HapticFeedback.mediumImpact();
-    unawaited(_completeWithLegalAcceptance());
+    await HapticFeedback.mediumImpact();
+    await _completeWithLegalAcceptance();
   }
 
+  /// Son sayfada "Hemen Dene" → implicit KVKK / Gizlilik Politikası kabul.
+  /// Yasal metinler ekranda link olarak gösterilmektedir; butona basmak
+  /// KVKK Madde 5/2(c) "açık rıza" kapsamında kabul sayılır.
+  ///
+  /// İki gariplikle dikkat: (1) çift-tap re-entrancy → `_isCompleting`
+  /// guard. (2) `recordLegalAcceptance` storage hatası ile çökerse
+  /// kullanıcı onboarding'te sıkışıp kalmamalı → try/catch + finally ile
+  /// `widget.onComplete()` her durumda çağrılır, hata Sentry'ye raporlanır.
   Future<void> _completeWithLegalAcceptance() async {
-    // Son sayfada "Hemen Dene" → implicit KVKK / Gizlilik Politikası kabul.
-    // Yasal metinler ekranda link olarak gösterilmektedir; butona basmak
-    // KVKK Madde 5/2(c) "açık rıza" kapsamında kabul sayılır.
-    await sl<OnboardingRepository>().recordLegalAcceptance(
-      LegalAcceptanceVersion.current,
-    );
-    widget.onComplete();
+    if (_isCompleting) return;
+    _isCompleting = true;
+    try {
+      await sl<OnboardingRepository>().recordLegalAcceptance(
+        LegalAcceptanceVersion.current,
+      );
+    } catch (e, st) {
+      // Best-effort persistence — kullanıcının uygulamaya girişini engelleme.
+      await sl<ErrorReporter>().report(
+        e,
+        st,
+        context: 'legal_acceptance_failed',
+      );
+    } finally {
+      if (mounted) widget.onComplete();
+    }
   }
 
   void _openLegalDocument(LegalDocumentType type) {
