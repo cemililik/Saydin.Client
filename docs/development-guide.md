@@ -65,8 +65,19 @@ flutter run \
   --dart-define=SENTRY_DSN=https://<key>@sentry.io/<project>
 ```
 
-> `API_BASE_URL` tanımlı değilse varsayılan `http://10.0.2.2:5080` kullanılır.
+> `API_BASE_URL` tanımlı değilse uygulama açılışta `StateError` ile çöker
+> (fail-loud). Release build'lerde scheme **`https://` zorunludur**; debug
+> build'lerde `http://` sadece `localhost` / `127.0.0.1` / `10.0.2.2` veya
+> `*.ngrok-free.app` / `*.ngrok.app` / `*.trycloudflare.com` host'larında
+> kabul edilir (bkz. [lib/core/network/api_base_url_validator.dart](../lib/core/network/api_base_url_validator.dart)).
+>
 > `SENTRY_DSN` tanımlı değilse Sentry sessizce devre dışı kalır.
+>
+> **Certificate pinning** (opsiyonel): release build'lerde MITM riskine karşı
+> `--dart-define=PINNED_CERT_SHA256=<hex,hex>` ile primary + backup
+> sertifika SHA-256 fingerprint'leri pinlenebilir. Pin yoksa sistem trust
+> store kullanılır — dev ortamı bozulmaz. Pin hesaplaması:
+> `openssl x509 -in cert.pem -outform DER | openssl dgst -sha256`.
 
 ## 4. Uygulamayı Çalıştır
 

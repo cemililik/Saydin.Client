@@ -39,6 +39,38 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<!--
+	  App Transport Security (ATS) — açık politika.
+
+	  iOS varsayılanı zaten "TLS 1.2+, no cleartext", ancak App Store review
+	  bazı yan-yollarda (örn. `NSAllowsArbitraryLoadsInWebContent`) gizli
+	  istisnalar olmadığından emin olmak için explicit politikayı tercih
+	  ediyor. `NSAllowsArbitraryLoads=false` ile tüm HTTP istekleri reddedilir
+	  ve `NSExceptionDomains` sadece dev tünelleri için minimum tanımlanır
+	  (debug build'te bile prod sürümünde override yoktur).
+
+	  Üçüncü taraf SDK'lar (Sentry, share_plus) zaten HTTPS kullanır, ATS
+	  istisnası gerektirmez.
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<false/>
+			</dict>
+		</dict>
+	</dict>
+	<!--
 	  ITMS-90683 için zorunlu. share_plus eklentisi iOS'ta "Fotoğraflara
 	  Kaydet" paylaşım sayfası seçeneği için PhotoKit framework'üne bağlanır.
 	  Saydın doğrudan fotoğraf kütüphanesini sorgulamaz, ancak kullanıcı
