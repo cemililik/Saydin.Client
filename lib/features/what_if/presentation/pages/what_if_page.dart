@@ -6,6 +6,7 @@ import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/utils/locale_number_parser.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
@@ -74,7 +75,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
       return;
     }
 
-    final amount = num.tryParse(_amountController.text.replaceAll(',', '.'));
+    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(
         context,
@@ -301,8 +302,8 @@ class _WhatIfPageState extends State<WhatIfPage> {
                         sellDate: sellDate,
                         amount: _amountController.text.isEmpty
                             ? 0
-                            : num.tryParse(
-                                    _amountController.text.replaceAll(',', '.'),
+                            : LocaleNumberParser.tryParseTr(
+                                    _amountController.text,
                                   ) ??
                                   0,
                         amountType: formInput.amountType,

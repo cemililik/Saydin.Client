@@ -6,6 +6,7 @@ import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/utils/locale_number_parser.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
@@ -58,8 +59,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
       ).showSnackBar(SnackBar(content: Text(context.l10n.compareMinAssets)));
       return;
     }
-    final raw = _amountController.text.replaceAll(',', '.');
-    final amount = num.tryParse(raw);
+    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
     if (amount == null || amount <= 0) return;
     context.read<ComparisonBloc>()
       ..add(ComparisonAmountChanged(amount))
@@ -169,8 +169,8 @@ class _ComparisonPageState extends State<ComparisonPage> {
               HapticFeedback.mediumImpact();
             }
             if (state is ComparisonSuccess && state.amount != null) {
-              final controllerAmount = num.tryParse(
-                _amountController.text.replaceAll(',', '.'),
+              final controllerAmount = LocaleNumberParser.tryParseTr(
+                _amountController.text,
               );
               if (controllerAmount != state.amount) {
                 _amountController.text = state.amount.toString().replaceAll(
@@ -460,9 +460,17 @@ class _SelectedAssetChips extends StatelessWidget {
       runSpacing: 4,
       children: [
         for (final symbol in selectedSymbols)
+          // Asset katalogtan kalkmışsa (replay edilmiş saved scenario veya
+          // backend asset listesinden çıkarılmış sembol) `firstWhere`
+          // `StateError` fırlatır ve tüm chip wrap'i çöker. Fallback olarak
+          // sembolün kendisini göster — kullanıcı tanır.
           Chip(
             label: Text(
-              assets.firstWhere((a) => a.symbol == symbol).displayName,
+              assets
+                      .where((a) => a.symbol == symbol)
+                      .map((a) => a.displayName)
+                      .firstOrNull ??
+                  symbol,
             ),
             deleteIcon: const Icon(Icons.close, size: 16),
             onDeleted: isCalculating ? null : () => onRemove(symbol),

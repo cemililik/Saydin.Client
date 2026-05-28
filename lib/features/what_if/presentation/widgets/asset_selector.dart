@@ -23,11 +23,13 @@ class AssetSelector extends StatelessWidget {
 
   String? _selectedName() {
     if (selectedSymbol == null) return null;
-    try {
-      return assets.firstWhere((a) => a.symbol == selectedSymbol).displayName;
-    } catch (_) {
-      return selectedSymbol;
-    }
+    // Asset katalogtan kalkmışsa fallback olarak sembolü göster.
+    // `firstWhere` + try/catch yerine `firstOrNull` daha okunaklı.
+    return assets
+            .where((a) => a.symbol == selectedSymbol)
+            .map((a) => a.displayName)
+            .firstOrNull ??
+        selectedSymbol;
   }
 
   Future<void> _openSheet(BuildContext context) async {

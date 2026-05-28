@@ -11,6 +11,9 @@ import 'package:saydin/features/what_if/domain/entities/asset.dart';
   final lastDate = assetLastDate ?? DateTime.now();
 
   if (priceHistoryMonths == 0) {
+    if (assetFirstDate != null && assetFirstDate.isAfter(lastDate)) {
+      return (firstDate: null, lastDate: null);
+    }
     return (firstDate: assetFirstDate, lastDate: lastDate);
   }
 
@@ -24,11 +27,24 @@ import 'package:saydin/features/what_if/domain/entities/asset.dart';
       ? cutoff
       : assetFirstDate;
 
+  // Guard: cutoff lastDate'ten sonra olabilir (priceHistoryMonths negatif
+  // veya lastDate çok eski). `showDatePicker` assertion crash önlenir.
+  if (firstDate.isAfter(lastDate)) {
+    return (firstDate: null, lastDate: null);
+  }
+
   return (firstDate: firstDate, lastDate: lastDate);
 }
 
 /// Seçili varlıkların tarih aralıklarının kesişimini hesaplar,
 /// ardından [priceHistoryMonths] kısıtını uygular.
+///
+/// İki ayrı varlığın aralıkları örtüşmüyorsa (örn BTC: 2021-01..2024-01,
+/// XYZ: 2024-06..2024-09), kesişim başlangıcı (`firstDate`) bitişinden
+/// (`lastDate`) sonra düşer. `showDatePicker` `firstDate > lastDate`
+/// durumunda assertion fırlatır ve sayfa çöker. Bu yüzden invalid
+/// kesişimde `(null, null)` dönülür — caller "aralık yok" mesajı veya
+/// disable edilmiş DateInput göstermelidir.
 ({DateTime? firstDate, DateTime? lastDate}) comparisonDateRange({
   required List<Asset> assets,
   required List<String> selectedSymbols,
@@ -62,6 +78,9 @@ import 'package:saydin/features/what_if/domain/entities/asset.dart';
   }
 
   if (priceHistoryMonths == 0) {
+    if (firstDate != null && lastDate != null && firstDate.isAfter(lastDate)) {
+      return (firstDate: null, lastDate: null);
+    }
     return (firstDate: firstDate, lastDate: lastDate);
   }
 
@@ -74,6 +93,11 @@ import 'package:saydin/features/what_if/domain/entities/asset.dart';
 
   if (firstDate == null || cutoff.isAfter(firstDate)) {
     firstDate = cutoff;
+  }
+
+  // Son guard: cutoff lastDate'ten sonra olabilir (lastDate çok eskiyse).
+  if (lastDate != null && firstDate.isAfter(lastDate)) {
+    return (firstDate: null, lastDate: null);
   }
 
   return (firstDate: firstDate, lastDate: lastDate);

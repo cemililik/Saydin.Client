@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/locale_number_parser.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/widgets/amount_input.dart';
@@ -73,7 +74,7 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
       ).showSnackBar(SnackBar(content: Text(context.l10n.assetRequired)));
       return;
     }
-    final amount = num.tryParse(_amountController.text.replaceAll(',', '.'));
+    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(
         context,

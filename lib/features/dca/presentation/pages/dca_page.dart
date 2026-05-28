@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/utils/locale_number_parser.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/skeleton_card.dart';
@@ -69,7 +70,7 @@ class _DcaPageState extends State<DcaPage> {
       return;
     }
 
-    final amount = num.tryParse(_amountController.text.replaceAll(',', '.'));
+    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(
         context,
@@ -233,7 +234,7 @@ class _DcaPageState extends State<DcaPage> {
                         if (v == null || v.trim().isEmpty) {
                           return l10n.enterAmount;
                         }
-                        final parsed = num.tryParse(v.replaceAll(',', '.'));
+                        final parsed = LocaleNumberParser.tryParseTr(v);
                         if (parsed == null || parsed <= 0) {
                           return l10n.validAmountRequired;
                         }

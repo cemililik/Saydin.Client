@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// Sayısal değeri 0'dan hedefe animasyonlu sayarak gösteren widget.
-class CountUpText extends StatelessWidget {
+/// Sayısal değeri animasyonlu sayarak gösteren widget.
+///
+/// İlk render'da 0'dan [value]'ya, sonraki [value] değişimlerinde ise
+/// önceki değerden yeni değere animasyon yapar. Önceki davranışta her
+/// parent rebuild [Tween.begin] sıfırdan başlatıldığı için sayı görsel
+/// olarak sıçrıyordu (`MaterialApp` rebuild veya BLoC state emit'lerinde).
+class CountUpText extends StatefulWidget {
   final double value;
   final String Function(double) formatter;
   final TextStyle? style;
@@ -16,17 +21,39 @@ class CountUpText extends StatelessWidget {
   });
 
   @override
+  State<CountUpText> createState() => _CountUpTextState();
+}
+
+class _CountUpTextState extends State<CountUpText> {
+  late double _begin;
+
+  @override
+  void initState() {
+    super.initState();
+    // İlk gösterimde 0'dan başla; sonraki güncellemelerde önceki value'dan.
+    _begin = 0.0;
+  }
+
+  @override
+  void didUpdateWidget(CountUpText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      _begin = oldWidget.value;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      // Explicit `Tween<double>(begin: 0.0, ...)`: `Tween(begin: 0, end: value)`
-      // Dart inference'ına göre `Tween<num>` çıkarılabilir; `TweenAnimationBuilder<double>`
-      // bunu kabul etmez ve `strict-casts: true` altında derleme hatası
-      // riski taşır. Explicit tip defansiftir ve niyeti netleştirir.
-      tween: Tween<double>(begin: 0.0, end: value),
-      duration: duration,
+      // Explicit `Tween<double>(...)`: `Tween(begin: 0, end: value)`
+      // Dart inference'ına göre `Tween<num>` çıkarılabilir;
+      // `TweenAnimationBuilder<double>` bunu kabul etmez ve
+      // `strict-casts: true` altında derleme hatası riski taşır.
+      tween: Tween<double>(begin: _begin, end: widget.value),
+      duration: widget.duration,
       curve: Curves.easeOutCubic,
       builder: (context, animatedValue, _) {
-        return Text(formatter(animatedValue), style: style);
+        return Text(widget.formatter(animatedValue), style: widget.style);
       },
     );
   }
