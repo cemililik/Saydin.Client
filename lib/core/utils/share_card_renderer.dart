@@ -76,13 +76,22 @@ class ShareCardRenderer {
   /// Eşik 1 saat: bir paylaşım hedef uygulaması (WhatsApp vb.) henüz
   /// dosyayı tüketmediği için aktif iletişim kutusu kapanmadan bekleyen
   /// dosyaları kaçırırız. Pratikte share session 1 saatten uzun sürmez.
+  ///
+  /// [maxKept] LRU üst sınırıdır: 1 saatten yeni dosyalar bile bu sayıyı
+  /// aşarsa en eski olanlar silinir. Kullanıcı kısa sürede çok sayıda
+  /// paylaşım denerse veya force-quit ile finally bloğu kaçırırsa diskte
+  /// finansal görsel birikimi engellenir (KVKK Madde 12 minimizasyon).
   static Future<void> cleanupStaleShareFiles({
     Duration olderThan = const Duration(hours: 1),
+    int maxKept = 20,
   }) async {
     try {
       final tempDir = await getTemporaryDirectory();
       if (!tempDir.existsSync()) return;
       final cutoff = DateTime.now().subtract(olderThan);
+
+      // İki geçiş: önce yaşa göre tara + sil, sonra LRU cap uygula.
+      final survivors = <_DatedFile>[];
       await for (final entry in tempDir.list(followLinks: false)) {
         if (entry is! File) continue;
         final name = entry.uri.pathSegments.last;
@@ -91,13 +100,33 @@ class ShareCardRenderer {
           final stat = await entry.stat();
           if (stat.modified.isBefore(cutoff)) {
             await entry.delete();
+          } else {
+            survivors.add(_DatedFile(file: entry, modified: stat.modified));
           }
         } catch (_) {
           /* best-effort per file */
+        }
+      }
+
+      if (survivors.length <= maxKept) return;
+
+      survivors.sort((a, b) => a.modified.compareTo(b.modified));
+      final toRemove = survivors.length - maxKept;
+      for (var i = 0; i < toRemove; i++) {
+        try {
+          await survivors[i].file.delete();
+        } catch (_) {
+          /* best-effort */
         }
       }
     } catch (_) {
       /* best-effort overall */
     }
   }
+}
+
+class _DatedFile {
+  final File file;
+  final DateTime modified;
+  const _DatedFile({required this.file, required this.modified});
 }
