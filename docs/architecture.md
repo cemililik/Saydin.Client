@@ -8,40 +8,55 @@ Feature-first Clean Architecture + BLoC pattern. Her özellik kendi klasöründe
 lib/
 ├── core/                          ← Özelliklerden bağımsız altyapı
 │   ├── constants/                 ← AppColors, ApiEndpoints
-│   ├── di/                        ← injection.dart (get_it servis locator)
+│   ├── di/                        ← injection.dart (get_it service locator)
 │   ├── error/                     ← AppError, DioErrorMapper, ErrorReporter
 │   ├── l10n/                      ← L10nContext extension (context.l10n)
-│   └── network/                   ← ApiClient, DeviceIdInterceptor, RetryInterceptor
+│   ├── network/                   ← ApiClient, DeviceIdInterceptor, LanguageInterceptor, RetryInterceptor
+│   ├── theme/                     ← AppTheme (light/dark ThemeData), ThemeModeMapper
+│   └── widgets/                   ← InflationToggle, SharePreviewSheet, SettingsIconButton
 ├── features/
 │   ├── what_if/                   ← Ana özellik: "ya alsaydım" hesaplama
 │   │   ├── data/
-│   │   │   ├── models/            ← AssetModel, WhatIfResultModel (fromJson)
+│   │   │   ├── models/            ← AssetModel, WhatIfResultModel, ReverseWhatIfResponseModel (fromJson)
 │   │   │   └── repositories/     ← WhatIfRepositoryImpl (Dio çağrıları burada)
 │   │   ├── domain/
-│   │   │   ├── entities/          ← Asset (allowedAmountTypes getter dahil), WhatIfResult
+│   │   │   ├── entities/          ← Asset (allowedAmountTypes getter dahil), WhatIfResult, ReverseWhatIfResult
 │   │   │   ├── repositories/     ← WhatIfRepository (abstract interface)
-│   │   │   └── usecases/         ← GetAssets, CalculateWhatIf
+│   │   │   └── usecases/         ← GetAssets, CalculateWhatIf, CalculateReverseWhatIf
 │   │   └── presentation/
 │   │       ├── bloc/              ← WhatIfBloc, WhatIfEvent, WhatIfState, WhatIfFormInput
 │   │       ├── pages/             ← WhatIfPage
 │   │       └── widgets/           ← AssetSelector (bottom sheet + arama), DateInput (asset tarih aralığı),
-│   │                                 AmountInput (dinamik tip/ikon), ResultCard, ResultChart (fl_chart)
-│   └── scenarios/                 ← Kaydedilen senaryolar
+│   │                                 AmountInput (dinamik tip/ikon), ResultCard, ReverseResultCard,
+│   │                                 ResultChart (fl_chart), ReverseShareCardWidget
+│   ├── scenarios/                 ← Kaydedilen senaryolar
+│   │   ├── data/
+│   │   │   ├── models/            ← SavedScenarioModel (fromJson)
+│   │   │   └── repositories/     ← ScenariosRepositoryImpl
+│   │   ├── domain/
+│   │   │   ├── entities/          ← SavedScenario
+│   │   │   ├── repositories/     ← ScenariosRepository (abstract interface)
+│   │   │   └── usecases/         ← GetScenarios, SaveScenario, DeleteScenario
+│   │   └── presentation/
+│   │       ├── bloc/              ← ScenariosBloc, ScenariosEvent, ScenariosState
+│   │       ├── pages/             ← ScenariosPage (swipe-to-delete, refresh)
+│   │       └── widgets/           ← ScenarioCard (avatar, Dismissible)
+│   └── settings/                  ← Kullanıcı ayarları (tema, gelecek tercihler)
 │       ├── data/
-│       │   ├── models/            ← SavedScenarioModel (fromJson)
-│       │   └── repositories/     ← ScenariosRepositoryImpl
+│       │   └── repositories/     ← SettingsRepositoryImpl (SharedPreferences)
 │       ├── domain/
-│       │   ├── entities/          ← SavedScenario
-│       │   ├── repositories/     ← ScenariosRepository (abstract interface)
-│       │   └── usecases/         ← GetScenarios, SaveScenario, DeleteScenario
+│       │   ├── entities/          ← AppSettings (themeMode, language + copyWith)
+│       │   └── repositories/     ← SettingsRepository (abstract interface)
 │       └── presentation/
-│           ├── bloc/              ← ScenariosBloc, ScenariosEvent, ScenariosState
-│           ├── pages/             ← ScenariosPage (swipe-to-delete, refresh)
-│           └── widgets/           ← ScenarioCard (avatar, Dismissible)
+│           ├── cubit/             ← SettingsCubit (LazySingleton)
+│           ├── pages/             ← SettingsPage
+│           └── widgets/           ← ThemeSelectorTile, LanguageSelectorTile (SegmentedButton)
 └── l10n/                          ← flutter gen-l10n çıktısı (commit'lenir)
     ├── app_localizations.dart
     ├── app_localizations_tr.dart
-    └── app_tr.arb                 ← Kaynak dosya (elle düzenlenen tek dosya)
+    ├── app_localizations_en.dart
+    ├── app_tr.arb                 ← Türkçe kaynak dosya
+    └── app_en.arb                 ← İngilizce kaynak dosya
 ```
 
 ## Katman Mimarisi
@@ -61,8 +76,8 @@ presentation → domain ← data
 
 | Kayıt Tipi | Kullanıldığı Yer | Gerekçe |
 |---|---|---|
-| `registerLazySingleton` | ApiClient, Repository, UseCase, DioErrorMapper, ErrorReporter | Bir kez oluşturulur, tüm uygulama boyunca paylaşılır |
-| `registerFactory` | WhatIfBloc | Her sayfa açılışında yeni instance — eski state sızmaz |
+| `registerLazySingleton` | ApiClient, Repository, UseCase, DioErrorMapper, ErrorReporter, SettingsCubit | Bir kez oluşturulur, tüm uygulama boyunca paylaşılır |
+| `registerFactory` | WhatIfBloc, ComparisonBloc, PortfolioBloc, DcaBloc, ScenariosBloc | Her sayfa açılışında yeni instance — eski state sızmaz |
 
 ```dart
 // Sayfa açılırken BLoC sağlanır
@@ -77,6 +92,8 @@ BlocProvider(
 ### WhatIfBloc
 
 Form alanları `WhatIfFormInput` veri sınıfında taşınır ve tüm state'lere gömülüdür. Bu sayede hesaplama başarısız olsa bile form değerleri kaybolmaz.
+
+**Hesaplama Modu:** `CalculationMode` enum'u (`normal` | `reverse`) ile iki hesaplama modu desteklenir. `SegmentedButton` ile kullanıcı mod değiştirebilir.
 
 ```
 WhatIfInitial
@@ -96,16 +113,29 @@ WhatIfAssetsLoaded / WhatIfSuccess / WhatIfFailure
     • buyDate/sellDate asset'in [firstDate, lastDate] dışındaysa → sıkıştırılır,
       formInput.dateAdjusted = true (tek seferlik flag — UI snackbar gösterir, sonra false olur)
 
+    │ WhatIfModeChanged(CalculationMode)
+    ▼
+    formInput.calculationMode güncellenir.
+    Ters modda amountType otomatik 'try'e zorlanır (hedef tutar yalnızca TL).
+
     │ WhatIfBuyDateChanged / WhatIfSellDateChanged / WhatIfAmountTypeChanged
     ▼
     Aynı state, formInput güncellenerek yeniden emit edilir
 
-    │ WhatIfCalculateRequested
+    │ WhatIfCalculateRequested (normal mod)
     ▼
 WhatIfCalculating(assets, formInput)
-    ├─ başarı ──► WhatIfSuccess(assets, result, formInput)
+    ├─ başarı ──► WhatIfSuccess(assets, result: WhatIfResult, formInput)
+    └─ hata ───► WhatIfFailure(assets, error, formInput)
+
+    │ WhatIfReverseCalculateRequested (ters mod)
+    ▼
+WhatIfCalculating(assets, formInput)
+    ├─ başarı ──► WhatIfSuccess(assets, reverseResult: ReverseWhatIfResult, formInput)
     └─ hata ───► WhatIfFailure(assets, error, formInput)
 ```
+
+**`WhatIfSuccess` state'i:** `result` (nullable `WhatIfResult`) ve `reverseResult` (nullable `ReverseWhatIfResult`) taşır. Mod'a göre yalnızca biri dolu olur.
 
 **`WhatIfFormInput` alanları:**
 
@@ -116,6 +146,8 @@ WhatIfCalculating(assets, formInput)
 | `sellDate` | `DateTime?` | Satış tarihi (opsiyonel) |
 | `amountType` | `String` | `try` \| `units` \| `grams` |
 | `amount` | `num?` | Tutar (replay/senaryo yüklemede doldurulur) |
+| `calculationMode` | `CalculationMode` | `normal` veya `reverse` — hesaplama modunu belirler |
+| `includeInflation` | `bool` | Enflasyon düzeltmesi dahil mi |
 | `dateAdjusted` | `bool` | Sembol değişince tarih sıkıştırıldıysa `true` — bir kez UI'a iletildikten sonra `copyWith` ile otomatik `false`'a döner (one-shot flag) |
 
 **State kuralları:**
@@ -195,6 +227,9 @@ Asset değiştiğinde `WhatIfBloc._onSymbolChanged`:
 DeviceIdInterceptor   ← Her isteğe X-Device-ID header ekler
     │
     ▼
+LanguageInterceptor   ← Her isteğe Accept-Language header ekler
+    │
+    ▼
 RetryInterceptor      ← GET/HEAD: max 2 yenileme, üstel backoff
     │
     ▼
@@ -205,6 +240,16 @@ Sunucu
 
 `FlutterSecureStorage` ile `saydin_device_id` anahtarı altında UUID v4 saklanır.
 **Fallback:** Storage erişimi başarısız olursa oturum süreli ephemeral UUID kullanılır — kullanıcı hata görmez.
+
+### LanguageInterceptor
+
+Her istekte `Accept-Language` header'ını `AppLocaleHolder.code` değerinden okuyarak ekler. `AppLocaleHolder` basit bir statik holder'dır — `SettingsCubit` dil değiştiğinde `update()` çağırarak günceller.
+
+| Kullanıcı seçimi | Accept-Language | Sonuç |
+|---|---|---|
+| Türkçe | `tr` | Backend Türkçe yanıt verir |
+| English | `en` | Backend İngilizce yanıt verir |
+| Sistem | Platform locale | Cihaz diline göre |
 
 ### RetryInterceptor
 
@@ -265,10 +310,12 @@ if (error is UnknownError || error is ServerError) {
 
 ## Lokalizasyon (L10n)
 
-Kaynak dosya: `lib/l10n/app_tr.arb` — **tüm kullanıcıya görünen string'ler buradadır**.
+**Desteklenen diller:** Türkçe (`tr`, varsayılan), İngilizce (`en`)
+
+Kaynak dosyalar: `lib/l10n/app_tr.arb` (Türkçe), `lib/l10n/app_en.arb` (İngilizce). Tüm kullanıcıya görünen string'ler buralardadır.
 
 ```bash
-# Kod üretimi (ARB değiştiğinde)
+# Kod üretimi (ARB dosyaları değiştiğinde)
 flutter gen-l10n
 ```
 
@@ -279,7 +326,28 @@ Text(l10n.calculate)
 Text(l10n.errorPriceNotFound)
 ```
 
-**Kural:** BLoC Türkçe string üretmez. Hata metni widget katmanında `switch (state.error)` ile l10n'dan çözülür.
+**Kural:** BLoC UI string üretmez. Hata metni widget katmanında `switch (state.error)` ile l10n'dan çözülür.
+
+### Dil Seçimi
+
+`AppSettings.language` enum'u üç seçenek sunar:
+
+| Seçenek | `MaterialApp.locale` | `Accept-Language` |
+|---|---|---|
+| `AppLanguage.tr` | `Locale('tr', 'TR')` | `tr` |
+| `AppLanguage.en` | `Locale('en', 'US')` | `en` |
+| `AppLanguage.system` | `null` (Flutter otomatik) | Platform locale |
+
+Dil değiştiğinde:
+1. `SettingsCubit.setLanguage()` → `AppSettings` emit eder
+2. `BlocBuilder<SettingsCubit>` → `MaterialApp.locale` güncellenir → UI yeniden çizilir
+3. `AppLocaleHolder.update()` → Sonraki API isteklerinde `Accept-Language` güncellenir
+
+### İstemci-Sunucu Dil Uyumu
+
+İstemci ve sunucu aynı dili konuşur:
+- **İstemci:** ARB dosyalarından `context.l10n` ile çözülen UI string'leri
+- **Sunucu:** `Accept-Language` header'ına göre `.resx` dosyalarından çözülen hata mesajları ve asset isimleri
 
 ## Grafik (ResultChart)
 
@@ -316,6 +384,96 @@ DateFormat('dd.MM.yyyy', 'tr_TR').format(date)  // 01.03.2020
 Color: Colors.green.shade700 / Colors.red.shade700
 Icon:  Icons.trending_up / Icons.trending_down
 ```
+
+## Tema Sistemi
+
+> ADR: [ADR-012](../../../docs/decisions/ADR-012-client-settings-architecture.md)
+
+### ThemeData Yapısı
+
+`core/theme/app_theme.dart` içinde `AppTheme.light` ve `AppTheme.dark` olmak üzere iki statik `ThemeData` tanımlıdır. Her ikisi de aynı seed rengi (`AppColors.primary`) ile `ColorScheme.fromSeed` kullanır.
+
+```dart
+// MaterialApp entegrasyonu (app.dart)
+MaterialApp(
+  theme: AppTheme.light,
+  darkTheme: AppTheme.dark,
+  themeMode: toFlutterThemeMode(settings.themeMode),  // SettingsCubit'ten
+)
+```
+
+`SettingsCubit` `MaterialApp`'in **üstünde** `BlocProvider` ile sağlanır. Tema değiştiğinde `BlocBuilder` tüm MaterialApp'i rebuild eder — bu Flutter'ın önerdiği tema değiştirme yöntemidir.
+
+### AppColors ve Dark Mode
+
+`AppColors` profit/loss renkleri için iki set sunar:
+
+| Renk | Light | Dark |
+|------|-------|------|
+| Kar (profit) | `#2E7D32` (koyu yeşil) | `#66BB6A` (açık yeşil) |
+| Zarar (loss) | `#C62828` (koyu kırmızı) | `#EF5350` (açık kırmızı) |
+
+Helper methodlar:
+```dart
+AppColors.profitColor(Theme.of(context).brightness)
+AppColors.lossColor(Theme.of(context).brightness)
+```
+
+### BottomNavigationBar
+
+Tema renkleri `BottomNavigationBarThemeData` üzerinden `AppTheme.light` ve `AppTheme.dark` içinde tanımlanır. Hardcoded `Colors.white` / `Color(0xFF757575)` **kullanılmaz** — `colorScheme.primary` ve `colorScheme.onSurfaceVariant` kullanılır.
+
+---
+
+## Ayarlar Altyapısı (Settings)
+
+### Depolama
+
+`SharedPreferences` (cihaz lokali). Platform bazında:
+- iOS: `NSUserDefaults`
+- Android: XML shared_prefs
+
+Sunucu senkronizasyonu **yok** — tema gibi tercihler cihaza özeldir.
+
+### SettingsCubit
+
+```
+SettingsCubit (LazySingleton)
+    │
+    │ load()  ← uygulama başlangıcında çağrılır
+    ▼
+AppSettings(themeMode: system, language: system)  ← SharedPreferences'tan okunur
+    │                                                 + AppLocaleHolder.update()
+    │ setThemeMode(dark)
+    ▼
+AppSettings(themeMode: dark, language: system)     ← emit + SharedPreferences'a yaz
+    │
+    │ setLanguage(en)
+    ▼
+AppSettings(themeMode: dark, language: en)         ← emit + SharedPreferences'a yaz
+                                                      + AppLocaleHolder.update('en')
+```
+
+**Neden Cubit, BLoC değil?** Ayar değiştirme basit bir setter — event/handler deseni gereksiz.
+
+**Neden LazySingleton, Factory değil?** Tema ve dil `MaterialApp` seviyesinde tüketilir, uygulama boyunca tek instance yeterli.
+
+### Genişletme
+
+Yeni ayar eklemek:
+1. `AppSettings` entity'sine field ekle (`copyWith`'i güncelle)
+2. `SettingsRepositoryImpl`'e okuma/yazma ekle (yeni SharedPreferences key)
+3. `SettingsCubit`'e setter ekle
+4. `SettingsPage`'e yeni widget ekle
+5. `app_tr.arb` ve `app_en.arb`'a l10n string'leri ekle
+
+### Navigasyon
+
+Settings sayfasına erişim: `SettingsIconButton` (gear icon) → tüm ana sayfa AppBar'larının `actions`'ında bulunur. `Navigator.push` ile `SettingsPage`'e gider.
+
+`SettingsCubit` `MaterialApp` üstünde olduğu için push edilen route'tan erişilemez — `SettingsIconButton` `BlocProvider.value` ile `sl<SettingsCubit>()` singleton'ını route'a geçirir.
+
+---
 
 ## CI/CD (GitHub Actions)
 

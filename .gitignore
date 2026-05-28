@@ -48,6 +48,9 @@ build/
 coverage/
 lcov.info
 
+# Code review artefactları (lokal incelemeler)
+docs/code-reviews/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -11,11 +11,13 @@ class CalculateWhatIf {
     DateTime? sellDate,
     required num amount,
     required String amountType,
+    bool includeInflation = false,
   }) => _repository.calculate(
     assetSymbol: assetSymbol,
     buyDate: buyDate,
     sellDate: sellDate,
     amount: amount,
     amountType: amountType,
+    includeInflation: includeInflation,
   );
 }

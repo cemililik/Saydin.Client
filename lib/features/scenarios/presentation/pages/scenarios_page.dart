@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/widgets/settings_icon_button.dart';
+import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
@@ -82,7 +84,8 @@ class _ScenariosPageState extends State<ScenariosPage> {
   @override
   void initState() {
     super.initState();
-    context.read<ScenariosBloc>().add(const ScenariosRequested());
+    final plan = context.read<AppConfigCubit>().state.tier;
+    context.read<ScenariosBloc>().add(ScenariosRequested(plan: plan));
   }
 
   String _errorMessage(AppError error, AppLocalizations l10n) =>
@@ -114,7 +117,11 @@ class _ScenariosPageState extends State<ScenariosPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.scenariosTitle), centerTitle: true),
+      appBar: AppBar(
+        title: Text(l10n.scenariosTitle),
+        centerTitle: true,
+        actions: const [SettingsIconButton()],
+      ),
       body: BlocConsumer<ScenariosBloc, ScenariosState>(
         listener: (context, state) {
           if (state is ScenariosFailure) {
@@ -162,7 +169,8 @@ class _ScenariosPageState extends State<ScenariosPage> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              context.read<ScenariosBloc>().add(const ScenariosRequested());
+              final plan = context.read<AppConfigCubit>().state.tier;
+              context.read<ScenariosBloc>().add(ScenariosRequested(plan: plan));
             },
             child: ListView.separated(
               padding: const EdgeInsets.all(16),

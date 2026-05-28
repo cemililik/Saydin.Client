@@ -119,6 +119,45 @@ final value = result?.price ?? 0;
 
 ---
 
+## Commit Kuralı (KRİTİK)
+
+### Conventional Commits (ZORUNLU)
+
+Commit mesajları **Conventional Commits** formatında olmalıdır. CI versiyon numarasını bu mesajlardan otomatik hesaplar.
+
+```
+<tip>(<kapsam>): <açıklama>
+```
+
+| Prefix | Versiyon etkisi | Örnek |
+|--------|----------------|-------|
+| `feat:` | MINOR (0.1.0 → 0.2.0) | `feat: portföy ekranı eklendi` |
+| `fix:` | PATCH (0.1.0 → 0.1.1) | `fix: grafik render hatası düzeltildi` |
+| `perf:` | PATCH | `perf: liste scroll performansı iyileştirildi` |
+| `revert:` | PATCH | `revert: son değişiklik geri alındı` |
+| `feat!:` / `fix!:` | MAJOR (0.1.0 → 1.0.0) | `feat!: API v2'ye geçildi` |
+| `chore:` | yok | `chore: bağımlılık güncellendi` |
+| `docs:` | yok | `docs: README güncellendi` |
+| `ci:` | yok | `ci: workflow düzeltildi` |
+| `style:` | yok | `style: format düzeltmesi` |
+| `refactor:` | yok | `refactor: widget yapısı sadeleştirildi` |
+| `test:` | yok | `test: bloc testi eklendi` |
+
+Kapsam isteğe bağlıdır: `feat(portfolio):`, `fix(auth):` gibi.
+
+### Build Öncesi Kontrol
+
+**Kod değişikliklerini commit etmeden önce mutlaka analiz ve testleri çalıştır.**
+
+```bash
+/Users/dev/development/flutter/bin/flutter analyze --fatal-infos
+/Users/dev/development/flutter/bin/flutter test
+```
+
+Analiz veya test başarısız olursa commit atma, önce hatayı düzelt.
+
+---
+
 ## Lokalizasyon Kuralları (KRİTİK)
 
 **Tüm kullanıcıya görünen string'ler `l10n/app_tr.arb` dosyasında olmalıdır.**
@@ -192,9 +231,32 @@ Color myColor = Color(0xFF2E7D32);  // magic number
 
 ## API İstemcisi
 
-- Base URL environment config'den gelir — hardcode YASAK
+- Base URL dart-define ile geçilir — hardcode YASAK
+- Aktif backend URL: `https://fumed-cleverishly-moses.ngrok-free.dev/`
 - `X-Device-ID` header her istekte otomatik eklenir (interceptor)
 - `FlutterSecureStorage` ile UUID oluşturulur ve saklanır
+
+---
+
+## Cihaza Deploy (KRİTİK)
+
+**Test cihazı:** iPhone "C.I." — `00008101-00013C6A02B9003A` (iOS 18.6)
+
+```bash
+# Debug modda iPhone'a deploy (varsayılan)
+flutter run \
+  --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ \
+  --device-id 00008101-00013C6A02B9003A
+
+# Release modda iPhone'a deploy
+flutter run \
+  --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ \
+  --device-id 00008101-00013C6A02B9003A \
+  --release
+```
+
+- Kullanıcı "iPhone'a gönder" veya "cihaza deploy et" dediğinde **debug mod** varsayılandır (aksi belirtilmezse)
+- Cihaz bağlı değilse önce `flutter devices` ile kontrol et
 
 ---
 
@@ -225,7 +287,8 @@ Color myColor = Color(0xFF2E7D32);  // magic number
 
 ### Kurallar
 
-- **Flutter'a özgü** her doküman `src/Saydin.Client/docs/` içine gider — kök `docs/` içine konmaz.
+- **Diyagram ve akış şemaları Mermaid ile çizilir** — ASCII art YASAK. Markdown dosyalarında ` ```mermaid ` blokları kullan.
+- **Flutter'a özgü** her doküman `docs/` içine gider — Saydın meta repo'sundaki kök `docs/` içine konmaz.
 - Kök `docs/`'a yalnızca birden fazla bileşeni (istemci + servisler) kapsayan belgeler eklenir.
 - Yeni özellik eklendiğinde `docs/architecture.md` güncellenir (yeni katman, pattern, paket).
 - `development-guide.md` iş akışı değiştiğinde güncellenir (yeni komut, env değişkeni, sorun).

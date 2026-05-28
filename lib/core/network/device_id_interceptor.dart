@@ -20,6 +20,14 @@ class DeviceIdInterceptor extends Interceptor {
     handler.next(options);
   }
 
+  /// In-memory cache'i temizler. Hesap silme akışı sonrası çağrılır;
+  /// aksi takdirde `_cachedDeviceId` aynı oturumda eski UUID'yi tutar ve
+  /// silinmiş SecureStorage'a rağmen sonraki istekler eski tanımlayıcıyı
+  /// gönderir (KVKK Madde 11 ihlali).
+  void resetCache() {
+    _cachedDeviceId = null;
+  }
+
   Future<String> _getOrCreateDeviceId() async {
     if (_cachedDeviceId != null) return _cachedDeviceId!;
     try {

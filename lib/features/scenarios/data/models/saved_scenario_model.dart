@@ -3,6 +3,7 @@ import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 class SavedScenarioModel extends SavedScenario {
   const SavedScenarioModel({
     required super.id,
+    super.type = ScenarioType.whatIf,
     required super.assetSymbol,
     required super.assetDisplayName,
     required super.buyDate,
@@ -11,11 +12,13 @@ class SavedScenarioModel extends SavedScenario {
     required super.amountType,
     super.label,
     required super.createdAt,
+    super.extraData,
   });
 
   factory SavedScenarioModel.fromJson(Map<String, dynamic> json) {
     return SavedScenarioModel(
       id: json['id'] as String,
+      type: _parseType(json['type'] as String?),
       assetSymbol: json['assetSymbol'] as String,
       assetDisplayName: json['assetDisplayName'] as String,
       buyDate: _parseDate(json['buyDate'] as String),
@@ -26,8 +29,22 @@ class SavedScenarioModel extends SavedScenario {
       amountType: json['amountType'] as String,
       label: json['label'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      extraData: json['extraData'] != null
+          ? Map<String, dynamic>.from(json['extraData'] as Map)
+          : null,
     );
   }
+
+  /// `ScenariosRepositoryImpl._typeToString` ile **simetrik** olmalı.
+  /// `'what_if'` case'i explicit; default'a düşmek backend'in bilinmeyen
+  /// bir type döndürmesini sessiz veri kaybına dönüştürürdü.
+  static ScenarioType _parseType(String? value) => switch (value) {
+    'what_if' => ScenarioType.whatIf,
+    'comparison' => ScenarioType.comparison,
+    'portfolio' => ScenarioType.portfolio,
+    'dca' => ScenarioType.dca,
+    _ => ScenarioType.whatIf,
+  };
 
   static DateTime _parseDate(String value) {
     final parts = value.split('-');

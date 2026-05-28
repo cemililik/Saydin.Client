@@ -24,6 +24,14 @@ class WhatIfResult extends Equatable {
   final double profitLossPercent;
   final bool isProfit;
   final List<ChartPoint> priceHistory;
+  // Enflasyon düzeltmesi — backend'den null gelirse özellik kapalıydı
+  final double? cumulativeInflationPercent;
+  final double? realProfitLossPercent;
+  // TÜİK gecikmesi: kullanılan endeks tarihi istenen satış ayından eskiyse dolu
+  final DateTime? inflationDataAsOf;
+  // Haftasonu/tatil: kullanıcının seçtiği tarih yerine kullanılan gerçek işlem günü
+  final DateTime? actualBuyDate;
+  final DateTime? actualSellDate;
 
   const WhatIfResult({
     required this.assetSymbol,
@@ -39,6 +47,11 @@ class WhatIfResult extends Equatable {
     required this.profitLossPercent,
     required this.isProfit,
     this.priceHistory = const [],
+    this.cumulativeInflationPercent,
+    this.realProfitLossPercent,
+    this.inflationDataAsOf,
+    this.actualBuyDate,
+    this.actualSellDate,
   });
 
   @override
@@ -56,5 +69,10 @@ class WhatIfResult extends Equatable {
     profitLossPercent,
     isProfit,
     priceHistory,
+    cumulativeInflationPercent,
+    realProfitLossPercent,
+    inflationDataAsOf,
+    actualBuyDate,
+    actualSellDate,
   ];
 }

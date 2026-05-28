@@ -131,7 +131,7 @@ void main() {
       ),
       expect: () => [
         isA<ScenariosSaving>(),
-        isA<ScenariosLoaded>().having(
+        isA<ScenariosSaved>().having(
           (s) => s.scenarios,
           'scenarios',
           hasLength(2),
@@ -177,7 +177,7 @@ void main() {
       ),
       expect: () => [
         isA<ScenariosSaving>(),
-        isA<ScenariosLoaded>().having(
+        isA<ScenariosSaved>().having(
           (s) => s.scenarios,
           'scenarios',
           hasLength(2),
