@@ -29,6 +29,27 @@ void main() {
       expect(DeviceInfoInterceptor.minimizeOsVersion('???'), 'unknown');
     });
 
+    test('Android uname (Linux kernel) → "unknown", kernel sürümü SIZMAZ', () {
+      // Android'de Platform.operatingSystemVersion uname() döner; naif regex
+      // kernel sürümünü ("5.10") Android sürümü sanırdı. "Linux" prefix
+      // guard'ı bunu "unknown"a çevirir (backend yanıltıcı veri almaz).
+      expect(
+        DeviceInfoInterceptor.minimizeOsVersion(
+          'Linux 5.10.66-android13-4-00257-g7e35917775b8-ab9739629',
+        ),
+        'unknown',
+      );
+      expect(
+        DeviceInfoInterceptor.minimizeOsVersion('Linux 4.14.190-23725512'),
+        'unknown',
+      );
+      // Regresyon koruması: çıktı kesinlikle kernel "5.10"/"4.14" OLMAMALI.
+      expect(
+        DeviceInfoInterceptor.minimizeOsVersion('Linux 5.10.66-android13-4'),
+        isNot('5.10'),
+      );
+    });
+
     test('iPadOS prefix ile sürüm', () {
       // iPadOS bazen "iPadOS 18.6 (Build 22G5072a)" formatında string verir.
       // Regex `(\d+)(?:\.(\d+))?` ilk sayıyı yakalar → "18.6".

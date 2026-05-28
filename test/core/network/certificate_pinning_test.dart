@@ -1,3 +1,4 @@
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:saydin/core/network/certificate_pinning.dart';
 
@@ -77,5 +78,39 @@ void main() {
     // CI test ortamında PINNED_CERT_SHA256 dart-define geçilmediği için
     // pinning kapalı olmalı; bu, dev/test cycle'ı bozulmadığını doğrular.
     expect(CertificatePinning.isEnabled, isFalse);
+  });
+
+  // validateCertificate callback'inin saf çekirdeği. Gerçek bir TLS
+  // handshake unit test'te kurulamadığı için fingerprint karşılaştırma
+  // mantığı matchesPin seam'i üzerinden doğrulanır.
+  group('CertificatePinning.matchesPin', () {
+    final der = <int>[0x01, 0x02, 0x03, 0x04, 0x05];
+    final fingerprint = sha256.convert(der).toString().toLowerCase();
+
+    test('null cert (der) → false (pin yoksa istek reddedilir)', () {
+      expect(CertificatePinning.matchesPin(null, {fingerprint}), isFalse);
+    });
+
+    test('eşleşen fingerprint → true', () {
+      expect(CertificatePinning.matchesPin(der, {fingerprint}), isTrue);
+    });
+
+    test('eşleşmeyen fingerprint → false', () {
+      expect(
+        CertificatePinning.matchesPin(der, {_validHex1, _validHex2}),
+        isFalse,
+      );
+    });
+
+    test('boş pin set → false', () {
+      expect(CertificatePinning.matchesPin(der, const <String>{}), isFalse);
+    });
+
+    test('çoklu pin (primary + backup) içinde eşleşme → true', () {
+      expect(
+        CertificatePinning.matchesPin(der, {_validHex1, fingerprint}),
+        isTrue,
+      );
+    });
   });
 }

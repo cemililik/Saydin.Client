@@ -78,6 +78,51 @@ void main() {
       expect(model.priceHistory, isEmpty);
     });
 
+    // ── Backend String para kontratı (MoneyParser.requireDecimal) ───────────
+
+    test('backend para alanlarını String gönderse de Decimal parse edilir', () {
+      // Kontrat: backend `num` VEYA `String` ("5.95") gönderebilir. Model
+      // her ikisini de aynı Decimal'a indirgemeli (precision korunarak).
+      final json = {
+        ..._baseJson(priceHistory: []),
+        'buyPrice': '5.95',
+        'sellPrice': '8.50',
+        'unitsAcquired': '1680.672269',
+        'initialValueTry': '10000.00',
+        'finalValueTry': '14285.71',
+        'profitLossTry': '4285.71',
+      };
+
+      final model = WhatIfResponseModel.fromJson(json);
+
+      expect(model.buyPrice, Decimal.parse('5.95'));
+      expect(model.sellPrice, Decimal.parse('8.50'));
+      expect(model.initialValueTry, Decimal.parse('10000.00'));
+      expect(model.finalValueTry, Decimal.parse('14285.71'));
+      expect(model.profitLossTry, Decimal.parse('4285.71'));
+    });
+
+    test('zorunlu para alanı null → FormatException (model seviyesinde)', () {
+      final json = {..._baseJson(priceHistory: []), 'buyPrice': null};
+
+      expect(
+        () => WhatIfResponseModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('zorunlu para alanı parse edilemez String → FormatException', () {
+      final json = {
+        ..._baseJson(priceHistory: []),
+        'finalValueTry': 'not-a-number',
+      };
+
+      expect(
+        () => WhatIfResponseModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
     // ── Enflasyon alanları ─────────────────────────────────────────────────
 
     test(

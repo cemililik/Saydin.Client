@@ -87,4 +87,88 @@ void main() {
       );
     });
   });
+
+  // `flutter test` debug modda koşar (kReleaseMode/kProfileMode == false), bu
+  // yüzden release/profile cleartext-reddi dalı validate() üzerinden hiç
+  // tetiklenemez. validateForMode seam'i bayrakları enjekte ederek bu
+  // güvenlik invariant'ını test edilebilir kılar.
+  group(
+    'ApiBaseUrlValidator.validateForMode — release/profile cleartext reddi',
+    () {
+      void expectHttpsRequired(
+        String url, {
+        required bool isRelease,
+        required bool isProfile,
+      }) {
+        expect(
+          () => ApiBaseUrlValidator.validateForMode(
+            url,
+            isRelease: isRelease,
+            isProfile: isProfile,
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              contains('must use https in non-debug builds'),
+            ),
+          ),
+        );
+      }
+
+      test('release modda http://localhost reddedilir', () {
+        expectHttpsRequired(
+          'http://localhost:5080',
+          isRelease: true,
+          isProfile: false,
+        );
+      });
+
+      test('release modda whitelisted ngrok http bile reddedilir', () {
+        expectHttpsRequired(
+          'http://abc123.ngrok-free.app',
+          isRelease: true,
+          isProfile: false,
+        );
+      });
+
+      test('profile modda http://10.0.2.2 reddedilir', () {
+        expectHttpsRequired(
+          'http://10.0.2.2:5080',
+          isRelease: false,
+          isProfile: true,
+        );
+      });
+
+      test('release/profile modda https sorunsuz geçer', () {
+        expect(
+          () => ApiBaseUrlValidator.validateForMode(
+            'https://api.saydin.app',
+            isRelease: true,
+            isProfile: false,
+          ),
+          returnsNormally,
+        );
+        expect(
+          () => ApiBaseUrlValidator.validateForMode(
+            'https://api.saydin.app',
+            isRelease: false,
+            isProfile: true,
+          ),
+          returnsNormally,
+        );
+      });
+
+      test('debug modda (her iki bayrak false) http://localhost geçer', () {
+        expect(
+          () => ApiBaseUrlValidator.validateForMode(
+            'http://localhost:5080',
+            isRelease: false,
+            isProfile: false,
+          ),
+          returnsNormally,
+        );
+      });
+    },
+  );
 }
