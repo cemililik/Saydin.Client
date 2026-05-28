@@ -44,6 +44,15 @@ jobs:
             echo "❌ pubspec.yaml içinde version alanı bulunamadı"
             exit 1
           fi
+          # GÜVENLIK: pubspec.yaml fork PR'da saldırgan-kontrollü. `tr -d`
+          # sadece boşluğu eler; `$(...)`/`${IFS}` geçer. Bu çıktı downstream
+          # build adımlarında `--build-name=${{ ... }}` ile `run:`'a interpole
+          # edildiği için (fork PR tetikleyicisi `pull_request`) format
+          # doğrulanmazsa command injection olur. Strict numeric guard:
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Geçersiz pubspec versiyon formatı: $VERSION (beklenen: X.Y.Z)"
+            exit 1
+          fi
           echo "version_name=$VERSION" >> $GITHUB_OUTPUT
           echo "ℹ️  pubspec.yaml versiyonu: $VERSION (CI display)"
 
@@ -177,7 +186,9 @@ jobs:
         with:
           name: osv-report-${{ github.sha }}
           path: osv-report.txt
-          retention-days: 14
+          # Aynı içerik zaten Step Summary'de (run ile saklanır); artifact
+          # yalnızca kısa süreli indirme kolaylığı için — uzun retention gerek yok.
+          retention-days: 1
 
   # ── Android Debug Build (PR + development push — sanity) ──────────────────
   build-android:
@@ -215,11 +226,18 @@ jobs:
         run: yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
 
       - name: Build APK (debug)
+        # Defense-in-depth: version job zaten format doğruluyor, ama
+        # template değerleri intermediate env var üzerinden geçirilip
+        # `run:`'a doğrudan interpole edilmez (GitHub güvenlik tavsiyesi).
+        env:
+          BUILD_NAME: ${{ needs.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+          API_URL: ${{ vars.API_URL_STAGING }}
         run: |
           flutter build apk --debug \
-            --build-name=${{ needs.version.outputs.version_name }} \
-            --build-number=${{ needs.version.outputs.build_number }} \
-            --dart-define=API_BASE_URL=${{ vars.API_URL_STAGING }} \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=API_BASE_URL="$API_URL" \
             --dart-define=APP_ENV=development
 
       - name: Upload APK artifact
@@ -263,9 +281,14 @@ jobs:
         run: flutter gen-l10n
 
       - name: Build iOS (no codesign)
+        # Defense-in-depth: bkz. Build APK adımı — intermediate env var.
+        env:
+          BUILD_NAME: ${{ needs.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+          API_URL: ${{ vars.API_URL_STAGING }}
         run: |
           flutter build ios --debug --no-codesign \
-            --build-name=${{ needs.version.outputs.version_name }} \
-            --build-number=${{ needs.version.outputs.build_number }} \
-            --dart-define=API_BASE_URL=${{ vars.API_URL_STAGING }} \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=API_BASE_URL="$API_URL" \
             --dart-define=APP_ENV=development
