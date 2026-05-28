@@ -226,6 +226,20 @@ class _DcaResultCardState extends State<DcaResultCard>
                         : AppColors.loss,
                     bold: true,
                   ),
+                  // WhatIf result_card.dart ile paralel: reel kar/zarar TL
+                  // tutarı (totalInvestedTry * realPct / 100). Sadece percent
+                  // göstermek kullanıcıyı "kaç TL kazandım gerçekten?"
+                  // sorusuyla baş başa bırakıyordu.
+                  _AnimatedRow(
+                    l10n.realProfitLoss,
+                    result.totalInvestedTry.toDouble() *
+                        result.realProfitLossPercent! /
+                        100,
+                    formatter: _trySignedFormatter,
+                    valueColor: result.realProfitLossPercent! >= 0
+                        ? AppColors.profit
+                        : AppColors.loss,
+                  ),
                   if (result.inflationDataAsOf != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),

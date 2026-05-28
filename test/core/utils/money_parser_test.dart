@@ -47,6 +47,24 @@ void main() {
       expect(MoneyParser.tryDecimal(true), isNull);
       expect(MoneyParser.tryDecimal(<String, dynamic>{}), isNull);
     });
+
+    test('scientific notation string parse edilir', () {
+      // Backend bazen "1e5" formatında gönderebilir; ya kabul ya net reject.
+      expect(MoneyParser.tryDecimal('1e5'), Decimal.fromInt(100000));
+      expect(MoneyParser.tryDecimal('1.5e3'), Decimal.parse('1500'));
+      expect(MoneyParser.tryDecimal('1E5'), Decimal.fromInt(100000));
+    });
+
+    test('negative zero "0" olarak parse edilir', () {
+      // IEEE-754'te -0 != 0 ama finansal anlamda eşittir.
+      expect(MoneyParser.tryDecimal(-0.0), Decimal.zero);
+      expect(MoneyParser.tryDecimal('-0'), Decimal.zero);
+      expect(MoneyParser.tryDecimal('-0.00'), Decimal.zero);
+    });
+
+    test('leading + işareti tolere edilir', () {
+      expect(MoneyParser.tryDecimal('+100'), Decimal.fromInt(100));
+    });
   });
 
   group('MoneyParser.requireDecimal', () {

@@ -28,5 +28,22 @@ void main() {
       expect(DeviceInfoInterceptor.minimizeOsVersion(''), 'unknown');
       expect(DeviceInfoInterceptor.minimizeOsVersion('???'), 'unknown');
     });
+
+    test('iPadOS prefix ile sürüm', () {
+      // iPadOS bazen "iPadOS 18.6 (Build 22G5072a)" formatında string verir.
+      // Regex `(\d+)(?:\.(\d+))?` ilk sayıyı yakalar → "18.6".
+      expect(
+        DeviceInfoInterceptor.minimizeOsVersion('iPadOS 18.6 (Build 22G5072a)'),
+        '18.6',
+      );
+    });
+
+    test('visionOS edge case', () {
+      expect(DeviceInfoInterceptor.minimizeOsVersion('visionOS 2.0'), '2.0');
+    });
+
+    test('major sürüm sıfırla başlasa kabul', () {
+      expect(DeviceInfoInterceptor.minimizeOsVersion('0.9'), '0.9');
+    });
   });
 }

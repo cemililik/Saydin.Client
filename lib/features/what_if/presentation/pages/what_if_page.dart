@@ -7,6 +7,7 @@ import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
+import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
@@ -245,13 +246,15 @@ class _WhatIfPageState extends State<WhatIfPage> {
                     );
                     if (reverseResult != null) {
                       final r = reverseResult;
-                      final pct = r.profitLossPercent;
-                      final sign = pct >= 0 ? '+' : '';
+                      // `NumberFormat.format(Decimal)` runtime'da
+                      // NoSuchMethodError fırlatır (intl içerideki
+                      // `.isNegative` getter Decimal'da yok). Decimal
+                      // → double dönüşümü display'de tek noktada.
                       final text = context.l10n.shareTextReverse(
                         r.assetDisplayName,
-                        fmt.format(r.targetValueTry),
-                        fmt.format(r.requiredInvestmentTry),
-                        '$sign${pct.toStringAsFixed(2).replaceAll('.', ',')}%',
+                        fmt.format(r.targetValueTry.toDouble()),
+                        fmt.format(r.requiredInvestmentTry.toDouble()),
+                        PercentageFormatter.signed(r.profitLossPercent),
                       );
                       showModalBottomSheet<void>(
                         context: context,
@@ -263,13 +266,12 @@ class _WhatIfPageState extends State<WhatIfPage> {
                       );
                     } else if (successResult != null) {
                       final r = successResult;
-                      final pct = r.profitLossPercent;
-                      final sign = pct >= 0 ? '+' : '';
+                      // Bkz. yukarıdaki Decimal → double notu.
                       final text = context.l10n.shareTextWhatIf(
                         r.assetDisplayName,
-                        fmt.format(r.initialValueTry),
-                        fmt.format(r.finalValueTry),
-                        '$sign${pct.toStringAsFixed(2).replaceAll('.', ',')}%',
+                        fmt.format(r.initialValueTry.toDouble()),
+                        fmt.format(r.finalValueTry.toDouble()),
+                        PercentageFormatter.signed(r.profitLossPercent),
                       );
                       showModalBottomSheet<void>(
                         context: context,

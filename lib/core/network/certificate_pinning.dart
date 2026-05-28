@@ -19,12 +19,25 @@ import 'package:flutter/foundation.dart';
 ///     standart şekilde kullanılır.
 ///   - Bu, dev ortamda ngrok sertifika rotasyonunda uygulamayı
 ///     bozmamayı garanti eder.
-///   - Release build için CI/CD'de production sertifikaların SHA-256'sı
-///     `PINNED_CERT_SHA256` olarak geçilmelidir.
 ///
-/// **Pin rotasyon yöntemi:** En az 2 fingerprint pinlenmeli — primary
-/// (mevcut) + backup (next rotation cert). Cert rotate edilince app
-/// güncellenmeden bozulmaz.
+/// **⚠ Önemli — production'da hâlâ aktive edilmedi:**
+/// `release.yml` AAB ve IPA build adımlarında `PINNED_CERT_SHA256`
+/// dart-define geçirilmiyor; production sertifikaların SHA-256'sı
+/// kararlaştığında release workflow'una eklenecek. O zamana kadar
+/// production build'leri sistem trust store ile korunur — yeterli
+/// ama pinning'in MITM ekstra koruması devre dışı. Bu kodda pinning
+/// altyapısı hazır, sadece dart-define aktivasyonu eksik.
+///
+/// **Pin rotasyon yöntemi (aktive edildiğinde):** En az 2 fingerprint
+/// pinlenmeli — primary (mevcut cert) + backup (next rotation cert).
+/// Cert rotate edilince app güncellenmeden bozulmaz. Let's Encrypt 90
+/// günlük döngüde leaf cert hash sıkça değişir; backup pin zorunlu.
+///
+/// **Hash yöntemi — leaf cert DER (SPKI değil):** `sha256.convert(
+/// cert.der)` LEAF sertifikanın tamamını hash'ler. Alternatif SPKI
+/// (Subject Public Key Info) hash daha sağlam (cert yenilenince key
+/// aynı kalırsa SPKI sabit) ama mevcut implementation leaf hash; pin
+/// rotasyon stratejisinin bunu hesaba katması şart.
 class CertificatePinning {
   const CertificatePinning._();
 

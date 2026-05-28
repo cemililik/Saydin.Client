@@ -1,5 +1,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!--
+      Backup politikası — katmanlı savunma (defense-in-depth):
+
+      `allowBackup="false"` PRIMARY mekanizmadır; bu set iken Android sistem
+      tüm backup attribute'larını yok sayar (developer.android.com:
+      "no backup or restore of the application is ever performed").
+      Yani `fullBackupContent` ve `dataExtractionRules` şu an aktif değil.
+
+      Bu XML'leri YİNE DE tanımlı tutuyoruz çünkü:
+        - İleride bir nedenle `allowBackup="true"` yapılırsa (örn. user-
+          opt-in backup feature) XML kuralları "exclude all" default'una
+          devreye girer ve sessizce veri sızması engellenir.
+        - Static analysis araçları (Android Lint, lint task) backup spec
+          eksikliğini warning olarak işaretliyor; explicit tanım sustur.
+
+      Eğer ileride backup gerçekten açılırsa şu kontrol listesi:
+        1. backup_rules.xml içindeki <exclude>'leri gözden geçir.
+        2. data_extraction_rules.xml hem cloud-backup hem device-transfer
+           politikalarını ayrı ayrı tanımlar.
+        3. KVKK Madde 12 ile uyum testi (silinen veri backup'tan dönmesin).
+    -->
     <application
         android:label="Saydın"
         android:name="${applicationName}"

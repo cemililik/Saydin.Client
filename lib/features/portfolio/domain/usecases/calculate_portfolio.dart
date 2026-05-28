@@ -99,12 +99,21 @@ class CalculatePortfolio {
     if (includeInflation &&
         results.every((r) => r.realProfitLossPercent != null)) {
       // Her kalemin reel son değeri: initialValue * (1 + realPct/100)
+      //
+      // Önceki implementasyon: `Decimal.parse((1 + realPct / 100).toString())`
+      // double aritmetiğine baş vuruyordu → 7.7% gibi düz değerlerde sorun
+      // yok ama 33.333% (1/3) gibi case'lerde double precision (17. ondalık)
+      // kaybı Decimal'a sızdırıyordu. Şimdi (100 + realPct) / 100 Decimal
+      // aritmetiğinde hesaplanır; intermediate double yok.
+      final hundred = Decimal.fromInt(100);
       var totalRealFinal = Decimal.zero;
       for (final r in results) {
-        // realPct double → Decimal (display-only oranı yeniden Decimal'a
-        // taşıyoruz çünkü toplama Decimal aritmetiğinde kalıyor).
-        final realFactor = Decimal.parse(
-          (1 + r.realProfitLossPercent! / 100).toString(),
+        final rateDecimal = Decimal.parse(r.realProfitLossPercent!.toString());
+        // (100 + rate) / 100 → Rational; Decimal'a düşürmek için
+        // `toDecimal(scaleOnInfinitePrecision: ...)` kullan. realPct
+        // typically ≤4 ondalık olduğu için scale=10 fazlasıyla yeter.
+        final realFactor = ((hundred + rateDecimal) / hundred).toDecimal(
+          scaleOnInfinitePrecision: 10,
         );
         totalRealFinal += r.initialValueTry * realFactor;
       }

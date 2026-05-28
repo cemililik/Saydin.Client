@@ -220,26 +220,35 @@ Asset değiştiğinde `WhatIfBloc._onSymbolChanged`:
 
 ### Interceptor Zinciri
 
+```mermaid
+flowchart TD
+    A[İstek gönderilecek] --> B[CertificatePinning HttpClientAdapter]
+    B -->|TLS handshake pin doğrulanır| C[DeviceIdInterceptor]
+    C -->|X-Device-ID header| D[DeviceInfoInterceptor]
+    D -->|X-Device-OS, X-Device-OS-Version, X-App-Version| E[LanguageInterceptor]
+    E -->|Accept-Language header| F[RetryInterceptor]
+    F -->|GET/HEAD: max 2 yenileme + üstel backoff| G[Sunucu]
 ```
-İstek gönderilecek
-    │
-    ▼
-DeviceIdInterceptor   ← Her isteğe X-Device-ID header ekler
-    │
-    ▼
-LanguageInterceptor   ← Her isteğe Accept-Language header ekler
-    │
-    ▼
-RetryInterceptor      ← GET/HEAD: max 2 yenileme, üstel backoff
-    │
-    ▼
-Sunucu
-```
+
+- **CertificatePinning** sertifika doğrulama katmanıdır — interceptor değil,
+  Dio'nun `IOHttpClientAdapter`'i üzerinde TLS handshake aşamasında çalışır.
+  Detay: [ADR-013](../../../docs/decisions/ADR-013-certificate-pinning-strategy.md).
 
 ### DeviceIdInterceptor
 
 `FlutterSecureStorage` ile `saydin_device_id` anahtarı altında UUID v4 saklanır.
 **Fallback:** Storage erişimi başarısız olursa oturum süreli ephemeral UUID kullanılır — kullanıcı hata görmez.
+
+### DeviceInfoInterceptor
+
+Her isteğe `X-Device-OS`, `X-Device-OS-Version`, `X-App-Version` header'larını
+ekler — backend activity logging için.
+
+**PII minimizasyonu:** `Platform.operatingSystemVersion` ham çıktısı iOS'ta
+build numarası + Darwin kernel sürümü ile 80+ karakter olabilir. Bu
+fingerprinting riski yaratır → `minimizeOsVersion` regex ile major.minor
+düzeyine indirilir (örn. `"18.6"`). Eşleşme yoksa `"unknown"` döner; ham
+veri ASLA propagate edilmez.
 
 ### LanguageInterceptor
 

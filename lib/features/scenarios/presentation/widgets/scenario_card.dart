@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
@@ -373,7 +374,6 @@ class _ComparisonCard extends StatelessWidget {
         : rawWinnerName;
     final winnerReturn =
         (scenario.extraData?['winnerReturn'] as num?)?.toDouble() ?? 0.0;
-    final winnerSign = winnerReturn >= 0 ? '+' : '';
     final winnerColor = winnerReturn >= 0 ? AppColors.profit : AppColors.loss;
 
     return Card(
@@ -424,9 +424,19 @@ class _ComparisonCard extends StatelessWidget {
                       Row(
                         children: [
                           const Text('🥇 ', style: TextStyle(fontSize: 12)),
+                          // CLAUDE.md a11y kuralı: kar/zarar sadece renkle
+                          // gösterilmez — ikon eşlik etmeli (renk körü).
+                          Icon(
+                            winnerReturn >= 0
+                                ? Icons.trending_up
+                                : Icons.trending_down,
+                            size: 12,
+                            color: winnerColor,
+                          ),
+                          const SizedBox(width: 2),
                           Expanded(
                             child: Text(
-                              '$winnerName  $winnerSign${winnerReturn.toStringAsFixed(2).replaceAll('.', ',')}%',
+                              '$winnerName  ${PercentageFormatter.signed(winnerReturn)}',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: winnerColor,
                                 fontWeight: FontWeight.w600,
@@ -485,7 +495,6 @@ class _PortfolioCard extends StatelessWidget {
 
     final totalReturn =
         (scenario.extraData?['totalReturn'] as num?)?.toDouble() ?? 0.0;
-    final returnSign = totalReturn >= 0 ? '+' : '';
     final returnColor = totalReturn >= 0 ? AppColors.profit : AppColors.loss;
 
     return Card(
@@ -553,8 +562,17 @@ class _PortfolioCard extends StatelessWidget {
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
+                          // CLAUDE.md a11y: kar/zarar ikon eşliğinde.
+                          Icon(
+                            totalReturn >= 0
+                                ? Icons.trending_up
+                                : Icons.trending_down,
+                            size: 12,
+                            color: returnColor,
+                          ),
+                          const SizedBox(width: 2),
                           Text(
-                            '$returnSign${totalReturn.toStringAsFixed(2).replaceAll('.', ',')}%',
+                            PercentageFormatter.signed(totalReturn),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: returnColor,
                               fontWeight: FontWeight.w600,
