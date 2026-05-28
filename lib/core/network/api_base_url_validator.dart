@@ -32,7 +32,25 @@ class ApiBaseUrlValidator {
   /// `baseUrl`'i doğrular. Başarısızlıkta `StateError` fırlatır — `assert`
   /// release build'te derlenmez, dolayısıyla fail-loud doğrulama
   /// `StateError` ile yapılmalıdır.
-  static void validate(String baseUrl) {
+  ///
+  /// Build modu (`kReleaseMode`/`kProfileMode`) [validateForMode]'a delege
+  /// edilir; `flutter test` debug modda koştuğu için release/profile
+  /// cleartext-reddi dalı ancak [validateForMode] ile test edilebilir.
+  static void validate(String baseUrl) => validateForMode(
+    baseUrl,
+    isRelease: kReleaseMode,
+    isProfile: kProfileMode,
+  );
+
+  /// [validate]'in mod-bağımsız çekirdeği. `isRelease`/`isProfile` enjekte
+  /// edilebilir olduğu için release/profile cleartext-reddi testlerden
+  /// doğrulanabilir (debug test runner'ında bu dallar normalde erişilemez).
+  @visibleForTesting
+  static void validateForMode(
+    String baseUrl, {
+    required bool isRelease,
+    required bool isProfile,
+  }) {
     if (baseUrl.isEmpty) {
       throw StateError(
         'API_BASE_URL dart-define is required. '
@@ -56,8 +74,8 @@ class ApiBaseUrlValidator {
 
     // HTTP — sadece debug mod + tanımlı dev host'lar. Profile build
     // de production'a yakın (release optimizasyonları + observatory);
-    // cleartext oraya da sızdırmamak için kProfileMode de bloklanır.
-    if (kReleaseMode || kProfileMode) {
+    // cleartext oraya da sızdırmamak için profile de bloklanır.
+    if (isRelease || isProfile) {
       throw StateError(
         'API_BASE_URL must use https in non-debug builds. Got: $baseUrl',
       );

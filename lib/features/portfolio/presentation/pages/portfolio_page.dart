@@ -107,9 +107,13 @@ class _PortfolioPageState extends State<PortfolioPage> {
         ),
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
-        // ScenarioSaveRequested.amount num bekliyor; Decimal precision
-        // sadece display-side için kritik, save → backend yolunda zaten
-        // num üzerinden geçer.
+        // DİKKAT: `totalInitialValueTry` aritmetik-türevli bir Decimal
+        // (kalemlerin Decimal toplamı) ve backend'e KAYDEDİLİR — yalnızca
+        // display değil. ScenarioSaveRequested.amount hâlâ `num` olduğu için
+        // burada `.toDouble()` zorunlu; double ~15 anlamlı hane tuttuğundan
+        // gerçekçi tutarlarda kuruş kaybı yok ama tam-precision için backend
+        // string `amount` kontratına geçince MoneyParser.toJsonString
+        // kullanılmalı (Faz 4 — amount num→Decimal end-to-end).
         amount: state.result.totalInitialValueTry.toDouble(),
         amountType: 'try',
         type: ScenarioType.portfolio,

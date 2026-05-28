@@ -68,7 +68,11 @@ class CertificatePinning {
     final pinned = _pinnedFingerprints;
     dio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
-        final client = HttpClient();
+        // Dio'nun default _createHttpClient() idleTimeout=3s set eder; özel
+        // createHttpClient geçtiğimiz için o default devre dışı kalır ve
+        // dart:io default'una (15s) düşerdi. Aynı 3s'i koru (bağlantı
+        // havuzu davranışı pinning aktive edildiğinde tutarlı kalsın).
+        final client = HttpClient()..idleTimeout = const Duration(seconds: 3);
         client.badCertificateCallback = (cert, host, port) {
           // System trust store reddetti — düz reject.
           // (`badCertificateCallback` yalnızca trust store reddinde çağrılır.)
@@ -82,10 +86,9 @@ class CertificatePinning {
         return client;
       },
       validateCertificate: (cert, host, port) {
-        if (cert == null) return false;
-        final fingerprint = sha256.convert(cert.der).toString().toLowerCase();
-        final ok = pinned.contains(fingerprint);
-        if (!ok && kDebugMode) {
+        final ok = matchesPin(cert?.der, pinned);
+        if (!ok && kDebugMode && cert != null) {
+          final fingerprint = sha256.convert(cert.der).toString().toLowerCase();
           debugPrint(
             '[CertificatePinning] Pin mismatch for $host: got $fingerprint',
           );
@@ -93,6 +96,16 @@ class CertificatePinning {
         return ok;
       },
     );
+  }
+
+  /// Pin karşılaştırma çekirdeği — `validateCertificate` callback'inin saf,
+  /// test edilebilir özü. `der` null ise (cert yok) reddet; aksi halde
+  /// SHA-256 hex digest pin set'inde var mı kontrol et.
+  @visibleForTesting
+  static bool matchesPin(List<int>? der, Set<String> pinned) {
+    if (der == null) return false;
+    final fingerprint = sha256.convert(der).toString().toLowerCase();
+    return pinned.contains(fingerprint);
   }
 
   /// Test/diag amaçlı: input string'i normalize set'e çevir.

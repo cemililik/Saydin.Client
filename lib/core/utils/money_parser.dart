@@ -1,5 +1,4 @@
 import 'package:decimal/decimal.dart';
-import 'package:intl/intl.dart';
 
 /// Para tutarı parse + format yardımcıları.
 ///
@@ -57,6 +56,11 @@ class MoneyParser {
 
   /// JSON'a serialize: Decimal → String. Backend `num` veya `String`
   /// kabul ediyorsa String tercih edilir — precision korunur.
+  ///
+  /// NOT: Şu an lib/ içinde caller yok (yalnızca test). Senaryo kaydet
+  /// yolunda `amount` hâlâ `num` olarak gönderiliyor; backend string
+  /// `amount` kontratına geçtiğinde (Faz 4) repository serializasyonu
+  /// buraya bağlanacak — bkz. scenarios_repository_impl + portfolio_page.
   static String toJsonString(Decimal value) => value.toString();
 }
 
@@ -70,7 +74,3 @@ extension MoneyDecimalFormat on Decimal {
   /// formatı etkiler (NumberFormat zaten 2 ondalık haneye yuvarlar).
   double toDisplayDouble() => toDouble();
 }
-
-/// `NumberFormat.currency(locale: 'tr_TR', symbol: '₺')` kısa yolu.
-NumberFormat tryCurrencyFormatter({String locale = 'tr_TR'}) =>
-    NumberFormat.currency(locale: locale, symbol: '₺');

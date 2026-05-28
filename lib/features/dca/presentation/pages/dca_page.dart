@@ -315,9 +315,11 @@ class _DcaPageState extends State<DcaPage> {
                                     assetDisplayName: result.assetDisplayName,
                                     buyDate: result.startDate,
                                     sellDate: result.endDate,
-                                    // ScenarioSaveRequested num bekliyor;
-                                    // tutar zaten user-input boundary,
-                                    // Decimal → double burada güvenli.
+                                    // ScenarioSaveRequested.amount num bekliyor.
+                                    // periodicAmount Decimal (backend'den parse);
+                                    // .toDouble() display/save köprüsü. Tam
+                                    // precision için backend string amount
+                                    // kontratı + MoneyParser.toJsonString (Faz 4).
                                     amount: result.periodicAmount.toDouble(),
                                     amountType: 'try',
                                     type: ScenarioType.dca,

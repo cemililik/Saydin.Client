@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
+import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/scenarios/domain/usecases/delete_scenario.dart';
 import 'package:saydin/features/scenarios/domain/usecases/get_scenarios.dart';
 import 'package:saydin/features/scenarios/domain/usecases/save_scenario.dart';
@@ -67,7 +68,13 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     // IEEE-754 precision farkını sızdırma riski taşıyordu (ve Decimal
     // sözleşmesiyle çelişiyordu). Event tutarını Decimal'a çevirip
     // Decimal `==` ile karşılaştır — Decimal equality exact.
-    final eventAmountDecimal = Decimal.parse(event.amount.toString());
+    //
+    // `MoneyParser.tryDecimal` ham `Decimal.parse` yerine kullanılır:
+    // num NaN/Infinity için `FormatException` yutar (try bloğu dışında
+    // olduğu için uncaught crash riskini eler), `?? Decimal.zero`
+    // güvenli fallback verir.
+    final eventAmountDecimal =
+        MoneyParser.tryDecimal(event.amount) ?? Decimal.zero;
     final isDuplicate = current.any(
       (s) =>
           s.type == event.type &&
