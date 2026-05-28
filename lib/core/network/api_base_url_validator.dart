@@ -54,11 +54,12 @@ class ApiBaseUrlValidator {
 
     if (scheme == 'https') return;
 
-    // HTTP — sadece debug mod + tanımlı dev host'lar.
-    if (kReleaseMode) {
+    // HTTP — sadece debug mod + tanımlı dev host'lar. Profile build
+    // de production'a yakın (release optimizasyonları + observatory);
+    // cleartext oraya da sızdırmamak için kProfileMode de bloklanır.
+    if (kReleaseMode || kProfileMode) {
       throw StateError(
-        'API_BASE_URL must use https in release builds. '
-        'Got: $baseUrl',
+        'API_BASE_URL must use https in non-debug builds. Got: $baseUrl',
       );
     }
 

@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
@@ -61,16 +62,19 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
   ) async {
     final current = state.scenarios;
 
+    // `s.amount` Decimal, `event.amount` num (form input). Daha önce
+    // `.toDouble()` üzerinden double `==` karşılaştırması vardı; bu
+    // IEEE-754 precision farkını sızdırma riski taşıyordu (ve Decimal
+    // sözleşmesiyle çelişiyordu). Event tutarını Decimal'a çevirip
+    // Decimal `==` ile karşılaştır — Decimal equality exact.
+    final eventAmountDecimal = Decimal.parse(event.amount.toString());
     final isDuplicate = current.any(
       (s) =>
           s.type == event.type &&
           s.assetSymbol == event.assetSymbol &&
           _isSameDay(s.buyDate, event.buyDate) &&
           _isSameDay(s.sellDate, event.sellDate) &&
-          // `s.amount` Decimal, `event.amount` num (form input).
-          // `.toDouble()` ile karşılaştır — kullanıcının girdiği tutar
-          // double-exact (örn. 47010.34) olduğu için precision farkı yok.
-          s.amount.toDouble() == event.amount &&
+          s.amount == eventAmountDecimal &&
           s.amountType == event.amountType,
     );
     if (isDuplicate) {

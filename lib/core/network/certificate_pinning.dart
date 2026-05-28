@@ -5,14 +5,19 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 
-/// Sertifika pinleme: TLS handshake'inde sunucu sertifika zincirinde beklenen
+/// Sertifika pinleme: TLS handshake sonunda sunucu sertifikanın beklenen
 /// SHA-256 fingerprint'i bulunmazsa istek reddedilir.
 ///
-/// Pin formatı: `sha256/<base64-encoded-DER-hash>` veya `<hex hash>`.
-/// `--dart-define=PINNED_CERT_SHA256=hash1,hash2` ile virgülle ayrılmış
-/// liste verilir. Hash'ler sertifikanın DER-encoded byte'larının SHA-256
-/// digest'idir (`openssl x509 -in cert.pem -outform DER | openssl dgst
-/// -sha256`).
+/// **Pin formatı (hex-only):** Sertifika DER bytes'ının SHA-256 hex
+/// digest'i. `--dart-define=PINNED_CERT_SHA256=hex1,hex2` ile virgülle
+/// ayrılmış liste verilir. Hash hesaplaması:
+/// ```
+/// openssl x509 -in cert.pem -outform DER | openssl dgst -sha256
+/// ```
+/// Çıktı `(stdin)= <hex>` formatında — sadece hex kısmını kullan. Opsiyonel
+/// `sha256/` veya `sha256:` prefix'i kabul edilir (yalnızca prefix soyulur,
+/// kalan kısmın hex olduğu varsayılır). **Base64 desteklenmiyor** —
+/// kullanıcı önce base64'ü hex'e çevirmeli (`base64 -d | xxd -p -c 64`).
 ///
 /// **Tasarım kararı — opt-in:**
 ///   - Pin verilmezse pinning DEVRE DIŞI kalır ve sistem trust store
@@ -94,15 +99,29 @@ class CertificatePinning {
   @visibleForTesting
   static Set<String> parsePinsForTest(String raw) => _parsePins(raw);
 
+  static final _hexRegex = RegExp(r'^[0-9a-f]{64}$');
+
   static Set<String> _parsePins(String raw) {
     if (raw.trim().isEmpty) return const <String>{};
-    return raw
-        .split(',')
-        .map((p) => p.trim().toLowerCase())
-        // `sha256/` veya `sha256:` prefix'ini soy.
-        .map((p) => p.startsWith('sha256/') ? p.substring(7) : p)
-        .map((p) => p.startsWith('sha256:') ? p.substring(7) : p)
-        .where((p) => p.isNotEmpty)
-        .toSet();
+    final pins = <String>{};
+    for (final rawPin in raw.split(',')) {
+      var p = rawPin.trim().toLowerCase();
+      if (p.isEmpty) continue;
+      // `sha256/` veya `sha256:` prefix'ini soy.
+      if (p.startsWith('sha256/')) p = p.substring(7);
+      if (p.startsWith('sha256:')) p = p.substring(7);
+      // Hex (64 char = 32 byte SHA-256) doğrula. Malformed → fail-loud:
+      // sessiz drop pin'siz çalışmaya çevirir, MITM koruması illüzyonu
+      // yaratır. Pin tanımlandıysa doğru tanımlı OLMALI.
+      if (!_hexRegex.hasMatch(p)) {
+        throw StateError(
+          'PINNED_CERT_SHA256 entry is not a valid 64-char lowercase hex '
+          'SHA-256 digest: "$rawPin". Use openssl dgst -sha256 output '
+          '(hex). Base64 not supported.',
+        );
+      }
+      pins.add(p);
+    }
+    return pins;
   }
 }

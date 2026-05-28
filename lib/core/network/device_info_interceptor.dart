@@ -44,7 +44,8 @@ class DeviceInfoInterceptor extends Interceptor {
     final match = RegExp(r'(\d+)(?:\.(\d+))?').firstMatch(raw);
     if (match == null) return 'unknown';
     final major = match.group(1);
+    if (major == null) return 'unknown';
     final minor = match.group(2);
-    return minor != null ? '$major.$minor' : major!;
+    return minor != null ? '$major.$minor' : major;
   }
 }

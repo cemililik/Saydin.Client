@@ -121,12 +121,15 @@ class _WhatIfCard extends StatelessWidget {
   );
   static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
 
-  String _formatAmount() {
+  String _formatAmount(BuildContext context) {
+    final l10n = context.l10n;
     final amount = scenario.amount.toDouble();
     if (scenario.amountType == 'try') {
       return _tryFormatter.format(amount);
     }
-    final suffix = scenario.amountType == 'grams' ? 'gram' : 'adet';
+    final suffix = scenario.amountType == 'grams'
+        ? l10n.amountTypeGrams
+        : l10n.amountTypeUnits;
     return '${NumberFormat.decimalPattern('tr_TR').format(amount)} $suffix';
   }
 
@@ -209,7 +212,7 @@ class _WhatIfCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _formatAmount(),
+                          _formatAmount(context),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
