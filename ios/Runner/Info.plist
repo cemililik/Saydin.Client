@@ -76,11 +76,14 @@
 	  Saydın doğrudan fotoğraf kütüphanesini sorgulamaz, ancak kullanıcı
 	  hesaplama sonucu kartını paylaşıp sistem "Fotoğraflara Kaydet"
 	  eylemini seçtiğinde iOS bu açıklamayı izin penceresinde gösterir.
-	  Apple'ın statik analizi, bu kod yolu hiç tetiklenmese bile bu
-	  anahtarı zorunlu kılar.
+
+	  `NSPhotoLibraryAddUsageDescription` kullanıyoruz (read+write değil
+	  add-only). Saydın fotoğraf okuma izni istemiyor — sadece kaydetme.
+	  Apple App Store review minimum izin prensibini bu add-only varyantla
+	  doğrular (F-14-13).
 	-->
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Hesaplama sonucu kartını Fotoğraflar uygulamasına kaydetmek istediğinizde fotoğraf kütüphanenize erişim gerekir.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Hesaplama sonucu kartını Fotoğraflar uygulamasına kaydetmek istediğinizde fotoğraf kütüphanenize yazma izni gerekir.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
