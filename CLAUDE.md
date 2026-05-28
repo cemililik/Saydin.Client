@@ -288,7 +288,7 @@ flutter run \
 ### Kurallar
 
 - **Diyagram ve akış şemaları Mermaid ile çizilir** — ASCII art YASAK. Markdown dosyalarında ` ```mermaid ` blokları kullan.
-- **Flutter'a özgü** her doküman `src/Saydin.Client/docs/` içine gider — kök `docs/` içine konmaz.
+- **Flutter'a özgü** her doküman `docs/` içine gider — Saydın meta repo'sundaki kök `docs/` içine konmaz.
 - Kök `docs/`'a yalnızca birden fazla bileşeni (istemci + servisler) kapsayan belgeler eklenir.
 - Yeni özellik eklendiğinde `docs/architecture.md` güncellenir (yeni katman, pattern, paket).
 - `development-guide.md` iş akışı değiştiğinde güncellenir (yeni komut, env değişkeni, sorun).
