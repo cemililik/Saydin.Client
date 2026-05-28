@@ -16,6 +16,7 @@ class _MockRepository extends Mock implements AccountDataRepository {}
 class _FakeErrorReporter implements ErrorReporter {
   final actions = <String>[];
   final reports = <Object>[];
+  int scopeClearCount = 0;
 
   @override
   Future<void> recordAction(
@@ -38,6 +39,11 @@ class _FakeErrorReporter implements ErrorReporter {
 
   @override
   Future<void> addBreadcrumb(String message, {String? category}) async {}
+
+  @override
+  Future<void> clearScope() async {
+    scopeClearCount++;
+  }
 }
 
 void main() {
@@ -85,6 +91,11 @@ void main() {
         'settings.account_delete_requested',
         'settings.account_deleted',
       ]);
+      expect(
+        reporter.scopeClearCount,
+        1,
+        reason: 'Wipe sonrası Sentry scope temizlenmiş olmalı (KVKK Madde 11)',
+      );
       expect(reporter.reports, isEmpty);
       // Stream listener async; broadcast'i drain etmek için pump.
       await Future<void>.delayed(Duration.zero);

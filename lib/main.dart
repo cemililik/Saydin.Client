@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'app.dart';
 import 'core/di/injection.dart';
 import 'core/observability/sentry_pii_scrubber.dart';
+import 'core/utils/share_card_renderer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +16,10 @@ void main() async {
   // EN tarafını kırıyordu.
   await initializeDateFormatting();
   await configureDependencies();
+  // 1 saatten eski paylaşım kart PNG'lerini temizle. Önceki oturumda share
+  // iletişim kutusu kapanmadan uygulama kapatıldıysa renderer'ın finally
+  // bloğu çalışmaz — startup pass ikinci savunma hattı (KVKK Madde 12).
+  unawaited(ShareCardRenderer.cleanupStaleShareFiles());
 
   const scrubber = SentryPiiScrubber();
 

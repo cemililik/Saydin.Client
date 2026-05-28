@@ -87,4 +87,18 @@ class ErrorReporter {
       ),
     );
   }
+
+  /// Hesap silme / wipe akışında çağrılır. Sentry scope'undaki tüm
+  /// breadcrumb, user, tag ve context bilgisini siler — sonraki bir
+  /// crash event'i eski `X-Device-ID`'yi veya kullanıcı eylem geçmişini
+  /// taşımaz. KVKK Madde 11 silme hakkının teknik karşılığı.
+  ///
+  /// `scope.clear()` çağrısı in-memory state'i temizler; ağda hâlihazırda
+  /// uçuşta olan bir event varsa onu geri alamayız, ancak sonraki olayların
+  /// silinen kullanıcıyla ilişkilendirilmesini engelleriz.
+  Future<void> clearScope() async {
+    await Sentry.configureScope((scope) async {
+      await scope.clear();
+    });
+  }
 }

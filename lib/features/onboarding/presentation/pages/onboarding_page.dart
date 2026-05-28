@@ -235,7 +235,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                       const Spacer(),
                       TextButton(
-                        onPressed: widget.onComplete,
+                        // Skip butonu da KVKK rıza kaydını yazar. Yasal metin
+                        // her sayfa boyunca CTA üstünde görünür değil; bu
+                        // nedenle skip kaydı yapmadan onboarding'i tamamlamak
+                        // PR #25'in KVKK consent disiplini ile çelişir. Skip
+                        // → "kullanıcı son sayfayı atladı ama implicit consent
+                        // yazıldı" akışı, hem kullanıcı deneyimini bozmaz hem
+                        // kayıtsız kullanımı engeller.
+                        onPressed: _completeWithLegalAcceptance,
                         child: Text(
                           l10n.onboardingSkip,
                           style: TextStyle(

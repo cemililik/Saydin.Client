@@ -59,6 +59,13 @@ class AccountDeletionCubit extends Cubit<AccountDeletionState> {
     // 2) Yerel veriyi sil — burası başarısız olursa kullanıcıya bildir
     try {
       await _repository.wipeLocalData();
+      // Wipe başarılı — Sentry scope'undaki tüm breadcrumb/user/tag bilgisini
+      // temizle. Bu, silinen cihazın eski device-ID'siyle ilişkilendirilmiş
+      // breadcrumb'ların sonraki crash event'lerine eklenmesini önler
+      // (KVKK Madde 11 silme hakkının observability tarafındaki karşılığı).
+      // Önce clear, sonra tek bir teknik telemetri breadcrumb'ı — bu yeni
+      // breadcrumb fresh scope'a yazılır.
+      await _reporter.clearScope();
       await _reporter.recordAction(
         'settings.account_deleted',
         category: 'settings',

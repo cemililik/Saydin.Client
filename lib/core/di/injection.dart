@@ -1,8 +1,8 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
+import 'package:saydin/core/storage/secure_storage_factory.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
 import 'package:saydin/core/network/api_client.dart';
@@ -93,7 +93,7 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<AccountDataRepository>(
     () => AccountDataRepositoryImpl(
       prefs: SharedPreferencesAsync(),
-      secureStorage: const FlutterSecureStorage(),
+      secureStorage: SecureStorageFactory.create(),
       dio: sl<ApiClient>().dio,
       deviceIdInterceptor: sl<ApiClient>().deviceIdInterceptor,
     ),

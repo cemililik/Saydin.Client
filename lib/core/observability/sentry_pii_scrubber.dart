@@ -64,19 +64,25 @@ class SentryPiiScrubber {
     r'\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?',
   );
 
-  /// Tutar / fiyat pattern'i. İki kalıbı OR ile birleştirir:
+  /// Tutar / fiyat pattern'i. Üç kalıbı OR ile birleştirir:
   ///   - Türkçe binlik formatı: `47.010,34` veya `1.250.500` (`d{1,3}` + en az bir
   ///     `[.,]ddd` grubu + opsiyonel `[.,]dd`).
+  ///   - Küçük tutar: `999,99`, `100,50`, `47.34` (1-3 hane + ondalık 1-4 hane).
   ///   - Binlik ayraçsız 4+ haneli sayı: `47010` veya `47010.34`.
-  /// 3 haneli ve daha küçük rakamlar (HTTP status, retry sayısı vb.) korunur.
+  /// Tam sayı 1-3 haneli sayılar (HTTP status, retry sayısı vb.) ondalıksız
+  /// korunur — `429` gibi teknik telemetri sızıntı oluşturmaz.
   static final RegExp _largeNumber = RegExp(
-    r'\b(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,4})?|\d{4,}(?:[.,]\d+)?)\b',
+    r'\b(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,4})?|\d{1,3}[.,]\d{2,4}|\d{4,}(?:[.,]\d+)?)\b',
   );
 
-  /// Asset sembolü kalıbı (sadece pair): `USD/TRY`, `BTC-USD`, `ETH/USDT`.
-  /// Tek sembol (BTC) `_safeAllCaps` dictionary'sine çarptığı için yakalanmaz;
-  /// breadcrumb mesajı allowlist'i bu boşluğu kapatır.
+  /// Asset sembolü kalıbı (pair): `USD/TRY`, `BTC-USD`, `ETH/USDT`.
   static final RegExp _assetSymbol = RegExp(r'\b[A-Z]{3,6}[/-][A-Z]{2,6}\b');
+
+  /// Tek sembol asset (BTC, USDTRY, XAUTRY, ETHUSDT). Yatırım bağlamında
+  /// PII sayılır — kullanıcı portföy/seçimini ima eder. `_safeAllCaps`
+  /// allowlist'inde olmayan 3-8 harfli ALL_CAPS token'ları sansürler.
+  /// `_assetSymbol` (pair) önce çalışır, bu pattern artakalanları yakalar.
+  static final RegExp _assetSymbolSingle = RegExp(r'\b[A-Z]{3,8}\b');
 
   /// UUID/cihaz tanımlayıcı kalıbı.
   static final RegExp _uuid = RegExp(
@@ -85,6 +91,20 @@ class SentryPiiScrubber {
 
   /// E-posta.
   static final RegExp _email = RegExp(r'\b[\w.+-]+@[\w-]+\.[\w.-]+\b');
+
+  /// T.C. Kimlik Numarası — 11 ardışık rakam, kelime sınırlarıyla. Başında
+  /// `0` olamaz ama burada katı olmadan tüm 11-rakam blokunu sansürleriz.
+  static final RegExp _tcKimlik = RegExp(r'\b\d{11}\b');
+
+  /// IBAN: TR + 24 alfanumerik. Türkiye için sabit uzunluk.
+  static final RegExp _iban = RegExp(r'\bTR\d{2}[A-Z0-9]{22}\b');
+
+  /// TR telefon (mobil/sabit) — `+90...`, `0090...`, `0XXX...`, 10 hane.
+  /// Sade yaklaşım: 11 haneli `0` ile başlayan numaralar + uluslararası
+  /// `+90` formatı.
+  static final RegExp _phoneTr = RegExp(
+    r'(?:\+?90[\s-]?)?0?5\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}',
+  );
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -177,11 +197,16 @@ class SentryPiiScrubber {
   Map<String, Object?>? filterAllowedKeys(Map<String, Object?>? map) =>
       _scrubMap(map);
 
-  /// Tek bir [text] üzerinde tarih/sayı/asset sembolü/UUID/e-posta scrub eder.
+  /// Tek bir [text] üzerinde tarih/sayı/asset sembolü/UUID/e-posta/TC/IBAN/
+  /// telefon scrub eder. Sıra önemli: önce daha spesifik pattern'ler
+  /// (UUID, e-posta, IBAN, telefon, TC) — sonra genel (sayı, sembol).
   String redactText(String text) {
     return text
         .replaceAll(_uuid, '<UUID>')
         .replaceAll(_email, '<EMAIL>')
+        .replaceAll(_iban, '<IBAN>')
+        .replaceAll(_phoneTr, '<PHONE>')
+        .replaceAll(_tcKimlik, '<TCKN>')
         .replaceAll(_isoDate, '<DATE>')
         .replaceAll(_largeNumber, '<NUMBER>')
         .replaceAllMapped(_assetSymbol, (m) {
@@ -192,6 +217,11 @@ class SentryPiiScrubber {
           // güvenli ise mesajı sansürleme.
           final parts = s.split(_assetSymbolSeparator);
           if (parts.every(_safeAllCaps.contains)) return s;
+          return '<SYMBOL>';
+        })
+        .replaceAllMapped(_assetSymbolSingle, (m) {
+          final s = m.group(0)!;
+          if (_safeAllCaps.contains(s)) return s;
           return '<SYMBOL>';
         });
   }

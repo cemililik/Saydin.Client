@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:saydin/core/storage/secure_storage_factory.dart';
 import 'device_id_interceptor.dart';
 import 'device_info_interceptor.dart';
 import 'language_interceptor.dart';
@@ -25,7 +26,7 @@ class ApiClient {
     );
 
     _deviceIdInterceptor = DeviceIdInterceptor(
-      storage ?? const FlutterSecureStorage(),
+      storage ?? SecureStorageFactory.create(),
     );
 
     _dio.interceptors.addAll([
