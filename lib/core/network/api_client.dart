@@ -8,6 +8,7 @@ import 'retry_interceptor.dart';
 
 class ApiClient {
   late final Dio _dio;
+  late final DeviceIdInterceptor _deviceIdInterceptor;
 
   ApiClient({
     required String baseUrl,
@@ -23,8 +24,12 @@ class ApiClient {
       ),
     );
 
+    _deviceIdInterceptor = DeviceIdInterceptor(
+      storage ?? const FlutterSecureStorage(),
+    );
+
     _dio.interceptors.addAll([
-      DeviceIdInterceptor(storage ?? const FlutterSecureStorage()),
+      _deviceIdInterceptor,
       DeviceInfoInterceptor(packageInfo),
       LanguageInterceptor(),
       RetryInterceptor(dio: _dio),
@@ -32,4 +37,9 @@ class ApiClient {
   }
 
   Dio get dio => _dio;
+
+  /// Hesap silme akışı için: in-memory device ID cache'ini sıfırlar.
+  /// Bir sonraki istek silinmiş SecureStorage'a düşer ve yeni UUID üretir
+  /// (ya da storage henüz boşsa onboarding tamamlanana kadar geçici UUID).
+  DeviceIdInterceptor get deviceIdInterceptor => _deviceIdInterceptor;
 }

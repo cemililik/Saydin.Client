@@ -11,7 +11,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION: "3.41.4"
+  # Flutter sürümü: pubspec.yaml > environment.flutter alanından okunur
+  # (subosito/flutter-action@v2 `flutter-version-file: pubspec.yaml`).
+  # Yerel `flutter pub get` ve CI aynı sürümü kullansın diye tek kaynak.
   IOS_BUNDLE_ID: "com.saydin.saydin"
 
 # ── Versiyon Yönetimi ─────────────────────────────────────────────────────────
@@ -136,7 +138,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: pubspec.yaml
           cache: true
 
       - name: Install dependencies
@@ -213,7 +215,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: pubspec.yaml
           cache: true
 
       - name: Install dependencies
@@ -264,7 +266,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: pubspec.yaml
           cache: true
 
       - name: Install dependencies
@@ -409,7 +411,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: pubspec.yaml
           cache: true
 
       - name: Install dependencies
@@ -545,7 +547,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: pubspec.yaml
           cache: true
 
       - name: Install dependencies

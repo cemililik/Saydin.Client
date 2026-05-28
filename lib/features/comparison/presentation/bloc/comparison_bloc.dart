@@ -73,10 +73,10 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     } catch (e, st) {
       await _reporter.report(e, st, context: 'comparison_get_assets');
       emit(
-        ComparisonFailure(
-          assets: const [],
-          selectedSymbols: const [],
-          error: const UnknownError(),
+        const ComparisonFailure(
+          assets: [],
+          selectedSymbols: [],
+          error: UnknownError(),
         ),
       );
     }

@@ -890,6 +890,102 @@ abstract class AppLocalizations {
   /// **'Sistem'**
   String get languageSystem;
 
+  /// No description provided for @settingsSectionPreferences.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tercihler'**
+  String get settingsSectionPreferences;
+
+  /// No description provided for @settingsSectionLegal.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yasal'**
+  String get settingsSectionLegal;
+
+  /// No description provided for @settingsSectionAccount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap'**
+  String get settingsSectionAccount;
+
+  /// No description provided for @settingsPrivacyPolicy.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gizlilik Politikası'**
+  String get settingsPrivacyPolicy;
+
+  /// No description provided for @settingsKvkkDisclosure.
+  ///
+  /// In tr, this message translates to:
+  /// **'KVKK Aydınlatma Metni'**
+  String get settingsKvkkDisclosure;
+
+  /// No description provided for @settingsDeleteAccount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabımı Sil'**
+  String get settingsDeleteAccount;
+
+  /// No description provided for @legalLastUpdated.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son güncelleme: {date}'**
+  String legalLastUpdated(String date);
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabımı Sil'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountWarning.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu işlem geri alınamaz. Cihazınızdaki tüm tercihleriniz, kaydedilen senaryolarınız ve favorileriniz kalıcı olarak silinir. KVKK Madde 11 / GDPR Madde 17 kapsamında verilerinizin silinmesi 30 gün içinde sonuçlandırılır.'**
+  String get deleteAccountWarning;
+
+  /// No description provided for @deleteAccountConfirmHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Onaylamak için aşağıya \"{word}\" yazınız.'**
+  String deleteAccountConfirmHint(String word);
+
+  /// No description provided for @deleteAccountConfirmWord.
+  ///
+  /// In tr, this message translates to:
+  /// **'SİL'**
+  String get deleteAccountConfirmWord;
+
+  /// No description provided for @deleteAccountConfirmButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabımı Kalıcı Olarak Sil'**
+  String get deleteAccountConfirmButton;
+
+  /// No description provided for @deleteAccountInProgress.
+  ///
+  /// In tr, this message translates to:
+  /// **'Veriler siliniyor...'**
+  String get deleteAccountInProgress;
+
+  /// No description provided for @deleteAccountSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabınız ve tüm verileriniz silindi.'**
+  String get deleteAccountSuccess;
+
+  /// No description provided for @deleteAccountPartialSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cihazınızdaki tüm veriler silindi. Ancak sunucu silme talebimiz şu an iletilemedi; iletisim@saydin.app adresinden silme talebinizi takip edin.'**
+  String get deleteAccountPartialSuccess;
+
+  /// No description provided for @deleteAccountFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap silme tamamlanamadı. Tekrar deneyin veya iletişime geçin.'**
+  String get deleteAccountFailed;
+
   /// No description provided for @shareCardInitialValue.
   ///
   /// In tr, this message translates to:
@@ -1068,6 +1164,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Hemen Dene'**
   String get onboardingGetStarted;
+
+  /// No description provided for @onboardingLegalConsent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Devam ederek {privacy} ve {kvkk} metinlerini okuduğumu ve kabul ettiğimi onaylıyorum.'**
+  String onboardingLegalConsent(String privacy, String kvkk);
+
+  /// No description provided for @onboardingPrivacyPolicyLink.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gizlilik Politikası'**
+  String get onboardingPrivacyPolicyLink;
+
+  /// No description provided for @onboardingKvkkLink.
+  ///
+  /// In tr, this message translates to:
+  /// **'KVKK Aydınlatma Metni'**
+  String get onboardingKvkkLink;
 
   /// No description provided for @onboardingPage1Title.
   ///

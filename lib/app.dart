@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/di/injection.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
 import 'package:saydin/core/theme/app_theme.dart';
 import 'package:saydin/core/theme/theme_mode_mapper.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
@@ -78,7 +81,7 @@ class SaydinApp extends StatelessWidget {
                 BlocProvider(create: (_) => sl<PortfolioBloc>()),
                 BlocProvider(create: (_) => sl<DcaBloc>()),
               ],
-              child: const _AppHome(),
+              child: const AppHome(),
             ),
           );
         },
@@ -87,20 +90,33 @@ class SaydinApp extends StatelessWidget {
   }
 }
 
-class _AppHome extends StatefulWidget {
-  const _AppHome();
+class AppHome extends StatefulWidget {
+  const AppHome({super.key});
 
   @override
-  State<_AppHome> createState() => _AppHomeState();
+  State<AppHome> createState() => _AppHomeState();
 }
 
-class _AppHomeState extends State<_AppHome> {
+class _AppHomeState extends State<AppHome> {
   bool? _onboardingCompleted;
+  StreamSubscription<void>? _resetSubscription;
 
   @override
   void initState() {
     super.initState();
+    // Hesap silme sonrası `AccountDeletionCubit` reset event yayar; bunu
+    // dinleyip onboarding state'ini sıfırlarız. Cross-layer coupling
+    // yerine publish/subscribe — feature → app yönündeki bağı keser.
+    _resetSubscription = sl<AppLifecycleEvents>().resetStream.listen((_) {
+      _restartFromOnboarding();
+    });
     _checkOnboarding();
+  }
+
+  @override
+  void dispose() {
+    _resetSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkOnboarding() async {
@@ -112,6 +128,12 @@ class _AppHomeState extends State<_AppHome> {
   Future<void> _completeOnboarding() async {
     await sl<OnboardingRepository>().completeOnboarding();
     if (mounted) setState(() => _onboardingCompleted = true);
+  }
+
+  Future<void> _restartFromOnboarding() async {
+    if (!mounted) return;
+    setState(() => _onboardingCompleted = null);
+    await _checkOnboarding();
   }
 
   @override

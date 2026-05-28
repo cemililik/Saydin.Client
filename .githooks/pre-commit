@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Flutter SDK yolunu bul
+# CLAUDE.md "Build Öncesi Kontrol" sözleşmesi:
+#   flutter analyze --fatal-infos
+#   flutter test
+# Bu hook her commit öncesi tam set'i çalıştırır.
+#
+# Aciliyet durumunda atlamak için: git commit --no-verify
+# (kullanıcının açıkça istemediği sürece kullanılmaz)
+
+# Flutter SDK yolunu bul. Foundation hedefi sözleşmeyi makinede zorlamak
+# olduğu için fail-CLOSED: SDK yoksa commit reddedilir. Aciliyet için
+# kullanıcı `git commit --no-verify` ile bypass edebilir.
 if command -v flutter &>/dev/null; then
   FLUTTER="flutter"
   DART="dart"
@@ -9,8 +19,14 @@ elif [ -f "$HOME/development/flutter/bin/flutter" ]; then
   FLUTTER="$HOME/development/flutter/bin/flutter"
   DART="$HOME/development/flutter/bin/dart"
 else
-  echo "⚠️  Flutter SDK bulunamadı, pre-commit hook atlandı."
-  exit 0
+  echo ""
+  echo "✗ Flutter SDK bulunamadı. Kurulum:"
+  echo "  https://docs.flutter.dev/get-started/install"
+  echo ""
+  echo "  Aciliyet durumunda bu kontrolü atlamak için:"
+  echo "  git commit --no-verify"
+  echo ""
+  exit 1
 fi
 
 echo "→ dart format kontrolü..."
@@ -22,12 +38,22 @@ if ! $DART format --output=none --set-exit-if-changed lib/ test/ 2>&1; then
   exit 1
 fi
 
-echo "→ flutter analyze..."
-if ! $FLUTTER analyze --no-pub 2>&1; then
+echo "→ flutter analyze --fatal-infos..."
+if ! $FLUTTER analyze --no-pub --fatal-infos 2>&1; then
   echo ""
   echo "✗ Analiz hatası. Yukarıdaki sorunları düzeltin."
+  echo "  (info seviyesi de fail eder — '--fatal-infos' sözleşme gereği)"
   echo ""
   exit 1
 fi
 
-echo "✓ Tüm kontroller geçti."
+echo "→ flutter test..."
+if ! $FLUTTER test --no-pub --reporter=compact 2>&1; then
+  echo ""
+  echo "✗ Test hatası. Yukarıdaki testleri düzeltin."
+  echo "  (Tek dosya çalıştırmak için: flutter test <path>)"
+  echo ""
+  exit 1
+fi
+
+echo "✓ Tüm kontroller geçti (format + analyze --fatal-infos + test)."

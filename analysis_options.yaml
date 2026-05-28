@@ -1,1 +1,36 @@
 include: package:flutter_lints/flutter.yaml
+
+# ── Sözleşmenin makinede zorlanması ──────────────────────────────────────────
+# CLAUDE.md "Yasak Listesi"nin doğrudan zorlanabilecek alt kümesi.
+# Yeni kural eklerken: önce `flutter analyze --fatal-infos` yeşil tut.
+
+analyzer:
+  language:
+    # Tipsiz cast (`as dynamic`, raw cast) → backend payload değişikliklerinde
+    # runtime crash kaynağı. `DioErrorMapper.map` gibi sıcak noktalar için kritik.
+    strict-casts: true
+    strict-raw-types: true
+    strict-inference: true
+  errors:
+    # CLAUDE.md: print() YASAK
+    avoid_print: error
+    # await unutmak finansal akışta sessiz hata yutmaya neden olur (F-12-13)
+    unawaited_futures: error
+    discarded_futures: warning
+  exclude:
+    # Generated dosya — manuel düzenlenmiyor.
+    - "lib/l10n/app_localizations*.dart"
+
+linter:
+  rules:
+    # Yasak Listesi tarafı
+    avoid_print: true
+    unawaited_futures: true
+    # Modernization & code quality
+    use_super_parameters: true
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+    # Sealed class & switch exhaustiveness (AppError, ScenarioType vb.)
+    exhaustive_cases: true
+    # `is` öncesi null kontrolü için
+    cast_nullable_to_non_nullable: true

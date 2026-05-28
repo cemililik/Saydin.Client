@@ -71,12 +71,14 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       if (error is UnknownError || error is ServerError) {
         await _reporter.report(e, st, context: 'get_assets');
       }
-      emit(WhatIfFailure(assets: [], error: error, formInput: _formInput));
+      emit(
+        WhatIfFailure(assets: const [], error: error, formInput: _formInput),
+      );
     } catch (e, st) {
       await _reporter.report(e, st, context: 'get_assets');
       emit(
         WhatIfFailure(
-          assets: [],
+          assets: const [],
           error: UnknownError(cause: e),
           formInput: _formInput,
         ),
@@ -232,9 +234,10 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   ) async {
     final currentAssets = _currentAssets();
 
-    await _reporter.addBreadcrumb(
-      'WhatIf calculated: ${event.assetSymbol} ${event.buyDate.toIso8601String()}',
+    await _reporter.recordAction(
+      'what_if.calculated',
       category: 'what_if',
+      data: const {'feature': 'what_if', 'action': 'calculated'},
     );
 
     emit(WhatIfCalculating(currentAssets, formInput: _formInput));
@@ -284,9 +287,10 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   ) async {
     final currentAssets = _currentAssets();
 
-    await _reporter.addBreadcrumb(
-      'ReverseWhatIf calculated: ${event.assetSymbol} ${event.buyDate.toIso8601String()}',
+    await _reporter.recordAction(
+      'what_if.reverse_calculated',
       category: 'what_if',
+      data: const {'feature': 'what_if', 'action': 'reverse_calculated'},
     );
 
     emit(WhatIfCalculating(currentAssets, formInput: _formInput));

@@ -57,12 +57,12 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
       if (error is UnknownError || error is ServerError) {
         await _reporter.report(e, st, context: 'dca_get_assets');
       }
-      emit(DcaFailure(assets: [], error: error, formInput: _formInput));
+      emit(DcaFailure(assets: const [], error: error, formInput: _formInput));
     } catch (e, st) {
       await _reporter.report(e, st, context: 'dca_get_assets');
       emit(
         DcaFailure(
-          assets: [],
+          assets: const [],
           error: UnknownError(cause: e),
           formInput: _formInput,
         ),
@@ -113,9 +113,10 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
   ) async {
     final currentAssets = _currentAssets();
 
-    await _reporter.addBreadcrumb(
-      'DCA calculated: ${event.assetSymbol} ${event.startDate.toIso8601String()}',
+    await _reporter.recordAction(
+      'dca.calculated',
       category: 'dca',
+      data: const {'feature': 'dca', 'action': 'calculated'},
     );
 
     final updatedForm = _formInput.copyWith(

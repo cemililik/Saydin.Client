@@ -67,9 +67,9 @@ class ShareCardWidget extends StatelessWidget {
             Container(height: 6, color: AppColors.primary),
 
             // ── Header ─────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              child: const Center(
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              child: Center(
                 child: Text(
                   'saydın',
                   style: TextStyle(
