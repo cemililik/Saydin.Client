@@ -1,0 +1,564 @@
+name: Release
+
+# ── Tag-Driven Release ──────────────────────────────────────────────────────
+#
+# Tetikleyici: sadece `v*` formatında tag push.
+#   v0.2.0          → production rollout (Play %10 staged + TestFlight)
+#   v0.2.0-rc.1     → staging (Play internal + TestFlight)
+#
+# Release nasıl yapılır?
+#   1. main güncel ve yeşil (CI ✅)
+#   2. Annotated tag yarat — gövdede TR ve EN release notes:
+#
+#        git tag -a v0.2.0 -m "v0.2.0
+#
+#        Yeni portföy ekranı eklendi.
+#        Grafik render hatası düzeltildi.
+#
+#        =====LANG_SEPARATOR=====
+#
+#        New portfolio screen.
+#        Fixed chart rendering bug.
+#        "
+#
+#   3. `git push origin v0.2.0`
+#   4. Bu workflow tetiklenir; production tag ise GitHub Environment
+#      onayını bekler.
+#
+# Acil yeniden çalıştırma: workflow_dispatch ile mevcut tag adı girilir.
+# ────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Mevcut tag (örn: v0.2.0 veya v0.2.0-rc.1)"
+        required: true
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+env:
+  IOS_BUNDLE_ID: "com.saydin.saydin"
+
+jobs:
+  # ── Guard: tag main'in atası mı? ───────────────────────────────────────────
+  guard:
+    name: Verify tag on main
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.t.outputs.tag }}
+    steps:
+      - id: t
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          if [ -z "$TAG" ]; then
+            echo "❌ Tag adı boş"
+            exit 1
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "📌 Release tag: $TAG"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.t.outputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Verify tag is on main
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          TAG_SHA=$(git rev-parse "${{ steps.t.outputs.tag }}^{commit}")
+          if ! git merge-base --is-ancestor "$TAG_SHA" origin/main; then
+            echo "❌ Tag ${{ steps.t.outputs.tag }} ($TAG_SHA) main branch'da değil; release iptal."
+            echo "   Sadece main'e merge edilmiş commit'ler tag'lenebilir."
+            exit 1
+          fi
+          echo "✅ Tag main'in atası — release devam ediyor."
+
+  # ── Channel + tag mesajından release notes ─────────────────────────────────
+  detect-channel:
+    name: Detect channel & parse tag message
+    runs-on: ubuntu-latest
+    needs: guard
+    outputs:
+      is_rc: ${{ steps.c.outputs.is_rc }}
+      version_name: ${{ steps.c.outputs.version_name }}
+      build_number: ${{ github.run_number }}
+      tag: ${{ needs.guard.outputs.tag }}
+      notes_tr: ${{ steps.notes.outputs.notes_tr }}
+      notes_en: ${{ steps.notes.outputs.notes_en }}
+      gh_body: ${{ steps.notes.outputs.gh_body }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.guard.outputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - id: c
+        name: Parse version from tag
+        run: |
+          TAG="${{ needs.guard.outputs.tag }}"
+          V="${TAG#v}"
+          if [[ "$V" == *-rc.* ]]; then
+            echo "is_rc=true" >> $GITHUB_OUTPUT
+            echo "version_name=${V%%-rc.*}" >> $GITHUB_OUTPUT
+            echo "🟡 RC tag → staging kanalı"
+          else
+            echo "is_rc=false" >> $GITHUB_OUTPUT
+            echo "version_name=$V" >> $GITHUB_OUTPUT
+            echo "🟢 Production tag → production kanalı"
+          fi
+
+      - id: notes
+        name: Read annotated tag message
+        env:
+          TAG: ${{ needs.guard.outputs.tag }}
+        run: |
+          SEPARATOR="=====LANG_SEPARATOR====="
+
+          # Annotated tag body (subject hariç gövde)
+          BODY=$(git tag -l --format='%(contents:body)' "$TAG")
+
+          # Boşsa tam mesajı (subject dahil) dene
+          if [ -z "$BODY" ]; then
+            BODY=$(git tag -l --format='%(contents)' "$TAG")
+          fi
+
+          # Hâlâ boşsa lightweight tag — son commit subject'i fallback
+          if [ -z "$BODY" ]; then
+            echo "⚠️  Annotated tag mesajı yok; lightweight tag varsayılıyor"
+            BODY=$(git log -1 --pretty=format:"%s" "$TAG")
+          fi
+
+          # TR / EN ayır
+          if printf '%s' "$BODY" | grep -q "$SEPARATOR"; then
+            NOTES_TR=$(printf '%s' "$BODY" | sed "/${SEPARATOR}/,\$d")
+            NOTES_EN=$(printf '%s' "$BODY" | sed "1,/${SEPARATOR}/d")
+          else
+            echo "ℹ️  Separator yok; TR ve EN için aynı metin kullanılacak"
+            NOTES_TR="$BODY"
+            NOTES_EN="$BODY"
+          fi
+
+          # Baş/son boşlukları kırp
+          NOTES_TR=$(printf '%s' "$NOTES_TR" | sed -e '/./,$!d' -e ':a' -e '/^\n*$/{$d;N;ba' -e '}')
+          NOTES_EN=$(printf '%s' "$NOTES_EN" | sed -e '/./,$!d' -e ':a' -e '/^\n*$/{$d;N;ba' -e '}')
+
+          # Boş kalanları diğeriyle doldur
+          [ -z "$NOTES_EN" ] && NOTES_EN="$NOTES_TR"
+          [ -z "$NOTES_TR" ] && NOTES_TR="$NOTES_EN"
+
+          # Play Store 500 karakter, TestFlight 4000 karakter — Play limiti kullan
+          NOTES_TR_500=$(printf '%s' "$NOTES_TR" | head -c 500)
+          NOTES_EN_500=$(printf '%s' "$NOTES_EN" | head -c 500)
+
+          # Multi-line outputs
+          EOF=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+          {
+            echo "notes_tr<<$EOF"
+            printf '%s\n' "$NOTES_TR_500"
+            echo "$EOF"
+          } >> $GITHUB_OUTPUT
+
+          EOF2=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+          {
+            echo "notes_en<<$EOF2"
+            printf '%s\n' "$NOTES_EN_500"
+            echo "$EOF2"
+          } >> $GITHUB_OUTPUT
+
+          # GitHub Release gövdesi — limit yok, tam metin
+          EOF3=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+          {
+            echo "gh_body<<$EOF3"
+            echo "## Release Notes"
+            echo ""
+            echo "### 🇹🇷 Türkçe"
+            echo ""
+            printf '%s\n' "$NOTES_TR"
+            echo ""
+            echo "### 🇬🇧 English"
+            echo ""
+            printf '%s\n' "$NOTES_EN"
+            echo "$EOF3"
+          } >> $GITHUB_OUTPUT
+
+          echo "✅ Tag mesajı parse edildi"
+          echo "--- TR (≤500) ---"
+          printf '%s\n' "$NOTES_TR_500"
+          echo "--- EN (≤500) ---"
+          printf '%s\n' "$NOTES_EN_500"
+
+  # ── Android Release AAB ────────────────────────────────────────────────────
+  release-android:
+    name: Release Android AAB
+    runs-on: ubuntu-latest
+    needs: [guard, detect-channel]
+    environment:
+      name: ${{ needs.detect-channel.outputs.is_rc == 'true' && 'staging' || 'production' }}
+      url: https://play.google.com/store/apps/details?id=com.saydin.saydin
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.guard.outputs.tag }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: pubspec.yaml
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate l10n
+        run: flutter gen-l10n
+
+      - name: Pre-install CMake
+        run: yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
+
+      - name: Prepare & verify signing
+        env:
+          KEYSTORE_B64:     ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD:   ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS:        ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD:     ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -z "$KEYSTORE_B64" ]   && missing="$missing\n  - ANDROID_KEYSTORE_BASE64"
+          [ -z "$STORE_PASSWORD" ] && missing="$missing\n  - ANDROID_STORE_PASSWORD"
+          [ -z "$KEY_ALIAS" ]      && missing="$missing\n  - ANDROID_KEY_ALIAS"
+          [ -z "$KEY_PASSWORD" ]   && missing="$missing\n  - ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            printf "❌ Eksik secret'lar:%b\n" "$missing"
+            exit 1
+          fi
+          echo "✅ [1/4] Tüm secret'lar mevcut"
+
+          printf '%s' "$KEYSTORE_B64" | base64 --decode --ignore-garbage \
+            > android/saydin-release.jks
+          FILESIZE=$(wc -c < android/saydin-release.jks)
+          if [ "$FILESIZE" -lt 100 ]; then
+            echo "❌ [2/4] Decode başarısız — dosya ${FILESIZE} bytes"
+            exit 1
+          fi
+          echo "✅ [2/4] Keystore decode edildi (${FILESIZE} bytes)"
+
+          if ! keytool -list \
+                -keystore android/saydin-release.jks \
+                -storepass "$STORE_PASSWORD" \
+                -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "❌ [3/4] STORE_PASSWORD veya KEY_ALIAS hatalı"
+            exit 1
+          fi
+          echo "✅ [3/4] Store password ve alias doğrulandı"
+
+          if ! keytool -exportcert \
+                -keystore android/saydin-release.jks \
+                -storepass "$STORE_PASSWORD" \
+                -alias "$KEY_ALIAS" \
+                -keypass "$KEY_PASSWORD" > /dev/null 2>&1; then
+            echo "❌ [4/4] KEY_PASSWORD hatalı"
+            exit 1
+          fi
+          echo "✅ [4/4] Key password doğrulandı"
+
+      - name: Set environment variables
+        id: env
+        run: |
+          if [ "${{ needs.detect-channel.outputs.is_rc }}" = "true" ]; then
+            echo "app_env=staging" >> $GITHUB_OUTPUT
+            echo "api_url=${{ vars.API_URL_STAGING }}" >> $GITHUB_OUTPUT
+          else
+            echo "app_env=production" >> $GITHUB_OUTPUT
+            echo "api_url=${{ vars.API_URL_PRODUCTION }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build AAB (release)
+        env:
+          STORE_FILE: ../saydin-release.jks
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          flutter build appbundle --release \
+            --build-name=${{ needs.detect-channel.outputs.version_name }} \
+            --build-number=${{ needs.detect-channel.outputs.build_number }} \
+            --dart-define=API_BASE_URL=${{ steps.env.outputs.api_url }} \
+            --dart-define=APP_ENV=${{ steps.env.outputs.app_env }}
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saydin-${{ needs.detect-channel.outputs.tag }}.aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 90
+
+      - name: Prepare release notes for Play Store
+        run: |
+          mkdir -p whatsnew
+          printf '%s' "${{ needs.detect-channel.outputs.notes_tr }}" > whatsnew/whatsnew-tr-TR
+          printf '%s' "${{ needs.detect-channel.outputs.notes_en }}" > whatsnew/whatsnew-en-US
+
+      # NOT: RC için track=internal + status=draft (Play Console'dan elle promote)
+      #      Prod için track=production + status=inProgress + userFraction=0.1
+      #      → %10 staged rollout. Play Console'dan elle %25 → %50 → %100.
+      - name: Upload to Play Store (RC → internal draft)
+        if: needs.detect-channel.outputs.is_rc == 'true'
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.saydin.saydin
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: draft
+          whatsNewDirectory: whatsnew
+
+      - name: Upload to Play Store (Production → staged 10%)
+        if: needs.detect-channel.outputs.is_rc == 'false'
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.saydin.saydin
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: production
+          status: inProgress
+          userFraction: 0.1
+          whatsNewDirectory: whatsnew
+
+  # ── iOS Release IPA + TestFlight ──────────────────────────────────────────
+  release-ios:
+    name: Release iOS + TestFlight
+    runs-on: macos-15
+    needs: [guard, detect-channel]
+    environment:
+      name: ${{ needs.detect-channel.outputs.is_rc == 'true' && 'staging' || 'production' }}
+      url: https://appstoreconnect.apple.com
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.guard.outputs.tag }}
+
+      # Apple ITMS-90725: 28 Nisan 2026'dan itibaren App Store Connect
+      # iOS 26 SDK altında derlenmiş build'leri reddediyor.
+      - name: Pin Xcode version for iOS 26 SDK (ITMS-90725)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: pubspec.yaml
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate l10n
+        run: flutter gen-l10n
+
+      - name: Import code signing certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+          p12-password: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+
+      - name: Download provisioning profile
+        uses: apple-actions/download-provisioning-profiles@v3
+        with:
+          bundle-id: com.saydin.saydin
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+
+      - name: Set environment variables
+        id: env
+        run: |
+          if [ "${{ needs.detect-channel.outputs.is_rc }}" = "true" ]; then
+            echo "app_env=staging" >> $GITHUB_OUTPUT
+            echo "api_url=${{ vars.API_URL_STAGING }}" >> $GITHUB_OUTPUT
+          else
+            echo "app_env=production" >> $GITHUB_OUTPUT
+            echo "api_url=${{ vars.API_URL_PRODUCTION }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build IPA (release)
+        run: |
+          flutter build ipa --release \
+            --build-name=${{ needs.detect-channel.outputs.version_name }} \
+            --build-number=${{ needs.detect-channel.outputs.build_number }} \
+            --dart-define=API_BASE_URL=${{ steps.env.outputs.api_url }} \
+            --dart-define=APP_ENV=${{ steps.env.outputs.app_env }} \
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Find IPA path
+        id: ipa
+        run: echo "path=$(find build/ios/ipa -name '*.ipa' | head -1)" >> $GITHUB_OUTPUT
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saydin-ios-${{ needs.detect-channel.outputs.tag }}.ipa
+          path: ${{ steps.ipa.outputs.path }}
+          retention-days: 90
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: ${{ steps.ipa.outputs.path }}
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+
+      - name: Set TestFlight release notes
+        env:
+          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          NOTES_TR: ${{ needs.detect-channel.outputs.notes_tr }}
+          NOTES_EN: ${{ needs.detect-channel.outputs.notes_en }}
+          VERSION: ${{ needs.detect-channel.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.detect-channel.outputs.build_number }}
+        run: |
+          # ── 1. JWT token oluştur (App Store Connect API) ───────────────
+          HEADER=$(printf '{"alg":"ES256","kid":"%s","typ":"JWT"}' "$KEY_ID" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          NOW=$(date +%s)
+          EXP=$((NOW + 1200))
+          CLAIMS=$(printf '{"iss":"%s","iat":%d,"exp":%d,"aud":"appstoreconnect-v1"}' "$ISSUER_ID" "$NOW" "$EXP" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          UNSIGNED="${HEADER}.${CLAIMS}"
+
+          echo "$PRIVATE_KEY" > /tmp/asc_key.p8
+          SIGNATURE=$(printf '%s' "$UNSIGNED" | openssl dgst -sha256 -sign /tmp/asc_key.p8 | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          rm /tmp/asc_key.p8
+          JWT="${UNSIGNED}.${SIGNATURE}"
+
+          # ── 2. Build'i bul (processing bitene kadar bekle) ─────────────
+          # NOT: curl'a -g (--globoff) flag'i ZORUNLU. App Store Connect API
+          # filter[xxx] query param'lari kullaniyor; curl varsayilan olarak
+          # URL'lerdeki [...] ifadesini URL globbing olarak parse ediyor.
+          BUNDLE_ID="${IOS_BUNDLE_ID}"
+          APP_RESPONSE=$(curl -sg \
+            -H "Authorization: Bearer $JWT" \
+            "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}")
+          APP_ID=$(echo "$APP_RESPONSE" | jq -r '.data[0].id // empty')
+
+          if [ -z "$APP_ID" ]; then
+            echo "⚠️  App bulunamadı (bundleId=${BUNDLE_ID}), release notes atlanıyor"
+            exit 0
+          fi
+
+          echo "⏳ Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te aranıyor (app=$APP_ID)..."
+
+          for i in $(seq 1 30); do
+            BUILDS=$(curl -sg \
+              -H "Authorization: Bearer $JWT" \
+              "https://api.appstoreconnect.apple.com/v1/builds?filter[version]=${BUILD_NUMBER}&filter[app]=${APP_ID}&limit=1")
+
+            BUILD_ID=$(echo "$BUILDS" | jq -r '.data[0].id // empty')
+            PROCESSING=$(echo "$BUILDS" | jq -r '.data[0].attributes.processingState // empty')
+
+            if [ -n "$BUILD_ID" ] && [ "$PROCESSING" = "VALID" ]; then
+              echo "✅ Build bulundu: $BUILD_ID"
+              break
+            fi
+            echo "  Deneme $i/30 — durum: ${PROCESSING:-bulunamadı}, 30s bekleniyor..."
+            sleep 30
+          done
+
+          if [ -z "$BUILD_ID" ]; then
+            echo "⚠️  Build bulunamadı, release notes atlanıyor"
+            exit 0
+          fi
+
+          LOCALIZATIONS=$(curl -s \
+            -H "Authorization: Bearer $JWT" \
+            "https://api.appstoreconnect.apple.com/v1/builds/${BUILD_ID}/betaBuildLocalizations")
+
+          TR_ID=$(echo "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="tr") | .id // empty')
+          if [ -n "$TR_ID" ]; then
+            curl -s -X PATCH \
+              -H "Authorization: Bearer $JWT" \
+              -H "Content-Type: application/json" \
+              "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations/${TR_ID}" \
+              -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"id\":\"${TR_ID}\",\"attributes\":{\"whatsNew\":$(echo "$NOTES_TR" | jq -Rs .)}}}"
+          else
+            curl -s -X POST \
+              -H "Authorization: Bearer $JWT" \
+              -H "Content-Type: application/json" \
+              "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations" \
+              -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"${BUILD_ID}\"}}},\"attributes\":{\"locale\":\"tr\",\"whatsNew\":$(echo "$NOTES_TR" | jq -Rs .)}}}"
+          fi
+
+          EN_ID=$(echo "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="en-US") | .id // empty')
+          if [ -n "$EN_ID" ]; then
+            curl -s -X PATCH \
+              -H "Authorization: Bearer $JWT" \
+              -H "Content-Type: application/json" \
+              "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations/${EN_ID}" \
+              -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"id\":\"${EN_ID}\",\"attributes\":{\"whatsNew\":$(echo "$NOTES_EN" | jq -Rs .)}}}"
+          else
+            curl -s -X POST \
+              -H "Authorization: Bearer $JWT" \
+              -H "Content-Type: application/json" \
+              "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations" \
+              -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"${BUILD_ID}\"}}},\"attributes\":{\"locale\":\"en-US\",\"whatsNew\":$(echo "$NOTES_EN" | jq -Rs .)}}}"
+          fi
+
+          echo "✅ TestFlight release notes eklendi (TR + EN)"
+
+  # ── GitHub Release ─────────────────────────────────────────────────────────
+  github-release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: [guard, detect-channel, release-android, release-ios]
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.guard.outputs.tag }}
+
+      - name: Download Android AAB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: saydin-${{ needs.detect-channel.outputs.tag }}.aab
+          path: release-assets/
+
+      - name: Download iOS IPA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: saydin-ios-${{ needs.detect-channel.outputs.tag }}.ipa
+          path: release-assets/
+
+      - name: Rename artifacts
+        run: |
+          mv release-assets/app-release.aab "release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.aab"
+          mv release-assets/*.ipa "release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.ipa"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.detect-channel.outputs.tag }}
+          name: ${{ needs.detect-channel.outputs.tag }}
+          prerelease: ${{ needs.detect-channel.outputs.is_rc == 'true' }}
+          body: ${{ needs.detect-channel.outputs.gh_body }}
+          files: |
+            release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.aab
+            release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.ipa

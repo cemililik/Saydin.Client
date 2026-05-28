@@ -123,27 +123,29 @@ final value = result?.price ?? 0;
 
 ### Conventional Commits (ZORUNLU)
 
-Commit mesajları **Conventional Commits** formatında olmalıdır. CI versiyon numarasını bu mesajlardan otomatik hesaplar.
+Commit mesajları **Conventional Commits** formatında olmalıdır.
 
 ```
 <tip>(<kapsam>): <açıklama>
 ```
 
-| Prefix | Versiyon etkisi | Örnek |
-|--------|----------------|-------|
-| `feat:` | MINOR (0.1.0 → 0.2.0) | `feat: portföy ekranı eklendi` |
-| `fix:` | PATCH (0.1.0 → 0.1.1) | `fix: grafik render hatası düzeltildi` |
-| `perf:` | PATCH | `perf: liste scroll performansı iyileştirildi` |
-| `revert:` | PATCH | `revert: son değişiklik geri alındı` |
-| `feat!:` / `fix!:` | MAJOR (0.1.0 → 1.0.0) | `feat!: API v2'ye geçildi` |
-| `chore:` | yok | `chore: bağımlılık güncellendi` |
-| `docs:` | yok | `docs: README güncellendi` |
-| `ci:` | yok | `ci: workflow düzeltildi` |
-| `style:` | yok | `style: format düzeltmesi` |
-| `refactor:` | yok | `refactor: widget yapısı sadeleştirildi` |
-| `test:` | yok | `test: bloc testi eklendi` |
+| Prefix | Anlam | Örnek |
+|--------|-------|-------|
+| `feat:` | Yeni özellik (MINOR bump kandidi) | `feat: portföy ekranı eklendi` |
+| `fix:` | Hata düzeltme (PATCH bump kandidi) | `fix: grafik render hatası düzeltildi` |
+| `perf:` | Performans iyileştirme (PATCH) | `perf: liste scroll performansı iyileştirildi` |
+| `revert:` | Geri alma (PATCH) | `revert: son değişiklik geri alındı` |
+| `feat!:` / `fix!:` | Breaking change (MAJOR) | `feat!: API v2'ye geçildi` |
+| `chore:` | Bakım | `chore: bağımlılık güncellendi` |
+| `docs:` | Dokümantasyon | `docs: README güncellendi` |
+| `ci:` | CI/CD | `ci: workflow düzeltildi` |
+| `style:` | Format | `style: format düzeltmesi` |
+| `refactor:` | Refactor | `refactor: widget yapısı sadeleştirildi` |
+| `test:` | Test | `test: bloc testi eklendi` |
 
 Kapsam isteğe bağlıdır: `feat(portfolio):`, `fix(auth):` gibi.
+
+> Versiyon numarası **tag adından** belirlenir (bkz. [Release Kuralı](#release-kuralı-kri̇ti̇k)). Commit prefix'i sadece sürüm planlamasına ipucu verir, otomatik bump'lamaz.
 
 ### Build Öncesi Kontrol
 
@@ -155,6 +157,72 @@ Kapsam isteğe bağlıdır: `feat(portfolio):`, `fix(auth):` gibi.
 ```
 
 Analiz veya test başarısız olursa commit atma, önce hatayı düzelt.
+
+---
+
+## Release Kuralı (KRİTİK)
+
+Saydın **tag-driven** release modelini kullanır. `main`'e push tek başına store'a deployment YAPMAZ — sadece `v*` formatında annotated tag push'lamak release tetikler.
+
+### Tag → Kanal Eşleşmesi
+
+| Tag formatı | Kanal | Play Store | TestFlight | GitHub Environment |
+|---|---|---|---|---|
+| `v0.2.0-rc.1` | staging | `internal` (draft) | beta | `staging` (oto-onay) |
+| `v0.2.0` | production | `production` (%10 staged) | beta | `production` (**manuel approval**) |
+
+Production rollout `userFraction: 0.1` ile başlar — Play Console'dan elle %25 → %50 → %100 promote edilir.
+
+### Release Akışı
+
+1. `main` güncel ve [CI](https://github.com/cemililik/Saydin.Client/actions) yeşil olmalı.
+2. **Annotated** tag oluştur (lightweight tag YASAK — release notes tag mesajından alınır):
+
+   ```bash
+   git tag -a v0.2.0 -m "v0.2.0
+
+   ✨ Portföy ekranı eklendi.
+   🐛 Grafik render hatası düzeltildi.
+
+   =====LANG_SEPARATOR=====
+
+   ✨ New portfolio screen.
+   🐛 Fixed chart rendering bug.
+   "
+   ```
+
+3. Tag'i push'la: `git push origin v0.2.0`
+4. [.github/workflows/release.yml](.github/workflows/release.yml) tetiklenir:
+   - **Guard** — tag main'in atası mı kontrol eder
+   - **Detect channel** — `-rc.*` suffix'ine bakar, tag mesajını TR/EN'e ayırır
+   - **Release Android** — signed AAB → Play Store
+   - **Release iOS** — signed IPA → TestFlight
+   - **GitHub Release** — AAB + IPA + tag mesajıyla
+5. Production tag ise GitHub Environment `production` manuel onay bekler.
+
+### Tag Mesajı Formatı
+
+- **İlk satır:** Tag adı (örn. `v0.2.0`) — GitHub Release başlığı olur
+- **Boş satır**
+- **Türkçe release notes** — Play Store/TestFlight TR sekmesine yazılır (≤500 karakter)
+- **Boş satır + `=====LANG_SEPARATOR=====` + boş satır**
+- **İngilizce release notes** — Play Store/TestFlight EN-US sekmesine yazılır (≤500 karakter)
+
+Separator yoksa TR ve EN için aynı metin kullanılır. Lightweight tag (`-a` olmadan) için son commit subject'i fallback'tir — önerilmez.
+
+### Versiyon Numarası
+
+Tag adı `vX.Y.Z` veya `vX.Y.Z-rc.N` olmalı. RC suffix'i otomatik strip edilir:
+- `v0.2.0-rc.1` → `version_name=0.2.0`, `is_rc=true`
+- `v0.2.0` → `version_name=0.2.0`, `is_rc=false`
+
+`build_number` her tetikte `github.run_number`'dan gelir (her zaman artan).
+
+### Yasak
+
+- Lightweight tag (`git tag v0.2.0` — `-a` olmadan) — annotated message yok
+- Tag silip yeniden push (`git push --delete` + yeni tag) — Play Console'da çift sürüm
+- Tag'i `main`'de olmayan bir commit'e koyma — guard job hata verir
 
 ---
 

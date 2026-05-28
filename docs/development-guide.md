@@ -225,7 +225,84 @@ Backend'de de lokalize edilmesi gereken metin varsa (hata mesajı, asset ismi vb
 - `src/Saydin.Api/Resources/ErrorMessages.resx` — Türkçe
 - `src/Saydin.Api/Resources/ErrorMessages.en.resx` — İngilizce
 
-## 11. Yaygın Sorunlar
+## 11. Release Çıkarma (Tag-Driven)
+
+Saydın **tag-driven release** modelini kullanır — sadece `v*` formatında annotated tag push'lamak Play Store + TestFlight + GitHub Release'i tetikler. `main`'e push tek başına release yapmaz.
+
+### Kanallar
+
+| Tag formatı | Kanal | Play Store | TestFlight | GitHub Environment |
+|---|---|---|---|---|
+| `v0.2.0-rc.1` | staging | `internal` (draft) | beta | `staging` (oto-onay) |
+| `v0.2.0` | production | `production` (%10 staged) | beta | `production` (**manuel approval**) |
+
+### Adım Adım Release
+
+1. **`main` yeşil mi kontrol et** ([Actions sekmesi](https://github.com/cemililik/Saydin.Client/actions)).
+2. **Annotated tag oluştur** — gövdede TR/EN release notes:
+
+   ```bash
+   git tag -a v0.2.0 -m "v0.2.0
+
+   ✨ Yeni portföy ekranı eklendi.
+   🐛 Grafik render hatası düzeltildi.
+
+   =====LANG_SEPARATOR=====
+
+   ✨ New portfolio screen.
+   🐛 Fixed chart rendering bug.
+   "
+   ```
+
+3. **Tag'i push'la:**
+   ```bash
+   git push origin v0.2.0
+   ```
+
+4. **GitHub Actions takip et:** [release.yml](../.github/workflows/release.yml) tetiklenir. Production tag ise `production` environment manuel onay bekler — onaylayıcılar GitHub Settings → Environments → production altında tanımlı.
+
+5. **Staged rollout'u büyüt:** Production deployment %10 ile başlar. 24-48 saat sonra crash-free rate sağlamsa Play Console → Production → Manage release → %25 / %50 / %100 promote et.
+
+### Tag Mesajı Formatı
+
+```
+v0.2.0                          ← Tag subject (GitHub Release başlığı)
+                                ← Boş satır
+<Türkçe release notes>           ← Play Store TR + TestFlight TR (≤500)
+                                ← Boş satır
+=====LANG_SEPARATOR=====         ← Ayraç
+                                ← Boş satır
+<English release notes>          ← Play Store EN-US + TestFlight EN (≤500)
+```
+
+Separator yoksa TR ve EN aynı metni alır. Karakter limiti Play Store'un 500'lük sınırı; daha uzun yazarsanız truncate edilir.
+
+### Acil Yeniden Çalıştırma
+
+Workflow yarıda kalırsa veya retry gerekirse:
+
+1. GitHub Actions → Release workflow → "Run workflow" butonu
+2. `tag` input'una mevcut tag adını gir (`v0.2.0`)
+3. Workflow yeniden başlar (concurrency=false sayesinde başkasıyla çakışmaz)
+
+### Versiyon Strateji
+
+| Senaryo | Tag |
+|---|---|
+| Yeni özellik | `v0.2.0` (minor bump) |
+| Bug fix | `v0.2.1` (patch bump) |
+| Breaking change | `v1.0.0` (major bump) |
+| Staging deneme | `v0.2.0-rc.1`, `-rc.2`, ... |
+
+Commit mesajları (Conventional Commits) sürüm seçimine ipucu verir ama otomatik bump'lamaz; final karar tag pushlayan kişiye aittir.
+
+### Yasak
+
+- **Lightweight tag** (`git tag v0.2.0` — `-a` flag'i olmadan): annotated message yok, fallback son commit subject'i olur.
+- **Tag silip yeniden push:** Play Console'da çift sürüm. Yeni sürüm gerekirse `v0.2.1` olarak çıkar.
+- **Main'de olmayan commit'i tag'leme:** Guard job hatayla durdurur — sadece `main`'e merge edilmiş commit'ler release'lenebilir.
+
+## 12. Yaygın Sorunlar
 
 ### `flutter gen-l10n` sonrası derleme hatası
 
