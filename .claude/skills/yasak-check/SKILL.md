@@ -67,21 +67,27 @@ git diff -- '*.dart' | grep -E '^\+.*\bdouble\b.*(amount|price|total|try|tl|tr[y
 İhlal varsa: `num` (Dart) veya server'dan gelen `String` → controlled parse. Display için `NumberFormat.currency(locale: 'tr_TR', symbol: '₺')`.
 
 ### 7. Domain'de Flutter import
+**Tek `*` dizin sınırını aşmaz** — domain dosyaları `domain/{entities,repositories,usecases}/` altındadır. Recursive globbing için `**` veya `git ls-files` kullan:
 ```bash
-git diff -- 'lib/features/*/domain/*.dart' | grep -E "^\+.*import 'package:flutter/"
+git diff -- 'lib/features/*/domain/**/*.dart' | grep -E "^\+.*import 'package:flutter/"
+
+# Alternatif (daha güvenli, recursive):
+git diff --name-only HEAD -- '*.dart' | grep '/domain/' | while read f; do
+  grep -l "^import 'package:flutter/" "$f" 2>/dev/null
+done
 ```
 İhlal varsa: domain'den çıkar; UI semantikleri (renk, ikon, asset) `presentation/` katmanına taşı.
 
 ### 8. BLoC içinde HTTP client
 **Tespit**: BLoC sınıfında `Dio`, `http.Client`, veya `ApiClient` türünde field.
 ```bash
-git diff -- '*/presentation/bloc/*.dart' | grep -E "^\+.*\b(Dio|http\.Client|ApiClient)\b"
+git diff -- '**/presentation/bloc/*.dart' | grep -E "^\+.*\b(Dio|http\.Client|ApiClient)\b"
 ```
 İhlal varsa: HTTP çağrısı Use Case katmanına alınmalı; BLoC sadece Use Case'i çağırır.
 
 ### 9. Widget içinde HTTP çağrısı
 ```bash
-git diff -- 'lib/features/*/presentation/{pages,widgets}/*.dart' | \
+git diff -- 'lib/features/*/presentation/pages/**/*.dart' 'lib/features/*/presentation/widgets/**/*.dart' | \
   grep -E '^\+.*\b(\.get\(|\.post\(|http\.get|dio\.)'
 ```
 İhlal varsa: Use Case + BLoC üzerinden geç.

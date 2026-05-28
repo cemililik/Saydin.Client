@@ -111,11 +111,11 @@ final message = switch (state.error) {
 
 ```dart
 // lib/core/di/injection.dart
-getIt.registerLazySingleton<IWhatIfRepository>(
-  () => WhatIfRepositoryImpl(getIt<ApiClient>()),
+sl.registerLazySingleton<IWhatIfRepository>(
+  () => WhatIfRepositoryImpl(sl<ApiClient>()),
 );
-getIt.registerLazySingleton(() => CalculateWhatIf(getIt()));
-getIt.registerFactory(() => WhatIfBloc(getIt()));
+sl.registerLazySingleton(() => CalculateWhatIf(sl()));
+sl.registerFactory(() => WhatIfBloc(sl()));
 ```
 
 ---

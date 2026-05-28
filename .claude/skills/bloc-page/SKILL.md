@@ -107,7 +107,7 @@ class PortfolioSummaryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<PortfolioSummaryBloc>(
-      create: (_) => getIt<PortfolioSummaryBloc>()
+      create: (_) => sl<PortfolioSummaryBloc>()
         ..add(const PortfolioSummaryRequested()),
       child: Scaffold(
         appBar: AppBar(title: Text(context.l10n.portfolioSummaryTitle)),
@@ -121,10 +121,12 @@ class PortfolioSummaryPage extends StatelessWidget {
             );
           },
           builder: (context, state) => switch (state.status) {
+            PortfolioSummaryStatus.initial => const _Empty(),
             PortfolioSummaryStatus.loading => const _Loading(),
+            // success state'inde data null olamaz — BLoC garantisi
             PortfolioSummaryStatus.success => _Body(data: state.data!),
+            // failure state'inde error null olamaz — BLoC garantisi
             PortfolioSummaryStatus.failure => _Failure(error: state.error!),
-            _ => const _Empty(),
           },
         ),
       ),
@@ -186,7 +188,7 @@ void main() {
 
 ```dart
 // lib/core/di/injection.dart — Presentation BLoCs bölümüne ekle
-getIt.registerFactory(() => PortfolioSummaryBloc(getIt()));
+sl.registerFactory(() => PortfolioSummaryBloc(sl()));
 ```
 
 `registerFactory` — her sayfa girişinde yeni instance (state leakage olmasın).
@@ -205,5 +207,5 @@ getIt.registerFactory(() => PortfolioSummaryBloc(getIt()));
 
 - `setState` — bu BLoC kullanan sayfa, asla
 - BLoC içinde HTTP — `final ApiClient _api;` YOK
-- Widget içinde `getIt<XBloc>()` direkt çağrısı — `BlocProvider.value` ya da `context.read<XBloc>()` kullan
+- Widget içinde `sl<XBloc>()` direkt çağrısı — `BlocProvider.value` ya da `context.read<XBloc>()` kullan
 - State'in içinde fonksiyon alanı tutma — `Equatable` props'la uyumsuz

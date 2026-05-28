@@ -39,11 +39,11 @@ lib/features/<feature>/
 
 - **Domain entity:** `Equatable` ile genişlet, alanları `final`, `props` tanımla. Para alanları `num` (asla `double`). `import 'package:flutter/...'` YASAK.
 - **Repository interface:** `Future<Result<Entity, AppError>>` döndüren metotlar.
-- **Repository impl:** `injectable` değil; manuel — `lib/core/di/injection.dart`'a `getIt.registerLazySingleton<IFooRepo>(() => FooRepoImpl(getIt()));` satırı ekle.
+- **Repository impl:** `injectable` değil; manuel — `lib/core/di/injection.dart`'a `sl.registerLazySingleton<IFooRepo>(() => FooRepoImpl(sl()));` satırı ekle.
 - **Use case:** Tek metot (`call`), tek sorumluluk. `FailureOrSuccess<T>` döndür.
 - **BLoC:** Use case'i `final` alan olarak tut. Event handler'lar `emit(state.copyWith(status: loading))` → use case → `emit(state.copyWith(status: success, data: ...))` deseni.
 - **State:** `<feature>_status.dart` enum'u (`initial`, `loading`, `success`, `failure`) + `copyWith`. Form input alanları state'in içinde — hata geldiğinde kullanıcı verisi kaybolmaz.
-- **Page:** `BlocProvider<XBloc>(create: (_) => getIt(), child: ...)`. `BlocConsumer` ile state'i dinle, `listenWhen` race önler.
+- **Page:** `BlocProvider<XBloc>(create: (_) => sl(), child: ...)`. `BlocConsumer` ile state'i dinle, `listenWhen` race önler.
 - **L10n:** Yeni key'leri **hem `lib/l10n/app_tr.arb` hem `lib/l10n/app_en.arb`** dosyalarına ekle. Placeholder varsa her iki dosyada da tanımla. `flutter gen-l10n` çalıştır.
 
 Detay için [l10n-add](../l10n-add/SKILL.md) skill'ini kullan.
@@ -54,15 +54,15 @@ Detay için [l10n-add](../l10n-add/SKILL.md) skill'ini kullan.
 
 ```dart
 // Repositories
-getIt.registerLazySingleton<IFooRepository>(
-  () => FooRepositoryImpl(getIt<ApiClient>()),
+sl.registerLazySingleton<IFooRepository>(
+  () => FooRepositoryImpl(sl<ApiClient>()),
 );
 
 // Use cases
-getIt.registerLazySingleton(() => CalculateFoo(getIt()));
+sl.registerLazySingleton(() => CalculateFoo(sl()));
 
 // BLoCs — factory (her sayfaya yeni instance)
-getIt.registerFactory(() => FooBloc(getIt()));
+sl.registerFactory(() => FooBloc(sl()));
 ```
 
 ## Test iskeletleri
