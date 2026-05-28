@@ -4,7 +4,7 @@
 
 Saydın Flutter mobil uygulaması. Türk kullanıcılara yönelik finansal "ya alsaydım?" hesaplama arayüzü.
 
-- **Flutter versiyonu:** 3.41.0
+- **Flutter versiyonu:** 3.41.4 (single source of truth: [pubspec.yaml](pubspec.yaml) `environment.flutter`)
 - **Flutter binary:** `flutter` (PATH'te olmalı; kurulum için bkz. [Flutter docs](https://docs.flutter.dev/get-started/install))
 - **Platform:** iOS + Android
 - **Mimari:** Feature-first Clean Architecture + BLoC
@@ -37,11 +37,11 @@ features/<feature_name>/
 ### Domain Katmanı Kuralları
 
 ```dart
-// DOĞRU ✓ — domain entity saf Dart
+// DOĞRU ✓ — domain entity saf Dart, para alanı num
 class WhatIfResult {
   final String assetSymbol;
-  final Decimal finalValueTry;
-  ...
+  final num finalValueTry;    // num: int veya double — para için double yerine num
+  final DateTime calculatedAt;
 }
 
 // YANLIŞ ✗ — domain'de Flutter import YASAK
@@ -78,6 +78,77 @@ class WhatIfBloc extends Bloc<...> {
 
 ---
 
+## Hata Modeli
+
+- **Tip:** `sealed class AppError` ([lib/core/error/app_error.dart](lib/core/error/app_error.dart))
+- **Varyantlar** (örnek): `NoInternetError`, `ServerError`, `PriceNotFoundError`, `DailyLimitError`, `UnknownError`
+- **BLoC state**: hata mesajı **string** taşımaz — `AppError` tipi taşır
+- **Widget**: hata varyantını `switch` ile `context.l10n.<key>`'e çözer
+- **Sealed switch zorunlu** — `exhaustive_cases` analyzer kuralı yeni varyantın her switch'te ele alınmasını dayatır
+- **Dio → AppError** dönüşümü: `lib/core/network/dio_error_mapper.dart` (interceptor sonrası)
+
+```dart
+// Widget'ta hata mesajı çözümü
+final message = switch (state.error) {
+  NoInternetError() => context.l10n.errorNoInternet,
+  ServerError() => context.l10n.errorServer,
+  PriceNotFoundError() => context.l10n.errorPriceNotFound,
+  DailyLimitError() => context.l10n.errorDailyLimit,
+  UnknownError() => context.l10n.errorUnknown,
+};
+```
+
+---
+
+## Dependency Injection
+
+- **Çatı:** `get_it` (manuel kayıt, code-gen YOK)
+- **Tek dosya:** [lib/core/di/injection.dart](lib/core/di/injection.dart) — tüm kayıtlar burada
+- **Lifecycle:**
+  - `registerLazySingleton` — repository, use case, paylaşılan servis (ApiClient, ErrorReporter, SettingsCubit gibi single-instance)
+  - `registerFactory` — BLoC'lar (her sayfa girişinde fresh instance; state leakage yok)
+- **Init:** `main()` içinde `configureDependencies()` çağrısı; async ise (PackageInfo gibi) `await`
+
+```dart
+// lib/core/di/injection.dart
+getIt.registerLazySingleton<IWhatIfRepository>(
+  () => WhatIfRepositoryImpl(getIt<ApiClient>()),
+);
+getIt.registerLazySingleton(() => CalculateWhatIf(getIt()));
+getIt.registerFactory(() => WhatIfBloc(getIt()));
+```
+
+---
+
+## Test Kuralı
+
+- **Çerçeve:** `flutter_test` (built-in)
+- **BLoC test:** `bloc_test` paketinin `blocTest`'ı — state geçişlerini sıralı assert et
+- **Mocking:** `mocktail` ZORUNLU. `mockito` YASAK (code-gen istemiyoruz; ek dependency ve build-time maliyet)
+- **Konum:** `test/features/<feature>/{data,domain,presentation}/...` — `lib/` ile parallel
+- **Coverage hedefi:** baseline %60+; her PR'da düşürmemek hedef
+- **`flutter test --coverage`** CI'da çalışır; sonuç Codecov'a yüklenir
+- **Üretilmiş mock dosyaları commit'lenmez** (zaten code-gen kullanılmadığı için ortaya çıkmaz)
+
+```dart
+import 'package:bloc_test/bloc_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockCalculateWhatIf extends Mock implements CalculateWhatIf {}
+
+blocTest<WhatIfBloc, WhatIfState>(
+  'success path',
+  setUp: () {
+    when(() => mockUseCase(any())).thenAnswer((_) async => fixtureResult);
+  },
+  build: () => WhatIfBloc(mockUseCase),
+  act: (b) => b.add(const WhatIfCalculateRequested(...)),
+  expect: () => [/* sıralı state'ler */],
+);
+```
+
+---
+
 ## Kod Standartları
 
 ### Finansal Değer Gösterimi
@@ -86,7 +157,8 @@ class WhatIfBloc extends Bloc<...> {
 // DOĞRU ✓ — Türkçe locale ile formatla
 import 'package:intl/intl.dart';
 final formatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
-final display = formatter.format(47010.34);  // "₺47.010,34"
+final num amount = 47010.34;                  // num — entity'de double değil num
+final display = formatter.format(amount);     // "₺47.010,34"
 
 // Yüzde
 final pctFormatter = NumberFormat.decimalPercentPattern(locale: 'tr_TR', decimalDigits: 2);
@@ -145,18 +217,18 @@ Commit mesajları **Conventional Commits** formatında olmalıdır.
 
 Kapsam isteğe bağlıdır: `feat(portfolio):`, `fix(auth):` gibi.
 
-> Versiyon numarası **tag adından** belirlenir (bkz. [Release Kuralı](#release-kuralı-kri̇ti̇k)). Commit prefix'i sadece sürüm planlamasına ipucu verir, otomatik bump'lamaz.
+> Versiyon numarası **tag adından** belirlenir (aşağıdaki "Release Kuralı" bölümü). Commit prefix'i sadece sürüm planlamasına ipucu verir, otomatik bump'lamaz.
 
 ### Build Öncesi Kontrol
 
 **Kod değişikliklerini commit etmeden önce mutlaka analiz ve testleri çalıştır.**
 
 ```bash
-/Users/dev/development/flutter/bin/flutter analyze --fatal-infos
-/Users/dev/development/flutter/bin/flutter test
+flutter analyze --fatal-infos
+flutter test
 ```
 
-Analiz veya test başarısız olursa commit atma, önce hatayı düzelt.
+Analiz veya test başarısız olursa commit atma, önce hatayı düzelt. Pre-commit hook ([.githooks/pre-commit](.githooks/pre-commit)) bu kontrolleri otomatik çalıştırır — etkinleştirme: `git config core.hooksPath .githooks`.
 
 ---
 
@@ -228,24 +300,29 @@ Tag adı `vX.Y.Z` veya `vX.Y.Z-rc.N` olmalı. RC suffix'i otomatik strip edilir:
 
 ## Lokalizasyon Kuralları (KRİTİK)
 
-**Tüm kullanıcıya görünen string'ler `l10n/app_tr.arb` dosyasında olmalıdır.**
+Saydın **iki dilli**: Türkçe (varsayılan) + İngilizce.
+
+**Tüm kullanıcıya görünen string'ler aşağıdaki dosyalara EŞZAMANLI eklenmelidir:**
+- `lib/l10n/app_tr.arb` — Türkçe (kaynak)
+- `lib/l10n/app_en.arb` — İngilizce
+
+> Tek dilli ekleme YASAK — eksik dilde runtime fallback sessizce devreye girer, kullanıcıya İngilizce'de Türkçe key adı görünür, testlerde yakalanmaz.
 
 ```dart
 // YANLIŞ ✗ — hardcoded Türkçe
 Text('Hesapla')
-Text('Sonuç yükleniyor...')
 
 // DOĞRU ✓
 Text(context.l10n.calculate)
-Text(context.l10n.loadingResult)
 ```
 
-`app_tr.arb` formatı:
+Her iki ARB dosyası paralel doldurulur:
+
 ```json
+// lib/l10n/app_tr.arb
 {
   "@@locale": "tr",
   "calculate": "Hesapla",
-  "loadingResult": "Sonuç yükleniyor...",
   "profitMessage": "{amount} kazanç ({percent})",
   "@profitMessage": {
     "placeholders": {
@@ -254,6 +331,30 @@ Text(context.l10n.loadingResult)
     }
   }
 }
+
+// lib/l10n/app_en.arb
+{
+  "@@locale": "en",
+  "calculate": "Calculate",
+  "profitMessage": "{amount} profit ({percent})",
+  "@profitMessage": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  }
+}
+```
+
+Placeholder kullanan key'lerde `@<key>` meta nesnesi HER İKİ dosyada da bulunmalı.
+
+`flutter gen-l10n` ile üretilmiş `lib/l10n/app_localizations*.dart` dosyaları commit'lenir; `analysis_options.yaml`'da exclude'da olduğu için analyzer dokunmaz.
+
+Senkron kontrolü:
+```bash
+diff <(jq -r 'keys[]' lib/l10n/app_tr.arb | grep -v '^@' | sort) \
+     <(jq -r 'keys[]' lib/l10n/app_en.arb | grep -v '^@' | sort)
+# boş çıktı = senkron
 ```
 
 ### Tarih Formatı
@@ -297,12 +398,58 @@ Color myColor = Color(0xFF2E7D32);  // magic number
 
 ---
 
+## Tema (Light / Dark / System)
+
+- **Tip:** `AppThemeMode` enum (`system` / `light` / `dark`)
+- **Konum:** [lib/core/theme/app_theme.dart](lib/core/theme/app_theme.dart) — `ThemeData` (light/dark) tanımları
+- **Kullanıcı tercihi:** `SettingsCubit` → `SharedPreferences`'ta saklanır
+- **MaterialApp:** `themeMode: settings.themeMode.toMaterial()` ile bağlanır
+- **Widget'ta renk seçimi tema-aware OLMALI:**
+
+```dart
+// YANLIŞ ✗ — sabit renk; dark mode'da kontrast kırılır
+Container(color: Colors.grey.shade100)
+
+// DOĞRU ✓ — semantic color
+Container(color: Theme.of(context).colorScheme.surfaceContainerHighest)
+
+// Domain-specific (kar/zarar gibi) için AppColors:
+Container(color: AppColors.profit)  // tema-bağımsız sabitler
+```
+
+---
+
 ## API İstemcisi
 
-- Base URL dart-define ile geçilir — hardcode YASAK
-- Aktif backend URL: `https://fumed-cleverishly-moses.ngrok-free.dev/`
-- `X-Device-ID` header her istekte otomatik eklenir (interceptor)
-- `FlutterSecureStorage` ile UUID oluşturulur ve saklanır
+- **Base URL:** `--dart-define=API_BASE_URL=<url>` ile geçilir — hardcode YASAK
+  ```bash
+  flutter run --dart-define=API_BASE_URL=https://api-staging.saydin.app
+  ```
+- **Aktif backend URL** dev cihazda değişken (ngrok tüneli) — güncel URL için takım ile eşgüdüm; URL'i burada listelemekten kaçınılır (commit history'sinde URL leak riski)
+- **Interceptor zinciri** ([lib/core/network/](lib/core/network/)):
+  1. `DeviceIdInterceptor` — `X-Device-ID` header (UUID v4, `FlutterSecureStorage`'dan)
+  2. `DeviceInfoInterceptor` — `X-Device-Info` header (app version, build number, platform)
+  3. `LanguageInterceptor` — `Accept-Language` header (kullanıcı seçimi)
+  4. `RetryInterceptor` — GET/HEAD için 2x exponential backoff
+- **Hata mapping:** `DioErrorMapper` → `AppError` (sealed class)
+- **Timeout:** 15s connect, 15s receive
+
+---
+
+## Observability ve KVKK
+
+### Sentry
+
+- **Etkinleştirme:** `--dart-define=SENTRY_DSN=<dsn>` (tanımlı değilse Sentry sessizce devre dışı kalır)
+- **PII scrubber ZORUNLU:** [lib/core/observability/sentry_pii_scrubber.dart](lib/core/observability/sentry_pii_scrubber.dart) — breadcrumb ve event'lerden kullanıcıya ait bilgileri temizler
+- **Log YASAK:** TC kimlik, telefon, e-posta, isim, IP, device ID — log'a yazılmaz, breadcrumb'a girmez
+
+### KVKK Madde 11/12 Uyumu
+
+- **Madde 11 (bilgi talebi):** Backend `/v1/account/data-export` üzerinden tetiklenir
+- **Madde 12 (silme):** [lib/features/account/](lib/features/account/) — backend 200 OK olmadan **local cleanup başlamaz** (race condition önle)
+- **Cross-feature reset:** Hesap silindiğinde favorites, scenarios, portfolio cache'leri **tek transaction'da** temizlenir
+- **Device ID:** Sadece `FlutterSecureStorage` (`SharedPreferences`'a YASAK — şifrelenmez)
 
 ---
 
@@ -313,32 +460,65 @@ Color myColor = Color(0xFF2E7D32);  // magic number
 ```bash
 # Debug modda iPhone'a deploy (varsayılan)
 flutter run \
-  --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ \
+  --dart-define=API_BASE_URL=<aktif-staging-URL> \
   --device-id 00008101-00013C6A02B9003A
 
 # Release modda iPhone'a deploy
 flutter run \
-  --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ \
+  --dart-define=API_BASE_URL=<aktif-staging-URL> \
   --device-id 00008101-00013C6A02B9003A \
   --release
 ```
+
+> `<aktif-staging-URL>` placeholder'ı dev tüneline (ngrok / cloudflared) işaret eder. Tünel URL'i sık sık değişir — committed dosyada hardcode edilmez; güncel URL takım iletişim kanalından alınır.
 
 - Kullanıcı "iPhone'a gönder" veya "cihaza deploy et" dediğinde **debug mod** varsayılandır (aksi belirtilmezse)
 - Cihaz bağlı değilse önce `flutter devices` ile kontrol et
 
 ---
 
-## Yasak Listesi
+## Yasak Listesi (Özet)
 
-- Widget içinde HTTP çağrısı — YASAK
-- `print()` — YASAK (kullan: `debugPrint()`)
-- Hardcoded Türkçe string — YASAK
-- Hardcoded renkler widget içinde — YASAK
-- Hardcoded API URL — YASAK
-- `setState` BLoC kullanan sayfada — YASAK
-- `double`/`float` para tutarı için — YASAK (Dart'ta `num` veya server'dan gelen string → parse et)
-- Domain katmanında Flutter import — YASAK
-- BLoC'ta HTTP client — YASAK
+Tüm yasaklar tek bakışta. Her kategori için detay yukarıdaki ilgili bölümde.
+
+### Mimari
+- Widget içinde HTTP çağrısı
+- BLoC'ta HTTP client (`Dio`, `ApiClient`, `http.Client` field)
+- BLoC içinde `dart:io` import
+- Domain katmanında Flutter import (`package:flutter/...`)
+- `setState` BLoC kullanan sayfada
+
+### Kod Stili
+- `print()` (kullan: `debugPrint()`)
+- Hardcoded Türkçe string (kullan: `context.l10n.<key>`)
+- Hardcoded renk widget içinde (kullan: `Theme.of(context)` veya `AppColors.*`)
+- Hardcoded API URL (kullan: `--dart-define=API_BASE_URL`)
+- `double` / `float` para tutarı için (kullan: `num` veya server-string parse)
+- BLoC state'inde hata mesajı string (kullan: `AppError` tipi)
+- `Equatable.props` içinde function field (callback'ler parent widget'tan parametre olur)
+
+### L10n
+- Tek dilli key ekleme (TR olmadan EN veya tersi)
+- `@<key>` placeholder meta nesnesini tek dilde tanımlama
+
+### Test
+- `mockito` kullanma (kullan: `mocktail` — code-gen istemiyoruz)
+- Code-generated mock dosyaları commit (zaten gitignore'da)
+
+### Release
+- Lightweight tag (annotated kullan: `git tag -a vX.Y.Z -m "..."`)
+- `main`'de olmayan commit'e tag (guard job hata verir)
+- Tag silip yeniden push (Play Console çift sürüm — semver bump et)
+- `=====LANG_SEPARATOR=====` ayracını unutma
+
+### Güvenlik / KVKK
+- PII (kimlik, telefon, e-posta, isim, IP, device ID) log'a / breadcrumb'a yazma
+- Device ID `SharedPreferences`'ta (kullan: `FlutterSecureStorage`)
+- Hesap silme: backend 200 OK olmadan local cleanup
+
+### Dokümantasyon
+- ASCII art diyagram (Mermaid kullan)
+- Flutter'a özgü doc'u kök `docs/`'a koyma (kullan: `<repo-kökü>/docs/`)
 
 ---
 
