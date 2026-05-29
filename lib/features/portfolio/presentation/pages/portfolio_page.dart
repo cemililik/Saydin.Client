@@ -11,6 +11,7 @@ import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
+import 'package:saydin/features/portfolio/portfolio_constants.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_event.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_state.dart';
@@ -46,6 +47,17 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   void _showAddSheet(PortfolioState state) {
+    // F-09-09: max kalem sınırında ekleme sheet'ini açma, bilgilendir.
+    if (state.items.length >= PortfolioConstants.maxItems) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.l10n.portfolioMaxItems(PortfolioConstants.maxItems),
+          ),
+        ),
+      );
+      return;
+    }
     final existingSymbols = state.items.map((item) => item.assetSymbol).toSet();
     showModalBottomSheet<void>(
       context: context,
@@ -72,12 +84,20 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   void _showEditSheet(PortfolioState state, PortfolioItem item) {
+    // F-09-06: düzenlemede DİĞER kalemlerin sembollerini hariç tut (kendi
+    // sembolü seçili kalsın) → başka bir kalemle aynı varlığa değiştirip
+    // duplicate oluşturma engellenir (add-mode ile aynı mekanizma).
+    final otherSymbols = state.items
+        .where((i) => i.id != item.id)
+        .map((i) => i.assetSymbol)
+        .toSet();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (_) => PortfolioAddItemSheet(
         assets: state.assets,
         editItem: item,
+        excludeSymbols: otherSymbols,
         onSave:
             ({
               required assetSymbol,

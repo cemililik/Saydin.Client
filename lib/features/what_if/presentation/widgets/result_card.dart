@@ -274,9 +274,12 @@ class _ResultCardState extends State<ResultCard>
                   ),
                   _AnimatedRow(
                     l10n.realProfitLoss,
-                    // Display'e geçmeden double'a çevir; precision loss
-                    // burada tolere edilir çünkü NumberFormat.currency
-                    // zaten 2 ondalık haneye yuvarlar.
+                    // F-07-12: reel kar/zarar TL'si YAKLAŞIK — backend henüz
+                    // reel-TL alanı döndürmediği için nominal yatırım × reel
+                    // getiri % ile istemcide türetilir (reverse_result_card ile
+                    // aynı formül). Backend reel-TL alanı eklenince bu çarpım
+                    // kaldırılıp alandan okunmalı. Display-only double dönüşüm;
+                    // NumberFormat 2 ondalığa yuvarladığından precision farkı yok.
                     result.initialValueTry.toDouble() *
                         result.realProfitLossPercent! /
                         100,

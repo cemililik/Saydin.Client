@@ -5,6 +5,7 @@ import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/usecases/calculate_portfolio.dart';
+import 'package:saydin/features/portfolio/portfolio_constants.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'package:uuid/uuid.dart';
 import 'portfolio_event.dart';
@@ -125,6 +126,9 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
   }
 
   void _onItemAdded(PortfolioItemAdded event, Emitter<PortfolioState> emit) {
+    // F-09-09: max kalem sınırı (defense-in-depth; UI butonu da disable eder +
+    // snackbar gösterir). BLoC snackbar gösteremediği için burada sessiz no-op.
+    if (state.items.length >= PortfolioConstants.maxItems) return;
     final newItem = PortfolioItem(
       id: _uuid.v4(),
       assetSymbol: event.assetSymbol,

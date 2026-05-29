@@ -272,9 +272,12 @@ class _ReverseResultCardState extends State<ReverseResultCard>
                   ),
                   _AnimatedRow(
                     l10n.realProfitLoss,
-                    // Display-only çarpım; Decimal → double tek seferlik
-                    // dönüşüm `NumberFormat` zaten 2 ondalık haneye
-                    // yuvarladığı için precision farkı yaratmaz.
+                    // F-07-12: reel kar/zarar TL'si YAKLAŞIK — backend henüz
+                    // reel-TL alanı döndürmediği için nominal yatırım × reel
+                    // getiri % ile istemcide türetilir (result_card ile aynı
+                    // formül). Backend reel-TL alanı eklenince bu çarpım
+                    // kaldırılıp alandan okunmalı. Display-only double dönüşüm;
+                    // NumberFormat 2 ondalığa yuvarladığından precision farkı yok.
                     result.requiredInvestmentTry.toDouble() *
                         result.realProfitLossPercent! /
                         100,

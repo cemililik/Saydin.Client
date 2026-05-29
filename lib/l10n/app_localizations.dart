@@ -338,6 +338,12 @@ abstract class AppLocalizations {
   /// **'Senaryo silindi.'**
   String get scenarioDeleted;
 
+  /// No description provided for @scenarioSavedAtSnapshot.
+  ///
+  /// In tr, this message translates to:
+  /// **'{date} tarihinde kaydedildi — o günkü sonuç'**
+  String scenarioSavedAtSnapshot(String date);
+
   /// No description provided for @deleteScenario.
   ///
   /// In tr, this message translates to:
@@ -548,7 +554,7 @@ abstract class AppLocalizations {
   /// **'Reel Getiri'**
   String get realReturn;
 
-  /// No description provided for @realProfitLoss.
+  /// Reel kar/zarar etiketi. TL tutarı, backend reel-TL alanı eklenene kadar istemcide nominal yatırım × reel getiri % ile YAKLAŞIK hesaplanır (F-07-12).
   ///
   /// In tr, this message translates to:
   /// **'Reel Kar / Zarar'**
@@ -733,6 +739,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'En az 1 varlık ekleyin.'**
   String get portfolioMinItems;
+
+  /// No description provided for @portfolioMaxItems.
+  ///
+  /// In tr, this message translates to:
+  /// **'En fazla {count} varlık ekleyebilirsiniz.'**
+  String portfolioMaxItems(int count);
+
+  /// No description provided for @portfolioAmountTooLarge.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tutar çok büyük. Lütfen daha küçük bir değer girin.'**
+  String get portfolioAmountTooLarge;
+
+  /// No description provided for @portfolioAmountTooManyDecimals.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tutarda en fazla {decimals} ondalık hane kullanılabilir.'**
+  String portfolioAmountTooManyDecimals(int decimals);
 
   /// No description provided for @portfolioHistoryLimit.
   ///

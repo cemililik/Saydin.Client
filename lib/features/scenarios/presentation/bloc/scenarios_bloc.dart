@@ -76,6 +76,11 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     // kontrolünü tümden atla (kaydetme akışı geçersiz tutarı kendi yakalar);
     // geçerli parse'ta Decimal `==` ile exact karşılaştır.
     final eventAmountDecimal = MoneyParser.tryDecimal(event.amount);
+    // F-11-08: normal ('what_if') ve ters ('reverse') hesaplama aynı
+    // type=whatIf taşır; ayrım extraData['mode']'da. Mode duplicate anahtarına
+    // dahil edilmezse aynı asset+tarih+tutarlı bir normal ve bir ters senaryo
+    // çakışır ve ikincisi kaydedilemez.
+    final eventMode = event.extraData?['mode'] as String?;
     final isDuplicate =
         eventAmountDecimal != null &&
         current.any(
@@ -85,7 +90,8 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
               _isSameDay(s.buyDate, event.buyDate) &&
               _isSameDay(s.sellDate, event.sellDate) &&
               s.amount == eventAmountDecimal &&
-              s.amountType == event.amountType,
+              s.amountType == event.amountType &&
+              (s.extraData?['mode'] as String?) == eventMode,
         );
     if (isDuplicate) {
       emit(ScenariosDuplicate(current));
@@ -138,10 +144,16 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     try {
       await _deleteScenario(event.id);
     } on DioException catch (e, st) {
+      // F-11-03: silme idempotent olmalı. 404 = kaynak zaten yok (sunucuda
+      // silinmiş / çift dokunuş) = istenen son durum → optimistic kaldırmayı
+      // koru, hata GÖSTERME, raporlama. (DioErrorMapper 404'ü
+      // PriceNotFoundError'a indirgediği için mapper yerine ham status'e bak.)
+      if (e.response?.statusCode == 404) return;
       final error = _errorMapper.map(e);
       if (error is UnknownError || error is ServerError) {
         await _reporter.report(e, st, context: 'delete_scenario');
       }
+      // 5xx / network: optimistic kaldırmayı geri al (original'i taşıyan Failure).
       emit(ScenariosFailure(scenarios: original, error: error));
     } catch (e, st) {
       await _reporter.report(e, st, context: 'delete_scenario');

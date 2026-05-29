@@ -45,6 +45,10 @@
   "saveScenario": "Save",
   "scenarioSaved": "Scenario saved.",
   "scenarioDeleted": "Scenario deleted.",
+  "scenarioSavedAtSnapshot": "Saved on {date} — result as of that date",
+  "@scenarioSavedAtSnapshot": {
+    "placeholders": { "date": { "type": "String" } }
+  },
   "deleteScenario": "Delete",
   "undo": "Undo",
   "tabCalculate": "Calculate",
@@ -102,6 +106,9 @@
   "premiumFeature": "Premium",
   "realReturn": "Real Return",
   "realProfitLoss": "Real Profit / Loss",
+  "@realProfitLoss": {
+    "description": "Real profit/loss label. The TRY amount is approximated client-side as nominal investment × real return % until the backend exposes a real-TRY field (F-07-12)."
+  },
   "cumulativeInflation": "Cumulative Inflation",
   "inflationSectionTitle": "Inflation Adjustment",
   "dateAdjustedNote": "Date adjustment applied",
@@ -149,6 +156,15 @@
   "portfolioChartTitle": "Final Value Distribution",
   "portfolioBuyDateRequired": "Please enter start date",
   "portfolioMinItems": "Add at least 1 asset.",
+  "portfolioMaxItems": "You can add at most {count} assets.",
+  "@portfolioMaxItems": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "portfolioAmountTooLarge": "Amount is too large. Please enter a smaller value.",
+  "portfolioAmountTooManyDecimals": "Amount can have at most {decimals} decimal places.",
+  "@portfolioAmountTooManyDecimals": {
+    "placeholders": { "decimals": { "type": "int" } }
+  },
   "portfolioHistoryLimit": "Free plan allows dates within the last {months} months.",
   "@portfolioHistoryLimit": {
     "placeholders": {

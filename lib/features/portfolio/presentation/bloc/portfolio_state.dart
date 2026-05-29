@@ -19,20 +19,6 @@ sealed class PortfolioState extends Equatable {
     this.includeInflation = false,
   });
 
-  PortfolioState copyWith({
-    List<Asset>? assets,
-    List<PortfolioItem>? items,
-    DateTime? buyDate,
-    Object? sellDate = _sentinel,
-    bool? includeInflation,
-  }) => _PortfolioEditing(
-    assets: assets ?? this.assets,
-    items: items ?? this.items,
-    buyDate: buyDate ?? this.buyDate,
-    sellDate: sellDate == _sentinel ? this.sellDate : sellDate as DateTime?,
-    includeInflation: includeInflation ?? this.includeInflation,
-  );
-
   @override
   List<Object?> get props => [
     assets,
@@ -41,20 +27,6 @@ sealed class PortfolioState extends Equatable {
     sellDate,
     includeInflation,
   ];
-}
-
-// Sentinel object to allow passing null for sellDate in copyWith
-const _sentinel = Object();
-
-// Internal editing state used by copyWith
-final class _PortfolioEditing extends PortfolioState {
-  const _PortfolioEditing({
-    super.assets,
-    super.items,
-    super.buyDate,
-    super.sellDate,
-    super.includeInflation,
-  });
 }
 
 final class PortfolioInitial extends PortfolioState {
