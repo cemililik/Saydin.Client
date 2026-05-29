@@ -144,7 +144,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                           ),
                           Text(
                             _tryFormatter.format(
-                              item.result.initialValueTry.toDouble(),
+                              item.calculation.initialValueTry.toDouble(),
                             ),
                             style: const TextStyle(
                               fontSize: 13,

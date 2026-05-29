@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:saydin/core/network/locale_provider.dart';
+import 'package:saydin/core/platform/platform_info.dart';
 import 'package:saydin/core/storage/secure_storage_factory.dart';
 import 'certificate_pinning.dart';
 import 'device_id_interceptor.dart';
@@ -15,6 +17,8 @@ class ApiClient {
   ApiClient({
     required String baseUrl,
     required PackageInfo packageInfo,
+    required PlatformInfo platformInfo,
+    required LocaleProvider localeProvider,
     FlutterSecureStorage? storage,
   }) {
     _dio = Dio(
@@ -37,8 +41,8 @@ class ApiClient {
 
     _dio.interceptors.addAll([
       _deviceIdInterceptor,
-      DeviceInfoInterceptor(packageInfo),
-      LanguageInterceptor(),
+      DeviceInfoInterceptor(packageInfo, platformInfo),
+      LanguageInterceptor(localeProvider),
       RetryInterceptor(dio: _dio),
     ]);
   }

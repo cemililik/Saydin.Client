@@ -1,7 +1,5 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
-import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_reverse_what_if.dart';
@@ -22,17 +20,14 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   final GetAssets _getAssets;
   final CalculateWhatIf _calculateWhatIf;
   final CalculateReverseWhatIf _calculateReverseWhatIf;
-  final DioErrorMapper _errorMapper;
   final ErrorReporter _reporter;
 
   WhatIfBloc(
     this._getAssets,
     this._calculateWhatIf,
     this._calculateReverseWhatIf, {
-    DioErrorMapper errorMapper = const DioErrorMapper(),
     ErrorReporter reporter = const ErrorReporter(),
-  }) : _errorMapper = errorMapper,
-       _reporter = reporter,
+  }) : _reporter = reporter,
        super(const WhatIfInitial()) {
     on<WhatIfAssetsRequested>(_onAssetsRequested);
     on<WhatIfSymbolChanged>(_onSymbolChanged);
@@ -66,10 +61,9 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     try {
       final assets = await _getAssets();
       emit(WhatIfAssetsLoaded(assets, formInput: _formInput));
-    } on DioException catch (e, st) {
-      final error = _errorMapper.map(e);
+    } on AppError catch (error, st) {
       if (error is UnknownError || error is ServerError) {
-        await _reporter.report(e, st, context: 'get_assets');
+        await _reporter.report(error, st, context: 'get_assets');
       }
       emit(
         WhatIfFailure(assets: const [], error: error, formInput: _formInput),
@@ -257,10 +251,9 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
           formInput: _formInput,
         ),
       );
-    } on DioException catch (e, st) {
-      final error = _errorMapper.map(e);
+    } on AppError catch (error, st) {
       if (error is UnknownError || error is ServerError) {
-        await _reporter.report(e, st, context: 'calculate_what_if');
+        await _reporter.report(error, st, context: 'calculate_what_if');
       }
       emit(
         WhatIfFailure(
@@ -310,10 +303,9 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
           formInput: _formInput,
         ),
       );
-    } on DioException catch (e, st) {
-      final error = _errorMapper.map(e);
+    } on AppError catch (error, st) {
       if (error is UnknownError || error is ServerError) {
-        await _reporter.report(e, st, context: 'reverse_calculate_what_if');
+        await _reporter.report(error, st, context: 'reverse_calculate_what_if');
       }
       emit(
         WhatIfFailure(

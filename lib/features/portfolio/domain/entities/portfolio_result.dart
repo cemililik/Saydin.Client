@@ -1,12 +1,15 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
+import 'package:saydin/features/portfolio/domain/entities/portfolio_calculation.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
-import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 
 /// Tek bir kalemin hesaplama sonucu + portföydeki payı.
 class PortfolioItemResult extends Equatable {
   final PortfolioItem item;
-  final WhatIfResult result;
+
+  /// Portföye ait hesaplama sonucu. (Önceden `WhatIfResult`'tı — F-09-19
+  /// cross-feature coupling'i kaldırıldı; artık portföy kendi entity'sini taşır.)
+  final PortfolioCalculation calculation;
 
   /// Son değer üzerinden hesaplanan portföy payı (0-100).
   /// Yüzde display-only — double yeterli, Decimal gereksiz precision.
@@ -14,12 +17,12 @@ class PortfolioItemResult extends Equatable {
 
   const PortfolioItemResult({
     required this.item,
-    required this.result,
+    required this.calculation,
     required this.sharePercent,
   });
 
   @override
-  List<Object?> get props => [item, result, sharePercent];
+  List<Object?> get props => [item, calculation, sharePercent];
 }
 
 /// Tüm portföy hesaplama sonucu.

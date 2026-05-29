@@ -1,7 +1,5 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
-import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/portfolio_constants.dart';
@@ -14,7 +12,6 @@ import 'portfolio_state.dart';
 class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
   final GetAssets _getAssets;
   final CalculatePortfolio _calculatePortfolio;
-  final DioErrorMapper _errorMapper;
   final ErrorReporter _reporter;
 
   static const _uuid = Uuid();
@@ -22,10 +19,8 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
   PortfolioBloc(
     this._getAssets,
     this._calculatePortfolio, {
-    DioErrorMapper errorMapper = const DioErrorMapper(),
     ErrorReporter reporter = const ErrorReporter(),
-  }) : _errorMapper = errorMapper,
-       _reporter = reporter,
+  }) : _reporter = reporter,
        super(const PortfolioInitial()) {
     on<PortfolioAssetsRequested>(_onAssetsRequested);
     on<PortfolioBuyDateChanged>(_onBuyDateChanged);
@@ -67,10 +62,9 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
           includeInflation: state.includeInflation,
         ),
       );
-    } on DioException catch (e, st) {
-      final error = _errorMapper.map(e);
+    } on AppError catch (error, st) {
       if (error is UnknownError || error is ServerError) {
-        await _reporter.report(e, st, context: 'portfolio_get_assets');
+        await _reporter.report(error, st, context: 'portfolio_get_assets');
       }
       emit(
         PortfolioFailure(
@@ -220,22 +214,10 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
           result: result,
         ),
       );
-    } on DioException catch (e, st) {
-      final error = _errorMapper.map(e);
-      if (error is UnknownError || error is ServerError) {
-        await _reporter.report(e, st, context: 'portfolio_calculate');
-      }
-      emit(
-        PortfolioFailure(
-          assets: state.assets,
-          items: state.items,
-          buyDate: state.buyDate,
-          sellDate: state.sellDate,
-          includeInflation: state.includeInflation,
-          error: error,
-        ),
-      );
     } catch (e, st) {
+      // _calculatePortfolio yalnızca PortfolioCalculationFailure (tüm kalemler
+      // başarısız) ya da beklenmedik bir hata fırlatır — Dio/AppError use-case
+      // içindeki per-item try/catch'te yutulur. Hepsi UnknownError'a düşer.
       await _reporter.report(e, st, context: 'portfolio_calculate');
       emit(
         PortfolioFailure(

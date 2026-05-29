@@ -1,15 +1,11 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
-import 'package:saydin/features/what_if/domain/entities/asset.dart';
-import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
-import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
 
 class ScenarioCard extends StatelessWidget {
   final SavedScenario scenario;
@@ -31,25 +27,6 @@ class ScenarioCard extends StatelessWidget {
       ),
       ScenarioType.dca => _DcaCard(scenario: scenario, onTap: onTap),
     };
-  }
-
-  /// Asset sembolünden güncel lokalize adı çözer.
-  /// BLoC'taki asset listesinden arar, bulamazsa [fallback] döner.
-  static String resolveAssetName(
-    BuildContext context,
-    String symbol,
-    String fallback,
-  ) {
-    final state = context.read<WhatIfBloc>().state;
-    final assets = switch (state) {
-      WhatIfAssetsLoaded(:final assets) => assets,
-      WhatIfSuccess(:final assets) => assets,
-      WhatIfFailure(:final assets) => assets,
-      WhatIfCalculating(:final assets) => assets,
-      _ => <Asset>[],
-    };
-    return assets.where((a) => a.symbol == symbol).firstOrNull?.displayName ??
-        fallback;
   }
 }
 
@@ -204,11 +181,11 @@ class _WhatIfCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            ScenarioCard.resolveAssetName(
-                              context,
-                              scenario.assetSymbol,
-                              scenario.assetDisplayName,
-                            ),
+                            // Kayıt anındaki donmuş ad (snapshot). Canlı
+                            // WhatIfBloc lookup'ı kaldırıldı — Scenarios artık
+                            // What-If'e bağlı değil (F-11-07). Senaryo geçmişsel
+                            // olduğu için ad da kayıt anına sabittir.
+                            scenario.assetDisplayName,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -322,11 +299,8 @@ class _DcaCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            ScenarioCard.resolveAssetName(
-                              context,
-                              scenario.assetSymbol,
-                              scenario.assetDisplayName,
-                            ),
+                            // Snapshot ad — bkz. F-11-07 (WhatIfBloc bağı yok).
+                            scenario.assetDisplayName,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -403,11 +377,9 @@ class _ComparisonCard extends StatelessWidget {
     final symbolCount = scenario.assetSymbol.split(',').length;
     final title = l10n.scenarioNameComparison(symbolCount);
 
-    final winnerSymbol = scenario.extraData?['winnerSymbol'] as String?;
-    final rawWinnerName = scenario.extraData?['winnerName'] as String? ?? '';
-    final winnerName = winnerSymbol != null
-        ? ScenarioCard.resolveAssetName(context, winnerSymbol, rawWinnerName)
-        : rawWinnerName;
+    // Kazanan adı kayıt anında extraData'ya yazılan snapshot'tır; canlı
+    // WhatIfBloc lookup'ı kaldırıldı (F-11-07 — Scenarios → What-If bağı yok).
+    final winnerName = scenario.extraData?['winnerName'] as String? ?? '';
     final winnerReturn =
         (scenario.extraData?['winnerReturn'] as num?)?.toDouble() ?? 0.0;
     final winnerColor = winnerReturn >= 0 ? AppColors.profit : AppColors.loss;

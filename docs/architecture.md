@@ -11,8 +11,10 @@ lib/
 │   ├── di/                        ← injection.dart (get_it service locator)
 │   ├── error/                     ← AppError, DioErrorMapper, ErrorReporter
 │   ├── l10n/                      ← L10nContext extension (context.l10n)
-│   ├── network/                   ← ApiClient, DeviceIdInterceptor, LanguageInterceptor, RetryInterceptor
+│   ├── network/                   ← ApiClient, *Interceptor, LocaleProvider (Accept-Language)
+│   ├── platform/                  ← PlatformInfo (dart:io soyutlaması — F-05-06)
 │   ├── theme/                     ← AppTheme (light/dark ThemeData), ThemeModeMapper
+│   ├── utils/                     ← date_utils (isSameDay), money_parser, percentage_formatter, ...
 │   └── widgets/                   ← InflationToggle, SharePreviewSheet, SettingsIconButton
 ├── features/
 │   ├── what_if/                   ← Ana özellik: "ya alsaydım" hesaplama
@@ -76,8 +78,13 @@ presentation → domain ← data
 
 | Kayıt Tipi | Kullanıldığı Yer | Gerekçe |
 |---|---|---|
-| `registerLazySingleton` | ApiClient, Repository, UseCase, DioErrorMapper, ErrorReporter, SettingsCubit | Bir kez oluşturulur, tüm uygulama boyunca paylaşılır |
+| `registerLazySingleton` | ApiClient, Repository, UseCase, DioErrorMapper, ErrorReporter, SettingsCubit, OnboardingCubit, `PlatformInfo`, `LocaleProvider`, `PortfolioRepository` | Bir kez oluşturulur, tüm uygulama boyunca paylaşılır |
 | `registerFactory` | WhatIfBloc, ComparisonBloc, PortfolioBloc, DcaBloc, ScenariosBloc | Her sayfa açılışında yeni instance — eski state sızmaz |
+
+> **Faz 5 eklemeleri:** `PlatformInfo` (network'ün `dart:io`'dan soyutlanması),
+> `LocaleProvider` (dil kodu global static yerine DI), `OnboardingCubit`
+> (onboarding durumu), `PortfolioRepository` (portföyün kendi data katmanı).
+> `DioErrorMapper` artık BLoC'lara değil **repository'lere** enjekte edilir.
 
 ```dart
 // Sayfa açılırken BLoC sağlanır
@@ -244,15 +251,32 @@ flowchart TD
 Her isteğe `X-Device-OS`, `X-Device-OS-Version`, `X-App-Version` header'larını
 ekler — backend activity logging için.
 
+**Platform soyutlaması (F-05-06):** İşletim sistemi bilgisi `dart:io.Platform`
+yerine DI ile enjekte edilen `PlatformInfo` arayüzünden okunur
+([lib/core/platform/platform_info.dart](../lib/core/platform/platform_info.dart)).
+Böylece network/interceptor katmanı `dart:io` import etmez ve birim testlerde
+sahte (`FakePlatformInfo`) implementasyonla doğrulanabilir. Production'da
+`SystemPlatformInfo` `Platform.operatingSystem`'i sarar.
+
 **PII minimizasyonu:** `Platform.operatingSystemVersion` ham çıktısı iOS'ta
 build numarası + Darwin kernel sürümü ile 80+ karakter olabilir. Bu
 fingerprinting riski yaratır → `minimizeOsVersion` regex ile major.minor
 düzeyine indirilir (örn. `"18.6"`). Eşleşme yoksa `"unknown"` döner; ham
-veri ASLA propagate edilmez.
+veri ASLA propagate edilmez. (`minimizeOsVersion` static helper olarak kalır.)
 
 ### LanguageInterceptor
 
-Her istekte `Accept-Language` header'ını `AppLocaleHolder.code` değerinden okuyarak ekler. `AppLocaleHolder` basit bir statik holder'dır — `SettingsCubit` dil değiştiğinde `update()` çağırarak günceller.
+Her istekte `Accept-Language` header'ını DI ile enjekte edilen `LocaleProvider`
+([lib/core/network/locale_provider.dart](../lib/core/network/locale_provider.dart))
+üzerinden okur. `SettingsCubit` dil değiştiğinde aynı `LocaleProvider`
+instance'ını günceller — `LazySingleton` olduğu için interceptor ve cubit tek
+instance'ı paylaşır.
+
+> **F-12-17 + F-05-27:** Önceden dil kodu global **mutable static**
+> `AppLocaleHolder.code` idi; testlerde izole edilemiyor ve `SettingsCubit`
+> global state'i doğrudan mutasyona uğratıyordu. Artık `LocaleProvider` arayüzü
+> DI ile enjekte edilir (`AppLocaleHolder` onu implement eden bellek-içi
+> tutucu); test sahte bir provider'a `verify` yapar.
 
 | Kullanıcı seçimi | Accept-Language | Sonuç |
 |---|---|---|
@@ -288,14 +312,19 @@ class UnknownError      extends AppError { ... }    // catch-all
 
 ### Akış
 
+`DioException` → `AppError` dönüşümü **repository (data) katmanında** yapılır;
+BLoC katmanı Dio'yu hiç import etmez, yalnızca `AppError` görür (CLAUDE.md
+"BLoC'ta HTTP YASAK"; Faz 5 — F-07-02/F-08-17/F-10-12).
+
 ```
-DioException
-    │
+Repository (data katmanı)
+    │  try { dio.get/post(...) } on DioException catch (e)
     ▼
-DioErrorMapper.map()   ← HTTP kodu → AppError dönüşümü
-    │
+DioErrorMapper.map(e)  ← HTTP kodu → AppError; repo `throw AppError`
+    │  (200 + boş gövde → ServerError; silme 404 → idempotent sessiz başarı)
     ▼
-WhatIfBloc             ← AppError'ı state'e koyar, mesaj üretmez
+BLoC                   ← `on AppError catch` — state'e koyar, mesaj üretmez
+    │                    (parse hatası gibi beklenmedikler generic catch → UnknownError)
     │
     ├─ ServerError / UnknownError ──► ErrorReporter.report() → Sentry
     │
@@ -305,6 +334,11 @@ WhatIfBloc             ← AppError'ı state'e koyar, mesaj üretmez
 Widget (BlocConsumer listener)
     └─ switch(state.error) ──► context.l10n.errorXxx
 ```
+
+> **Repository sözleşmesi:** Her `*RepositoryImpl` Dio çağrılarını `try/catch
+> (DioException)` ile sarar ve `DioErrorMapper` ile `AppError`'a çevirir.
+> `DioErrorMapper` artık DI'da repository'lere enjekte edilir (BLoC'lara değil).
+> Silme idempotency'si (404 = zaten yok) `ScenariosRepositoryImpl`'de ele alınır.
 
 ### ErrorReporter (Sentry)
 
@@ -350,7 +384,7 @@ Text(l10n.errorPriceNotFound)
 Dil değiştiğinde:
 1. `SettingsCubit.setLanguage()` → `AppSettings` emit eder
 2. `BlocBuilder<SettingsCubit>` → `MaterialApp.locale` güncellenir → UI yeniden çizilir
-3. `AppLocaleHolder.update()` → Sonraki API isteklerinde `Accept-Language` güncellenir
+3. `LocaleProvider.update()` → Sonraki API isteklerinde `Accept-Language` güncellenir
 
 ### İstemci-Sunucu Dil Uyumu
 
@@ -491,7 +525,7 @@ SettingsCubit (LazySingleton)
     │ load()  ← uygulama başlangıcında çağrılır
     ▼
 AppSettings(themeMode: system, language: system)  ← SharedPreferences'tan okunur
-    │                                                 + AppLocaleHolder.update()
+    │                                                 + LocaleProvider.update()
     │ setThemeMode(dark)
     ▼
 AppSettings(themeMode: dark, language: system)     ← emit + SharedPreferences'a yaz
@@ -499,8 +533,11 @@ AppSettings(themeMode: dark, language: system)     ← emit + SharedPreferences'
     │ setLanguage(en)
     ▼
 AppSettings(themeMode: dark, language: en)         ← emit + SharedPreferences'a yaz
-                                                      + AppLocaleHolder.update('en')
+                                                      + LocaleProvider.update('en')
 ```
+
+`LocaleProvider` DI ile enjekte edilir (constructor: `SettingsCubit(repo,
+localeProvider)`) — bkz. LanguageInterceptor / F-12-17.
 
 **Neden Cubit, BLoC değil?** Ayar değiştirme basit bir setter — event/handler deseni gereksiz.
 
@@ -522,6 +559,73 @@ Settings sayfasına erişim: `SettingsIconButton` (gear icon) → tüm ana sayfa
 `SettingsCubit` `MaterialApp` üstünde olduğu için push edilen route'tan erişilemez — `SettingsIconButton` `BlocProvider.value` ile `sl<SettingsCubit>()` singleton'ını route'a geçirir.
 
 ---
+
+## Portföy Hesaplama (Composition over What-If)
+
+Portföy feature'ı tam üç katmana sahiptir (Faz 5 — F-09-01). Portföyün ayrı bir
+backend endpoint'i yoktur; her kalem tekil bir "ya alsaydım" hesabıdır, bu yüzden
+`PortfolioRepositoryImpl` hesaplamayı `WhatIfRepository`'ye **delege eder**
+(kalıtım değil kompozisyon).
+
+```mermaid
+flowchart LR
+    UC[CalculatePortfolio use case] -->|calculateItems| PR[PortfolioRepository]
+    PR -.implements.- PRI[PortfolioRepositoryImpl]
+    PRI -->|delege: calculate per item| WIR[WhatIfRepository]
+    PRI -->|map: WhatIfResult → PortfolioCalculation| PC[PortfolioCalculation]
+```
+
+- **`PortfolioCalculation`** (portföy domain entity'si) yalnızca portföyün
+  kullandığı alanları taşır. `WhatIfResult` → `PortfolioCalculation` eşlemesi
+  **data katmanında** (`PortfolioRepositoryImpl`) yapılır; böylece portföy
+  domain'i What-If domain'ine bağımlı değildir (F-09-19; önceden
+  `PortfolioItemResult.result` doğrudan `WhatIfResult`'tı).
+- **Per-item izolasyon** repository'dedir: bir kalem çökerse
+  `PortfolioItemOutcome.calculation == null` döner; use case bunu `failedItems`'a
+  düşürüp partial-success gösterir. Tüm kalemler çökerse
+  `PortfolioCalculationFailure` fırlatılır.
+- Backend ileride batch `/v1/portfolio/calculate` eklerse `PortfolioRepository`
+  sözleşmesi sabit kalır; yalnızca impl, delegasyon yerine doğrudan Dio'ya geçer.
+
+## Use Case Katmanı Felsefesi
+
+Use case'lerin bir kısmı şu an ince passthrough'dur (örn. `GetAssets`,
+`CalculateWhatIf` doğrudan repository'yi çağırır). Bu **kasıtlı** ve kabul
+edilebilir bir Clean Architecture pragmatizmidir (F-07-26):
+
+- BLoC → domain ← repository sınırını korur (BLoC repository'yi doğrudan bilmez).
+- Özellik olgunlaştıkça doğrulama, cache, retry, side-effect mantığı use case'e
+  taşınır — mimari değişmeden genişleme noktasıdır. (Örn. `CalculatePortfolio`
+  zaten Decimal aggregasyon iş mantığını barındırır.)
+
+İnce use case "bloat" değil, beklenen evrim noktasıdır.
+
+## Plan / Abonelik (SubscriptionTier)
+
+`AppConfig.tier` magic-string (`'free'`/`'premium'`) yerine tip-güvenli
+`enum SubscriptionTier { free, premium }`'dir (F-12-07). `AppConfigModel.fromJson`
+wire string'i güvenle enum'a map'ler; bilinmeyen/eksik değer **güvenli varsayılan**
+`SubscriptionTier.free`'e düşer (config asla uygulamayı bloklamaz).
+`isPremium => tier == SubscriptionTier.premium`. Backend'e gönderilen `plan`
+parametresi (scenarios) `tier.name` ile wire string'e çevrilir.
+
+## Onboarding (OnboardingCubit)
+
+Onboarding tamamlanma durumu `OnboardingCubit` (`OnboardingStatus { unknown,
+pending, completed }`) ile yönetilir (F-12-09). Önceden `_AppHome` `StatefulWidget`
+içinde ad-hoc `bool? + setState` + elle yönetilen `StreamSubscription` vardı.
+Cubit, hesap-silme reset aboneliğini (`AppLifecycleEvents.resetStream`) de sahiplenir
+ve `close()`'da iptal eder; `AppHome` artık durumu yalnızca `BlocBuilder` ile okuyan
+stateless bir widget'tır.
+
+## Backend API Namespace Sözleşmesi
+
+Hipotetik/"ya alsaydım" türevi tüm hesaplamalar `/v1/what-if/*` namespace'i
+altında toplanır — `calculate`, `compare`, `reverse` ve `dca` dahil. DCA istemcide
+ayrı bir *feature* (`features/dca`) olsa da backend'de bir what-if senaryo türü
+olduğu için endpoint'i `/v1/what-if/dca`'dır (F-08-16). İstemci feature yapısı ile
+API namespace'i kasıtlı olarak ayrışır; bu tutarsızlık değildir. Tek kaynak:
+[lib/core/constants/api_endpoints.dart](../lib/core/constants/api_endpoints.dart).
 
 ## CI/CD (GitHub Actions)
 

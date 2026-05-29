@@ -1,6 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:decimal/decimal.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:saydin/core/error/app_error.dart';
@@ -34,13 +33,10 @@ void main() {
   ScenariosBloc buildBloc() =>
       ScenariosBloc(mockGetScenarios, mockSaveScenario, mockDeleteScenario);
 
-  // connectionError → DioErrorMapper.map → NoInternetError. NoInternetError
-  // reporter tetiklemez (yalnızca Unknown/ServerError raporlanır), bu yüzden
-  // testler Sentry'ye dokunmadan emit yolunu doğrular.
-  DioException connError() => DioException(
-    requestOptions: RequestOptions(path: '/scenarios'),
-    type: DioExceptionType.connectionError,
-  );
+  // Dio→AppError eşlemesi artık repository katmanında (F-10-12 deseni); use
+  // case'ler BLoC'a doğrudan AppError fırlatır. NoInternetError reporter
+  // tetiklemez (yalnızca Unknown/ServerError raporlanır), bu yüzden testler
+  // Sentry'ye dokunmadan emit yolunu doğrular.
 
   void stubSaveAny(SavedScenario result) {
     when(
@@ -247,7 +243,7 @@ void main() {
     );
 
     blocTest<ScenariosBloc, ScenariosState>(
-      'save DioException → ScenariosFailure (AppError taşır), liste korunur',
+      'save AppError → ScenariosFailure (AppError taşır), liste korunur',
       build: buildBloc,
       seed: () => ScenariosLoaded([existingScenario]),
       setUp: () {
@@ -262,7 +258,7 @@ void main() {
             type: any(named: 'type'),
             extraData: any(named: 'extraData'),
           ),
-        ).thenThrow(connError());
+        ).thenThrow(const NoInternetError());
       },
       act: (bloc) => bloc.add(
         ScenarioSaveRequested(
@@ -344,11 +340,11 @@ void main() {
     );
 
     blocTest<ScenariosBloc, ScenariosState>(
-      'DioException → ScenariosFailure(NoInternetError)',
+      'AppError → ScenariosFailure(NoInternetError)',
       build: buildBloc,
       setUp: () => when(
         () => mockGetScenarios(plan: any(named: 'plan')),
-      ).thenThrow(connError()),
+      ).thenThrow(const NoInternetError()),
       act: (bloc) => bloc.add(const ScenariosRequested()),
       expect: () => [
         isA<ScenariosLoading>(),
@@ -375,37 +371,33 @@ void main() {
     );
 
     blocTest<ScenariosBloc, ScenariosState>(
-      'silme hatası → optimistic kaldırma sonra rollback (Failure original taşır)',
+      'silme hatası (5xx/network AppError) → optimistic kaldırma sonra rollback',
       build: buildBloc,
       seed: () => ScenariosLoaded([existingScenario]),
-      setUp: () => when(() => mockDeleteScenario(any())).thenThrow(connError()),
+      setUp: () =>
+          when(() => mockDeleteScenario(any())).thenThrow(const ServerError()),
       act: (bloc) => bloc.add(const ScenarioDeleteRequested('abc-123')),
       expect: () => [
         // 1) optimistic: hemen listeden kaldır
         isA<ScenariosLoaded>().having((s) => s.scenarios, 'scenarios', isEmpty),
         // 2) hata: original listeyi geri yükleyen Failure
         isA<ScenariosFailure>()
-            .having((s) => s.error, 'error', isA<NoInternetError>())
+            .having((s) => s.error, 'error', isA<ServerError>())
             .having((s) => s.scenarios, 'scenarios', [existingScenario]),
       ],
     );
 
     blocTest<ScenariosBloc, ScenariosState>(
-      'F-11-03: 404 idempotent — kalem kaldırılmış kalır, Failure YOK',
+      'F-11-03 idempotent silme: use case normal dönerse (repo 404\'ü yuttu) '
+      'kalem kaldırılmış kalır, Failure YOK',
       build: buildBloc,
       seed: () => ScenariosLoaded([existingScenario]),
-      setUp: () => when(() => mockDeleteScenario(any())).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/v1/scenarios/abc-123'),
-          type: DioExceptionType.badResponse,
-          response: Response(
-            requestOptions: RequestOptions(path: '/v1/scenarios/abc-123'),
-            statusCode: 404,
-          ),
-        ),
-      ),
+      // Idempotency artık repository'de (404 → sessiz başarı); BLoC açısından
+      // silme normal tamamlanır. Repo seviyesi 404 davranışı
+      // scenarios_repository_impl_test.dart'ta doğrulanır.
+      setUp: () =>
+          when(() => mockDeleteScenario(any())).thenAnswer((_) async {}),
       act: (bloc) => bloc.add(const ScenarioDeleteRequested('abc-123')),
-      // Yalnızca optimistic kaldırma; 404 hata olarak gösterilmez (rollback yok).
       expect: () => [
         isA<ScenariosLoaded>().having((s) => s.scenarios, 'scenarios', isEmpty),
       ],

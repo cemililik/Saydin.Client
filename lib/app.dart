@@ -1,10 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/di/injection.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
-import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
 import 'package:saydin/core/theme/app_theme.dart';
 import 'package:saydin/core/theme/theme_mode_mapper.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
@@ -13,7 +10,7 @@ import 'package:saydin/features/comparison/presentation/pages/comparison_page.da
 import 'package:saydin/features/dca/presentation/bloc/dca_bloc.dart';
 import 'package:saydin/features/dca/presentation/bloc/dca_event.dart';
 import 'package:saydin/features/dca/presentation/pages/dca_page.dart';
-import 'package:saydin/features/onboarding/domain/repositories/onboarding_repository.dart';
+import 'package:saydin/features/onboarding/presentation/cubit/onboarding_cubit.dart';
 import 'package:saydin/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_event.dart';
@@ -63,6 +60,7 @@ class SaydinApp extends StatelessWidget {
         BlocProvider(create: (_) => sl<SettingsCubit>()..load()),
         BlocProvider(create: (_) => sl<FavoritesCubit>()..load()),
         BlocProvider(create: (_) => sl<AppConfigCubit>()..load()),
+        BlocProvider(create: (_) => sl<OnboardingCubit>()..load()),
         BlocProvider(create: (_) => sl<WhatIfBloc>()),
         BlocProvider(create: (_) => sl<ScenariosBloc>()),
         BlocProvider(create: (_) => sl<ComparisonBloc>()),
@@ -93,62 +91,28 @@ class SaydinApp extends StatelessWidget {
   }
 }
 
-class AppHome extends StatefulWidget {
+/// Onboarding durumuna göre splash / onboarding / ana uygulamayı seçer.
+///
+/// Durum ve hesap-silme reset aboneliği [OnboardingCubit]'te yönetilir
+/// (F-12-09); bu widget yalnızca state'i okur — ad-hoc `setState`/`StreamSub`
+/// yok.
+class AppHome extends StatelessWidget {
   const AppHome({super.key});
 
   @override
-  State<AppHome> createState() => _AppHomeState();
-}
-
-class _AppHomeState extends State<AppHome> {
-  bool? _onboardingCompleted;
-  StreamSubscription<void>? _resetSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    // Hesap silme sonrası `AccountDeletionCubit` reset event yayar; bunu
-    // dinleyip onboarding state'ini sıfırlarız. Cross-layer coupling
-    // yerine publish/subscribe — feature → app yönündeki bağı keser.
-    _resetSubscription = sl<AppLifecycleEvents>().resetStream.listen((_) {
-      _restartFromOnboarding();
-    });
-    _checkOnboarding();
-  }
-
-  @override
-  void dispose() {
-    _resetSubscription?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _checkOnboarding() async {
-    final repo = sl<OnboardingRepository>();
-    final completed = await repo.isOnboardingCompleted();
-    if (mounted) setState(() => _onboardingCompleted = completed);
-  }
-
-  Future<void> _completeOnboarding() async {
-    await sl<OnboardingRepository>().completeOnboarding();
-    if (mounted) setState(() => _onboardingCompleted = true);
-  }
-
-  Future<void> _restartFromOnboarding() async {
-    if (!mounted) return;
-    setState(() => _onboardingCompleted = null);
-    await _checkOnboarding();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_onboardingCompleted == null) {
-      // Henüz yükleniyor
-      return const Scaffold(body: SizedBox.shrink());
-    }
-    if (_onboardingCompleted == false) {
-      return OnboardingPage(onComplete: _completeOnboarding);
-    }
-    return const MainShell();
+    return BlocBuilder<OnboardingCubit, OnboardingStatus>(
+      builder: (context, status) {
+        return switch (status) {
+          // Henüz yükleniyor — boş splash.
+          OnboardingStatus.unknown => const Scaffold(body: SizedBox.shrink()),
+          OnboardingStatus.pending => OnboardingPage(
+            onComplete: context.read<OnboardingCubit>().complete,
+          ),
+          OnboardingStatus.completed => const MainShell(),
+        };
+      },
+    );
   }
 }
 

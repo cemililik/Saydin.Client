@@ -1,7 +1,5 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
-import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/comparison/domain/usecases/compare_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
@@ -11,7 +9,6 @@ import 'comparison_state.dart';
 class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   final GetAssets _getAssets;
   final CompareWhatIf _compareWhatIf;
-  final DioErrorMapper _errorMapper;
   final ErrorReporter _reporter;
 
   /// Monotonik istek sayacı. Her `_onCalculateRequested` başlangıcında
@@ -24,10 +21,8 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   ComparisonBloc(
     this._getAssets,
     this._compareWhatIf, {
-    DioErrorMapper errorMapper = const DioErrorMapper(),
     ErrorReporter reporter = const ErrorReporter(),
-  }) : _errorMapper = errorMapper,
-       _reporter = reporter,
+  }) : _reporter = reporter,
        super(const ComparisonInitial()) {
     on<ComparisonAssetsRequested>(_onAssetsRequested);
     on<ComparisonSymbolToggled>(_onSymbolToggled);
@@ -69,10 +64,9 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     try {
       final assets = await _getAssets();
       emit(ComparisonAssetsLoaded(assets: assets));
-    } on DioException catch (e, st) {
-      final error = _errorMapper.map(e);
+    } on AppError catch (error, st) {
       if (error is UnknownError || error is ServerError) {
-        await _reporter.report(e, st, context: 'comparison_get_assets');
+        await _reporter.report(error, st, context: 'comparison_get_assets');
       }
       emit(
         ComparisonFailure(
@@ -210,11 +204,10 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
           result: result,
         ),
       );
-    } on DioException catch (e, st) {
+    } on AppError catch (error, st) {
       if (requestSeq != _requestSeq) return;
-      final error = _errorMapper.map(e);
       if (error is UnknownError || error is ServerError) {
-        await _reporter.report(e, st, context: 'comparison_calculate');
+        await _reporter.report(error, st, context: 'comparison_calculate');
       }
       emit(
         ComparisonFailure(

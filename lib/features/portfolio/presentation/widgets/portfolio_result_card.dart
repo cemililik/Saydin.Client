@@ -189,7 +189,7 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                           // fl_chart double ister; pasta dilimi oranı zaten
                           // floating-point ile temsil ediliyor — finansal
                           // toplama Decimal'da yapıldı.
-                          value: item.result.finalValueTry.toDouble(),
+                          value: item.calculation.finalValueTry.toDouble(),
                           color: color,
                           title: '${item.sharePercent.toStringAsFixed(1)}%',
                           titleStyle: const TextStyle(
@@ -213,10 +213,10 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                   final item = result.items[i];
                   final dotColor = AppColors
                       .portfolioColors[i % AppColors.portfolioColors.length];
-                  final itemColor = item.result.isProfit
+                  final itemColor = item.calculation.isProfit
                       ? AppColors.profit
                       : AppColors.loss;
-                  final itemSign = item.result.profitLossPercent >= 0
+                  final itemSign = item.calculation.profitLossPercent >= 0
                       ? '+'
                       : '';
                   final pctFmt = NumberFormat.decimalPercentPattern(
@@ -244,7 +244,7 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                           ),
                         ),
                         Text(
-                          '$itemSign${pctFmt.format(item.result.profitLossPercent / 100)}',
+                          '$itemSign${pctFmt.format(item.calculation.profitLossPercent / 100)}',
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 color: itemColor,

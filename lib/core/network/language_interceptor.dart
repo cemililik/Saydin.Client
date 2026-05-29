@@ -1,27 +1,18 @@
-import 'dart:ui';
-
 import 'package:dio/dio.dart';
+import 'package:saydin/core/network/locale_provider.dart';
 
-/// Her API isteğine Accept-Language header'ı ekleyen interceptor.
-/// Uygulama dili değiştiğinde [AppLocaleHolder.update] çağrılarak güncellenir.
+/// Her API isteğine `Accept-Language` header'ı ekleyen interceptor.
+///
+/// Dil kodunu DI ile enjekte edilen [LocaleProvider]'dan okur; uygulama dili
+/// değiştiğinde `SettingsCubit` aynı [LocaleProvider] instance'ını günceller.
 class LanguageInterceptor extends Interceptor {
+  final LocaleProvider _localeProvider;
+
+  LanguageInterceptor(this._localeProvider);
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    options.headers['Accept-Language'] = AppLocaleHolder.code;
+    options.headers['Accept-Language'] = _localeProvider.localeCode;
     handler.next(options);
-  }
-}
-
-/// Uygulama genelinde aktif dil kodunu tutan basit holder.
-/// SettingsCubit dil değiştiğinde [update] çağırır.
-class AppLocaleHolder {
-  static String _code = PlatformDispatcher.instance.locale.languageCode;
-
-  static String get code => _code;
-
-  /// [languageCode] → "tr", "en" veya null (system).
-  /// null geldiğinde platform locale kullanılır.
-  static void update(String? languageCode) {
-    _code = languageCode ?? PlatformDispatcher.instance.locale.languageCode;
   }
 }

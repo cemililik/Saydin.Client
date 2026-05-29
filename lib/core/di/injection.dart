@@ -7,6 +7,8 @@ import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
 import 'package:saydin/core/network/api_base_url_validator.dart';
 import 'package:saydin/core/network/api_client.dart';
+import 'package:saydin/core/network/locale_provider.dart';
+import 'package:saydin/core/platform/platform_info.dart';
 import 'package:saydin/features/account/data/repositories/account_data_repository_impl.dart';
 import 'package:saydin/features/account/domain/repositories/account_data_repository.dart';
 import 'package:saydin/features/account/presentation/cubit/account_deletion_cubit.dart';
@@ -30,11 +32,14 @@ import 'package:saydin/features/favorites/domain/repositories/favorites_reposito
 import 'package:saydin/features/favorites/presentation/cubit/favorites_cubit.dart';
 import 'package:saydin/features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import 'package:saydin/features/onboarding/domain/repositories/onboarding_repository.dart';
+import 'package:saydin/features/onboarding/presentation/cubit/onboarding_cubit.dart';
 import 'package:saydin/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:saydin/features/settings/domain/repositories/settings_repository.dart';
 import 'package:saydin/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:saydin/features/what_if/data/repositories/what_if_repository_impl.dart';
 import 'package:saydin/features/what_if/domain/repositories/what_if_repository.dart';
+import 'package:saydin/features/portfolio/data/repositories/portfolio_repository_impl.dart';
+import 'package:saydin/features/portfolio/domain/repositories/portfolio_repository.dart';
 import 'package:saydin/features/portfolio/domain/usecases/calculate_portfolio.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
 import 'package:saydin/features/dca/data/repositories/dca_repository_impl.dart';
@@ -52,6 +57,12 @@ Future<void> configureDependencies() async {
   // PackageInfo (async — uygulama başlangıcında bir kez çözümlenir)
   final packageInfo = await PackageInfo.fromPlatform();
 
+  // Platform & locale soyutlamaları — network katmanı dart:io/global state'e
+  // sızmasın diye DI ile enjekte edilir (F-05-06, F-12-17). Tek instance:
+  // LanguageInterceptor okur, SettingsCubit aynı LocaleProvider'ı günceller.
+  sl.registerLazySingleton<PlatformInfo>(SystemPlatformInfo.new);
+  sl.registerLazySingleton<LocaleProvider>(AppLocaleHolder.new);
+
   // Network
   sl.registerLazySingleton<ApiClient>(() {
     const baseUrl = String.fromEnvironment('API_BASE_URL');
@@ -59,7 +70,12 @@ Future<void> configureDependencies() async {
     // `StateError` fırlatır. `assert` release build'te derlenmez —
     // fail-loud için runtime check (`StateError`) zorunlu.
     ApiBaseUrlValidator.validate(baseUrl);
-    return ApiClient(baseUrl: baseUrl, packageInfo: packageInfo);
+    return ApiClient(
+      baseUrl: baseUrl,
+      packageInfo: packageInfo,
+      platformInfo: sl<PlatformInfo>(),
+      localeProvider: sl<LocaleProvider>(),
+    );
   });
 
   // Error handling
@@ -73,12 +89,15 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<OnboardingRepository>(
     () => OnboardingRepositoryImpl(SharedPreferencesAsync()),
   );
+  sl.registerLazySingleton(
+    () => OnboardingCubit(sl(), sl<AppLifecycleEvents>()),
+  );
 
   // Settings
   sl.registerLazySingleton<SettingsRepository>(
     () => SettingsRepositoryImpl(SharedPreferencesAsync()),
   );
-  sl.registerLazySingleton(() => SettingsCubit(sl()));
+  sl.registerLazySingleton(() => SettingsCubit(sl(), sl<LocaleProvider>()));
 
   // Legal — statik içerik, network çağrısı yok
   sl.registerLazySingleton<LegalRepository>(() => const LegalRepositoryImpl());
@@ -112,51 +131,52 @@ Future<void> configureDependencies() async {
   );
   sl.registerLazySingleton(() => AppConfigCubit(sl()));
 
-  // Repositories
+  // Repositories — DioErrorMapper repo katmanına enjekte edilir; BLoC'lar
+  // yalnızca AppError görür (F-07-02/F-08-17/F-10-12; Dio sızıntısı kapatıldı).
   sl.registerLazySingleton<WhatIfRepository>(
-    () => WhatIfRepositoryImpl(sl<ApiClient>().dio),
+    () => WhatIfRepositoryImpl(sl<ApiClient>().dio, sl<DioErrorMapper>()),
   );
 
   // Use cases
   sl.registerLazySingleton(() => CalculateWhatIf(sl()));
   sl.registerLazySingleton(() => CalculateReverseWhatIf(sl()));
   sl.registerLazySingleton(() => GetAssets(sl()));
-  sl.registerLazySingleton(() => CalculatePortfolio(sl()));
+
+  // Portfolio — kendi data katmanı (F-09-01); hesaplamayı WhatIfRepository'ye
+  // delege eder ve WhatIfResult'ı portföye ait PortfolioCalculation'a map'ler.
+  sl.registerLazySingleton<PortfolioRepository>(
+    () => PortfolioRepositoryImpl(sl<WhatIfRepository>()),
+  );
+  sl.registerLazySingleton(() => CalculatePortfolio(sl<PortfolioRepository>()));
 
   // Comparison
   sl.registerLazySingleton<ComparisonRepository>(
-    () => ComparisonRepositoryImpl(sl<ApiClient>().dio),
+    () => ComparisonRepositoryImpl(sl<ApiClient>().dio, sl<DioErrorMapper>()),
   );
   sl.registerLazySingleton(() => CompareWhatIf(sl()));
 
   // DCA
   sl.registerLazySingleton<DcaRepository>(
-    () => DcaRepositoryImpl(sl<ApiClient>().dio),
+    () => DcaRepositoryImpl(sl<ApiClient>().dio, sl<DioErrorMapper>()),
   );
   sl.registerLazySingleton(() => CalculateDca(sl()));
 
-  // BLoC (factory — her sayfa açılışında yeni instance)
-  sl.registerFactory(
-    () => WhatIfBloc(sl(), sl(), sl(), errorMapper: sl(), reporter: sl()),
-  );
-  sl.registerFactory(
-    () => ComparisonBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
-  );
-  sl.registerFactory(
-    () => PortfolioBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
-  );
-  sl.registerFactory(
-    () => DcaBloc(sl(), sl(), errorMapper: sl(), reporter: sl()),
-  );
+  // BLoC (factory — her sayfa açılışında yeni instance). Hata eşleme
+  // repository katmanında yapıldığı için BLoC'lara DioErrorMapper geçilmez.
+  sl.registerFactory(() => WhatIfBloc(sl(), sl(), sl(), reporter: sl()));
+  sl.registerFactory(() => ComparisonBloc(sl(), sl(), reporter: sl()));
+  sl.registerFactory(() => PortfolioBloc(sl(), sl(), reporter: sl()));
+  sl.registerFactory(() => DcaBloc(sl(), sl(), reporter: sl()));
 
   // Scenarios
   sl.registerLazySingleton<ScenariosRepository>(
-    () => ScenariosRepositoryImpl(sl<ApiClient>().dio),
+    () => ScenariosRepositoryImpl(
+      sl<ApiClient>().dio,
+      errorMapper: sl<DioErrorMapper>(),
+    ),
   );
   sl.registerLazySingleton(() => GetScenarios(sl()));
   sl.registerLazySingleton(() => SaveScenario(sl()));
   sl.registerLazySingleton(() => DeleteScenario(sl()));
-  sl.registerFactory(
-    () => ScenariosBloc(sl(), sl(), sl(), errorMapper: sl(), reporter: sl()),
-  );
+  sl.registerFactory(() => ScenariosBloc(sl(), sl(), sl(), reporter: sl()));
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:saydin/features/config/data/models/app_config_model.dart';
+import 'package:saydin/features/config/domain/entities/subscription_tier.dart';
 
 void main() {
   group('AppConfigModel.fromJson (F-12-08 tip güvenliği)', () {
@@ -17,7 +18,7 @@ void main() {
         },
       });
 
-      expect(m.tier, 'premium');
+      expect(m.tier, SubscriptionTier.premium);
       expect(m.dailyCalculationLimit, 100);
       expect(m.maxSavedScenarios, 50);
       expect(m.features.comparison, isFalse);
@@ -27,7 +28,7 @@ void main() {
     test('boş {} payload tüm default değerlere düşer', () {
       final m = AppConfigModel.fromJson(const {});
 
-      expect(m.tier, 'free');
+      expect(m.tier, SubscriptionTier.free);
       expect(m.dailyCalculationLimit, 20);
       expect(m.maxSavedScenarios, 10);
       expect(m.features.comparison, isTrue);
@@ -45,16 +46,26 @@ void main() {
         'maxSavedScenarios': '50',
         // features List — _map {} → tüm flag default
         'features': ['unexpected'],
-        // tier int — String değil → 'free'
+        // tier int — String değil → SubscriptionTier.free (güvenli varsayılan)
         'tier': 42,
       });
 
-      expect(m.tier, 'free');
+      expect(m.tier, SubscriptionTier.free);
       expect(m.dailyCalculationLimit, 20);
       expect(m.maxSavedScenarios, 10);
       expect(m.features.comparison, isTrue);
       expect(m.features.priceHistoryMonths, 12);
     });
+
+    test(
+      'bilinmeyen tier string\'i güvenli varsayılan free\'e düşer (F-12-07)',
+      () {
+        // Backend yeni/bilinmeyen bir plan ("pro") gönderirse uygulama çökmez,
+        // free olarak yorumlanır (en kısıtlı/güvenli varsayılan).
+        final m = AppConfigModel.fromJson(const {'tier': 'pro'});
+        expect(m.tier, SubscriptionTier.free);
+      },
+    );
 
     test(
       'bool flag int 0/1 olarak gelirse tolere edilir (M3: 1→true, 0→false)',

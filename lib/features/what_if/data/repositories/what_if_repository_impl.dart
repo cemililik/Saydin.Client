@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:saydin/core/constants/api_endpoints.dart';
+import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/features/what_if/data/models/asset_model.dart';
 import 'package:saydin/features/what_if/data/models/reverse_what_if_response_model.dart';
 import 'package:saydin/features/what_if/data/models/what_if_response_model.dart';
@@ -8,17 +10,28 @@ import 'package:saydin/features/what_if/domain/entities/reverse_what_if_result.d
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/features/what_if/domain/repositories/what_if_repository.dart';
 
+/// Dio çağrılarını yapar ve `DioException`'ı bu katmanda [AppError]'a
+/// dönüştürür — BLoC katmanı yalnızca [AppError] görür (Dio import etmez,
+/// CLAUDE.md "BLoC'ta HTTP YASAK"; F-07-02).
 class WhatIfRepositoryImpl implements WhatIfRepository {
   final Dio _dio;
-  WhatIfRepositoryImpl(this._dio);
+  final DioErrorMapper _errorMapper;
+
+  WhatIfRepositoryImpl(this._dio, [this._errorMapper = const DioErrorMapper()]);
 
   @override
   Future<List<Asset>> getAssets() async {
-    final response = await _dio.get<Map<String, dynamic>>(ApiEndpoints.assets);
-    final list = (response.data?['assets'] as List<dynamic>?) ?? [];
-    return list
-        .map((e) => AssetModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.assets,
+      );
+      final list = (response.data?['assets'] as List<dynamic>?) ?? [];
+      return list
+          .map((e) => AssetModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw _errorMapper.map(e);
+    }
   }
 
   @override
@@ -30,22 +43,28 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
     required String amountType,
     bool includeInflation = false,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      ApiEndpoints.whatIfCalculate,
-      data: {
-        'assetSymbol': assetSymbol,
-        'buyDate': _formatDate(buyDate),
-        if (sellDate != null) 'sellDate': _formatDate(sellDate),
-        'amount': amount,
-        'amountType': amountType,
-        'includeInflation': includeInflation,
-      },
-    );
-    final data = response.data;
-    if (data == null) {
-      throw const FormatException('WhatIf yanıtı boş geldi.');
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.whatIfCalculate,
+        data: {
+          'assetSymbol': assetSymbol,
+          'buyDate': _formatDate(buyDate),
+          if (sellDate != null) 'sellDate': _formatDate(sellDate),
+          'amount': amount,
+          'amountType': amountType,
+          'includeInflation': includeInflation,
+        },
+      );
+      final data = response.data;
+      // 200 + boş gövde sunucu sözleşme ihlali → ServerError (hardcoded TR
+      // FormatException yerine tip-güvenli AppError).
+      if (data == null) {
+        throw ServerError(statusCode: response.statusCode);
+      }
+      return WhatIfResponseModel.fromJson(data);
+    } on DioException catch (e) {
+      throw _errorMapper.map(e);
     }
-    return WhatIfResponseModel.fromJson(data);
   }
 
   @override
@@ -57,22 +76,26 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
     required String targetAmountType,
     bool includeInflation = false,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      ApiEndpoints.whatIfReverse,
-      data: {
-        'assetSymbol': assetSymbol,
-        'buyDate': _formatDate(buyDate),
-        if (sellDate != null) 'sellDate': _formatDate(sellDate),
-        'targetAmount': targetAmount,
-        'targetAmountType': targetAmountType,
-        'includeInflation': includeInflation,
-      },
-    );
-    final data = response.data;
-    if (data == null) {
-      throw const FormatException('Reverse WhatIf yanıtı boş geldi.');
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.whatIfReverse,
+        data: {
+          'assetSymbol': assetSymbol,
+          'buyDate': _formatDate(buyDate),
+          if (sellDate != null) 'sellDate': _formatDate(sellDate),
+          'targetAmount': targetAmount,
+          'targetAmountType': targetAmountType,
+          'includeInflation': includeInflation,
+        },
+      );
+      final data = response.data;
+      if (data == null) {
+        throw ServerError(statusCode: response.statusCode);
+      }
+      return ReverseWhatIfResponseModel.fromJson(data);
+    } on DioException catch (e) {
+      throw _errorMapper.map(e);
     }
-    return ReverseWhatIfResponseModel.fromJson(data);
   }
 
   String _formatDate(DateTime date) =>

@@ -1,42 +1,55 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/scenarios/data/models/saved_scenario_model.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/domain/repositories/scenarios_repository.dart';
 
+/// Dio çağrılarını yapar ve `DioException`'ı bu katmanda [AppError]'a
+/// dönüştürür — BLoC yalnızca [AppError] görür (Dio import etmez). Silme
+/// idempotency'si (404 = zaten yok) de burada ele alınır (F-11-03 semantiği
+/// data katmanına taşındı).
 class ScenariosRepositoryImpl implements ScenariosRepository {
   final Dio _dio;
+  final DioErrorMapper _errorMapper;
   final ErrorReporter _reporter;
 
   ScenariosRepositoryImpl(
     this._dio, {
+    DioErrorMapper errorMapper = const DioErrorMapper(),
     ErrorReporter reporter = const ErrorReporter(),
-  }) : _reporter = reporter;
+  }) : _errorMapper = errorMapper,
+       _reporter = reporter;
 
   @override
   Future<List<SavedScenario>> getScenarios({String plan = 'free'}) async {
-    final response = await _dio.get<List<dynamic>>(
-      '/v1/scenarios',
-      queryParameters: {'plan': plan},
-    );
-    final list = response.data ?? [];
-    // Tek bozuk/eksik satır (örn. geçersiz tarih) tüm senaryo listesini
-    // düşürmesin: her satırı izole et, hatalıyı atla ve raporla. Kullanıcı
-    // diğer geçerli senaryolarını görmeye devam eder.
-    final scenarios = <SavedScenario>[];
-    for (final e in list) {
-      try {
-        scenarios.add(SavedScenarioModel.fromJson(e as Map<String, dynamic>));
-      } catch (err, st) {
-        // Raporlamayı await ETME: birden çok bozuk satırda ardışık ağ
-        // istekleri döngüyü bloklayıp geçerli senaryoların gösterimini
-        // geciktirir. Arka planda fire-and-forget.
-        unawaited(_reporter.report(err, st, context: 'get_scenarios_parse'));
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/v1/scenarios',
+        queryParameters: {'plan': plan},
+      );
+      final list = response.data ?? [];
+      // Tek bozuk/eksik satır (örn. geçersiz tarih) tüm senaryo listesini
+      // düşürmesin: her satırı izole et, hatalıyı atla ve raporla. Kullanıcı
+      // diğer geçerli senaryolarını görmeye devam eder.
+      final scenarios = <SavedScenario>[];
+      for (final e in list) {
+        try {
+          scenarios.add(SavedScenarioModel.fromJson(e as Map<String, dynamic>));
+        } catch (err, st) {
+          // Raporlamayı await ETME: birden çok bozuk satırda ardışık ağ
+          // istekleri döngüyü bloklayıp geçerli senaryoların gösterimini
+          // geciktirir. Arka planda fire-and-forget.
+          unawaited(_reporter.report(err, st, context: 'get_scenarios_parse'));
+        }
       }
+      return scenarios;
+    } on DioException catch (e) {
+      throw _errorMapper.map(e);
     }
-    return scenarios;
   }
 
   @override
@@ -50,29 +63,42 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
     ScenarioType type = ScenarioType.whatIf,
     Map<String, dynamic>? extraData,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      '/v1/scenarios',
-      data: {
-        'assetSymbol': assetSymbol,
-        'assetDisplayName': assetDisplayName,
-        'buyDate': _formatDate(buyDate),
-        if (sellDate != null) 'sellDate': _formatDate(sellDate),
-        'amount': amount,
-        'amountType': amountType,
-        'type': _typeToString(type),
-        if (extraData != null) 'extraData': extraData,
-      },
-    );
-    final data = response.data;
-    if (data == null) {
-      throw const FormatException('Senaryo yanıtı boş geldi.');
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/v1/scenarios',
+        data: {
+          'assetSymbol': assetSymbol,
+          'assetDisplayName': assetDisplayName,
+          'buyDate': _formatDate(buyDate),
+          if (sellDate != null) 'sellDate': _formatDate(sellDate),
+          'amount': amount,
+          'amountType': amountType,
+          'type': _typeToString(type),
+          if (extraData != null) 'extraData': extraData,
+        },
+      );
+      final data = response.data;
+      // 200 + boş gövde → ServerError (hardcoded TR FormatException yerine).
+      if (data == null) {
+        throw ServerError(statusCode: response.statusCode);
+      }
+      return SavedScenarioModel.fromJson(data);
+    } on DioException catch (e) {
+      throw _errorMapper.map(e);
     }
-    return SavedScenarioModel.fromJson(data);
   }
 
   @override
   Future<void> deleteScenario(String id) async {
-    await _dio.delete<void>('/v1/scenarios/$id');
+    try {
+      await _dio.delete<void>('/v1/scenarios/$id');
+    } on DioException catch (e) {
+      // F-11-03: silme idempotent. 404 = kaynak zaten yok (sunucuda silinmiş /
+      // çift dokunuş) = istenen son durum → sessiz başarı, hata fırlatma.
+      // (Mapper 404'ü PriceNotFoundError'a indirgediği için ham status'e bakılır.)
+      if (e.response?.statusCode == 404) return;
+      throw _errorMapper.map(e);
+    }
   }
 
   static String _typeToString(ScenarioType type) => switch (type) {

@@ -1,7 +1,5 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
-import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/dca/domain/usecases/calculate_dca.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
@@ -12,16 +10,13 @@ import 'dca_state.dart';
 class DcaBloc extends Bloc<DcaEvent, DcaState> {
   final GetAssets _getAssets;
   final CalculateDca _calculateDca;
-  final DioErrorMapper _errorMapper;
   final ErrorReporter _reporter;
 
   DcaBloc(
     this._getAssets,
     this._calculateDca, {
-    DioErrorMapper errorMapper = const DioErrorMapper(),
     ErrorReporter reporter = const ErrorReporter(),
-  }) : _errorMapper = errorMapper,
-       _reporter = reporter,
+  }) : _reporter = reporter,
        super(const DcaInitial()) {
     on<DcaAssetsRequested>(_onAssetsRequested);
     on<DcaSymbolChanged>(_onSymbolChanged);
@@ -52,10 +47,9 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
     try {
       final assets = await _getAssets();
       emit(DcaAssetsLoaded(assets, formInput: _formInput));
-    } on DioException catch (e, st) {
-      final error = _errorMapper.map(e);
+    } on AppError catch (error, st) {
       if (error is UnknownError || error is ServerError) {
-        await _reporter.report(e, st, context: 'dca_get_assets');
+        await _reporter.report(error, st, context: 'dca_get_assets');
       }
       emit(DcaFailure(assets: const [], error: error, formInput: _formInput));
     } catch (e, st) {
@@ -146,10 +140,9 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
           formInput: updatedForm,
         ),
       );
-    } on DioException catch (e, st) {
-      final error = _errorMapper.map(e);
+    } on AppError catch (error, st) {
       if (error is UnknownError || error is ServerError) {
-        await _reporter.report(e, st, context: 'dca_calculate');
+        await _reporter.report(error, st, context: 'dca_calculate');
       }
       emit(
         DcaFailure(assets: currentAssets, error: error, formInput: updatedForm),
