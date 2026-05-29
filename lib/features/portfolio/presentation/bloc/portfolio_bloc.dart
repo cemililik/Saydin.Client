@@ -200,6 +200,9 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
     try {
       final result = await _calculatePortfolio(
         items: state.items,
+        // buyDate! güvenli: PortfolioPage._onCalculate (portfolio_page.dart)
+        // buyDate == null iken PortfolioCalculateRequested dispatch etmez
+        // (ilgili butonlar da disabled). Olay yalnızca buyDate set iken gelir.
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
         includeInflation: state.includeInflation,

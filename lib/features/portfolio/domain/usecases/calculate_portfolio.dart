@@ -47,6 +47,8 @@ class CalculatePortfolio {
     }
 
     final results = successful
+        // `!` güvenli: PortfolioItemOutcome.isSuccess => calculation != null,
+        // successful zaten isSuccess ile filtrelendi.
         .map((o) => o.calculation!)
         .toList(growable: false);
     final keptItems = successful.map((o) => o.item).toList(growable: false);

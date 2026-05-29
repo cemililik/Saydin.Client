@@ -243,6 +243,16 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
+                        // Renk körü erişilebilirliği (CLAUDE.md): kar/zarar
+                        // yalnız renkle değil, yön ikonuyla da gösterilir.
+                        Icon(
+                          item.calculation.isProfit
+                              ? Icons.trending_up
+                              : Icons.trending_down,
+                          size: 16,
+                          color: itemColor,
+                        ),
+                        const SizedBox(width: 4),
                         Text(
                           '$itemSign${pctFmt.format(item.calculation.profitLossPercent / 100)}',
                           style: Theme.of(context).textTheme.bodyMedium

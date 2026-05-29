@@ -95,9 +95,53 @@ void main() {
     }
   }
 
-  test('her kalem için WhatIfRepository.calculate çağrılır ve alanlar '
-      'PortfolioCalculation\'a map\'lenir', () async {
-    stubCalc('AAA', result: whatIfResult('AAA'));
+  test(
+    'calculateItems_perItem_mapsWhatIfResultToPortfolioCalculation',
+    () async {
+      stubCalc('AAA', result: whatIfResult('AAA'));
+
+      final outcomes = await repo.calculateItems(
+        items: [item('AAA')],
+        buyDate: DateTime(2020, 1, 1),
+        sellDate: DateTime(2021, 1, 1),
+      );
+
+      expect(outcomes, hasLength(1));
+      final calc = outcomes.single.calculation;
+      expect(calc, isNotNull);
+      expect(calc!.initialValueTry, Decimal.fromInt(1000));
+      expect(calc.finalValueTry, Decimal.fromInt(1200));
+      expect(calc.profitLossPercent, 20);
+      expect(calc.isProfit, isTrue);
+      expect(calc.cumulativeInflationPercent, 5);
+      expect(calc.realProfitLossPercent, 14);
+    },
+  );
+
+  test(
+    'calculateItems_perItemIsolation_appError_itemCalculationNull_othersSuccess',
+    () async {
+      stubCalc('AAA', result: whatIfResult('AAA'));
+      // BBB backend hatası (repo bunu AppError olarak fırlatır) → izole edilir.
+      stubCalc('BBB', throws: const ServerError());
+
+      final outcomes = await repo.calculateItems(
+        items: [item('AAA'), item('BBB')],
+        buyDate: DateTime(2020, 1, 1),
+        sellDate: DateTime(2021, 1, 1),
+      );
+
+      expect(outcomes, hasLength(2));
+      final aaa = outcomes.firstWhere((o) => o.item.assetSymbol == 'AAA');
+      final bbb = outcomes.firstWhere((o) => o.item.assetSymbol == 'BBB');
+      expect(aaa.isSuccess, isTrue);
+      expect(bbb.isSuccess, isFalse);
+      expect(bbb.calculation, isNull);
+    },
+  );
+
+  test('calculateItems_appError_notReported', () async {
+    stubCalc('AAA', throws: const ServerError());
 
     final outcomes = await repo.calculateItems(
       items: [item('AAA')],
@@ -105,76 +149,30 @@ void main() {
       sellDate: DateTime(2021, 1, 1),
     );
 
-    expect(outcomes, hasLength(1));
-    final calc = outcomes.single.calculation;
-    expect(calc, isNotNull);
-    expect(calc!.initialValueTry, Decimal.fromInt(1000));
-    expect(calc.finalValueTry, Decimal.fromInt(1200));
-    expect(calc.profitLossPercent, 20);
-    expect(calc.isProfit, isTrue);
-    expect(calc.cumulativeInflationPercent, 5);
-    expect(calc.realProfitLossPercent, 14);
+    expect(outcomes.single.calculation, isNull);
+    // Rapor fire-and-forget olsaydı bile microtask'i boşaltalım — yine de boş.
+    await Future<void>.delayed(Duration.zero);
+    expect(
+      reporter.reports,
+      isEmpty,
+      reason: 'AppError beklenen hata; telemetri gürültüsü üretmemeli',
+    );
   });
 
-  test('per-item izolasyon: bir kalem AppError fırlatırsa o kalemin '
-      'calculation\'ı null, diğerleri başarılı', () async {
-    stubCalc('AAA', result: whatIfResult('AAA'));
-    // BBB backend hatası (repo bunu AppError olarak fırlatır) → izole edilir.
-    stubCalc('BBB', throws: const ServerError());
+  test('calculateItems_nonAppError_fireAndForget_isReported', () async {
+    // Beklenmedik programlama hatası (örn. TypeError) "veri yok" gibi
+    // sessizce maskelenmemeli; izolasyon korunur ama telemetri gider.
+    stubCalc('AAA', throws: ArgumentError('beklenmedik'));
 
     final outcomes = await repo.calculateItems(
-      items: [item('AAA'), item('BBB')],
+      items: [item('AAA')],
       buyDate: DateTime(2020, 1, 1),
       sellDate: DateTime(2021, 1, 1),
     );
 
-    expect(outcomes, hasLength(2));
-    final aaa = outcomes.firstWhere((o) => o.item.assetSymbol == 'AAA');
-    final bbb = outcomes.firstWhere((o) => o.item.assetSymbol == 'BBB');
-    expect(aaa.isSuccess, isTrue);
-    expect(bbb.isSuccess, isFalse);
-    expect(bbb.calculation, isNull);
+    expect(outcomes.single.calculation, isNull, reason: 'izolasyon korunur');
+    await Future<void>.delayed(Duration.zero);
+    expect(reporter.reports, hasLength(1));
+    expect(reporter.reports.single, isA<ArgumentError>());
   });
-
-  test(
-    'L-2: AppError fırlatan kalem raporlanmaz (beklenen ağ hatası)',
-    () async {
-      stubCalc('AAA', throws: const ServerError());
-
-      final outcomes = await repo.calculateItems(
-        items: [item('AAA')],
-        buyDate: DateTime(2020, 1, 1),
-        sellDate: DateTime(2021, 1, 1),
-      );
-
-      expect(outcomes.single.calculation, isNull);
-      // Rapor fire-and-forget olsaydı bile microtask'i boşaltalım — yine de boş.
-      await Future<void>.delayed(Duration.zero);
-      expect(
-        reporter.reports,
-        isEmpty,
-        reason: 'AppError beklenen hata; telemetri gürültüsü üretmemeli',
-      );
-    },
-  );
-
-  test(
-    'L-2: non-AppError fırlatan kalem fire-and-forget raporlanır (maskeleme yok)',
-    () async {
-      // Beklenmedik programlama hatası (örn. TypeError) "veri yok" gibi
-      // sessizce maskelenmemeli; izolasyon korunur ama telemetri gider.
-      stubCalc('AAA', throws: ArgumentError('beklenmedik'));
-
-      final outcomes = await repo.calculateItems(
-        items: [item('AAA')],
-        buyDate: DateTime(2020, 1, 1),
-        sellDate: DateTime(2021, 1, 1),
-      );
-
-      expect(outcomes.single.calculation, isNull, reason: 'izolasyon korunur');
-      await Future<void>.delayed(Duration.zero);
-      expect(reporter.reports, hasLength(1));
-      expect(reporter.reports.single, isA<ArgumentError>());
-    },
-  );
 }

@@ -55,8 +55,11 @@ class OnboardingCubit extends Cubit<OnboardingStatus> {
   }
 
   @override
-  Future<void> close() {
-    _resetSubscription?.cancel();
+  Future<void> close() async {
+    // Aboneliği super.close()'tan ÖNCE ve await ile iptal et: broadcast
+    // resetStream'in teardown sırasında restart() (→ emit) tetiklemesini
+    // garanti altına al (close sonrası emit StateError'a yol açardı).
+    await _resetSubscription?.cancel();
     return super.close();
   }
 }

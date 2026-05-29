@@ -72,6 +72,9 @@ void main() {
           'USDTRY',
         ),
       ],
+      // Null-guard'ın amacı: eksik form alanlarında replay (yeniden hesaplama)
+      // YAPILMAMALI — calculateDca'ya hiç dokunulmadığını doğrula.
+      verify: (_) => verifyZeroInteractions(calculateDca),
     );
   });
 }
