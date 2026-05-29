@@ -280,6 +280,51 @@ void main() {
             .having((s) => s.scenarios, 'scenarios', [existingScenario]),
       ],
     );
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'geçersiz (NaN) tutar Decimal.zero\'a coerce edilmez → yanlış duplicate olmaz',
+      build: buildBloc,
+      // Tutarı 0 olan, diğer tüm alanları eşleşen mevcut bir senaryo. Eski
+      // `?? Decimal.zero` davranışında NaN→0 bununla yanlış-pozitif duplicate
+      // yapardı; yeni davranışta NaN→null → duplicate atlanır, kaydetmeye gider.
+      seed: () => ScenariosLoaded([
+        SavedScenario(
+          id: 'zero-amt',
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: Decimal.zero,
+          amountType: 'try',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ]),
+      setUp: () => stubSaveAny(
+        SavedScenario(
+          id: 'new-id',
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: Decimal.fromInt(5000),
+          amountType: 'try',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ),
+      act: (bloc) => bloc.add(
+        ScenarioSaveRequested(
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount:
+              double.nan, // parse edilemez → Decimal.zero'a coerce EDİLMEMELİ
+          amountType: 'try',
+        ),
+      ),
+      // Duplicate DEĞİL → kaydetmeye gider (ScenariosDuplicate emit edilmez).
+      expect: () => [isA<ScenariosSaving>(), isA<ScenariosSaved>()],
+    );
   });
 
   group('ScenariosBloc — ScenariosRequested', () {
