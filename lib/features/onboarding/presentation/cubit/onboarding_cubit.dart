@@ -38,12 +38,16 @@ class OnboardingCubit extends Cubit<OnboardingStatus> {
   /// `SharedPreferences`'tan onboarding durumunu okur (uygulama açılışında).
   Future<void> load() async {
     final completed = await _repository.isOnboardingCompleted();
+    // await sonrası cubit kapanmış olabilir (örn. teardown sırasında restart) →
+    // kapalı cubit'te emit production'da StateError atar.
+    if (isClosed) return;
     emit(completed ? OnboardingStatus.completed : OnboardingStatus.pending);
   }
 
   /// Onboarding tamamlandı — kalıcı kaydet ve ana uygulamaya geç.
   Future<void> complete() async {
     await _repository.completeOnboarding();
+    if (isClosed) return;
     emit(OnboardingStatus.completed);
   }
 

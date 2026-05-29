@@ -379,9 +379,14 @@ class _ComparisonCard extends StatelessWidget {
 
     // Kazanan adı kayıt anında extraData'ya yazılan snapshot'tır; canlı
     // WhatIfBloc lookup'ı kaldırıldı (F-11-07 — Scenarios → What-If bağı yok).
-    final winnerName = scenario.extraData?['winnerName'] as String? ?? '';
-    final winnerReturn =
-        (scenario.extraData?['winnerReturn'] as num?)?.toDouble() ?? 0.0;
+    // Defansif okuma (PR geneli `is` paterni): non-String/non-num bir değer
+    // gelirse `as` cast TypeError atıp kartı çökertirdi.
+    final winnerVal = scenario.extraData?['winnerName'];
+    final winnerName = winnerVal is String ? winnerVal : '';
+    final winnerReturnVal = scenario.extraData?['winnerReturn'];
+    final winnerReturn = winnerReturnVal is num
+        ? winnerReturnVal.toDouble()
+        : 0.0;
     final winnerColor = winnerReturn >= 0 ? AppColors.profit : AppColors.loss;
 
     return Card(

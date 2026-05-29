@@ -145,7 +145,10 @@ Future<void> configureDependencies() async {
   // Portfolio — kendi data katmanı (F-09-01); hesaplamayı WhatIfRepository'ye
   // delege eder ve WhatIfResult'ı portföye ait PortfolioCalculation'a map'ler.
   sl.registerLazySingleton<PortfolioRepository>(
-    () => PortfolioRepositoryImpl(sl<WhatIfRepository>()),
+    () => PortfolioRepositoryImpl(
+      sl<WhatIfRepository>(),
+      reporter: sl<ErrorReporter>(),
+    ),
   );
   sl.registerLazySingleton(() => CalculatePortfolio(sl<PortfolioRepository>()));
 
