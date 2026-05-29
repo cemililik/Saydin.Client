@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/portfolio/data/repositories/portfolio_repository_impl.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
@@ -9,15 +10,46 @@ import 'package:saydin/features/what_if/domain/repositories/what_if_repository.d
 
 class MockWhatIfRepository extends Mock implements WhatIfRepository {}
 
+/// L-2: per-item catch'te beklenmedik (non-AppError) hataların fire-and-forget
+/// raporlandığını saymak için fake reporter.
+class _FakeErrorReporter implements ErrorReporter {
+  final reports = <Object>[];
+
+  @override
+  Future<void> report(
+    Object exception,
+    StackTrace stackTrace, {
+    String? context,
+    Map<String, Object?>? extras,
+  }) async {
+    reports.add(exception);
+  }
+
+  @override
+  Future<void> recordAction(
+    String action, {
+    String? category,
+    Map<String, Object?>? data,
+  }) async {}
+
+  @override
+  Future<void> addBreadcrumb(String message, {String? category}) async {}
+
+  @override
+  Future<void> clearScope() async {}
+}
+
 void main() {
   late MockWhatIfRepository whatIf;
+  late _FakeErrorReporter reporter;
   late PortfolioRepositoryImpl repo;
 
   setUpAll(() => registerFallbackValue(DateTime(2020)));
 
   setUp(() {
     whatIf = MockWhatIfRepository();
-    repo = PortfolioRepositoryImpl(whatIf);
+    reporter = _FakeErrorReporter();
+    repo = PortfolioRepositoryImpl(whatIf, reporter: reporter);
   });
 
   PortfolioItem item(String symbol) => PortfolioItem(
@@ -103,4 +135,46 @@ void main() {
     expect(bbb.isSuccess, isFalse);
     expect(bbb.calculation, isNull);
   });
+
+  test(
+    'L-2: AppError fırlatan kalem raporlanmaz (beklenen ağ hatası)',
+    () async {
+      stubCalc('AAA', throws: const ServerError());
+
+      final outcomes = await repo.calculateItems(
+        items: [item('AAA')],
+        buyDate: DateTime(2020, 1, 1),
+        sellDate: DateTime(2021, 1, 1),
+      );
+
+      expect(outcomes.single.calculation, isNull);
+      // Rapor fire-and-forget olsaydı bile microtask'i boşaltalım — yine de boş.
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        reporter.reports,
+        isEmpty,
+        reason: 'AppError beklenen hata; telemetri gürültüsü üretmemeli',
+      );
+    },
+  );
+
+  test(
+    'L-2: non-AppError fırlatan kalem fire-and-forget raporlanır (maskeleme yok)',
+    () async {
+      // Beklenmedik programlama hatası (örn. TypeError) "veri yok" gibi
+      // sessizce maskelenmemeli; izolasyon korunur ama telemetri gider.
+      stubCalc('AAA', throws: ArgumentError('beklenmedik'));
+
+      final outcomes = await repo.calculateItems(
+        items: [item('AAA')],
+        buyDate: DateTime(2020, 1, 1),
+        sellDate: DateTime(2021, 1, 1),
+      );
+
+      expect(outcomes.single.calculation, isNull, reason: 'izolasyon korunur');
+      await Future<void>.delayed(Duration.zero);
+      expect(reporter.reports, hasLength(1));
+      expect(reporter.reports.single, isA<ArgumentError>());
+    },
+  );
 }

@@ -7,7 +7,9 @@ import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 import 'package:saydin/features/dca/domain/repositories/dca_repository.dart';
 
 /// Dio çağrısını yapar ve `DioException`'ı bu katmanda [AppError]'a
-/// dönüştürür — BLoC yalnızca [AppError] görür (F-08-17).
+/// dönüştürür — BLoC Dio import etmez (F-08-17). Beklenmedik parse hataları
+/// (FormatException/TypeError) burada YAKALANMAZ; BLoC'un generic catch'inde
+/// [UnknownError]'a sarılır.
 class DcaRepositoryImpl implements DcaRepository {
   final Dio _dio;
   final DioErrorMapper _errorMapper;

@@ -11,8 +11,11 @@ import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/features/what_if/domain/repositories/what_if_repository.dart';
 
 /// Dio çağrılarını yapar ve `DioException`'ı bu katmanda [AppError]'a
-/// dönüştürür — BLoC katmanı yalnızca [AppError] görür (Dio import etmez,
-/// CLAUDE.md "BLoC'ta HTTP YASAK"; F-07-02).
+/// dönüştürür — BLoC katmanı Dio import etmez (CLAUDE.md "BLoC'ta HTTP YASAK";
+/// F-07-02). Yalnızca `DioException` eşlenir; beklenmedik parse hataları
+/// (FormatException/TypeError) burada YAKALANMAZ — BLoC'un generic catch'ine
+/// düşüp [UnknownError]'a sarılır (sözleşme: tipli ağ hataları AppError,
+/// beklenmedikler UnknownError).
 class WhatIfRepositoryImpl implements WhatIfRepository {
   final Dio _dio;
   final DioErrorMapper _errorMapper;

@@ -68,6 +68,26 @@ void main() {
     );
 
     test(
+      'tier kanonik-olmayan casing ("Premium"/"PREMIUM") premium\'a normalize edilir (L-4)',
+      () {
+        // Ödeme yapan kullanıcı, backend casing tutarsızlığında premium'u
+        // kaybetmemeli — case-insensitive eşleme.
+        expect(
+          AppConfigModel.fromJson(const {'tier': 'Premium'}).tier,
+          SubscriptionTier.premium,
+        );
+        expect(
+          AppConfigModel.fromJson(const {'tier': 'PREMIUM'}).tier,
+          SubscriptionTier.premium,
+        );
+        expect(
+          AppConfigModel.fromJson(const {'tier': 'FREE'}).tier,
+          SubscriptionTier.free,
+        );
+      },
+    );
+
+    test(
       'bool flag int 0/1 olarak gelirse tolere edilir (M3: 1→true, 0→false)',
       () {
         final m = AppConfigModel.fromJson(const {

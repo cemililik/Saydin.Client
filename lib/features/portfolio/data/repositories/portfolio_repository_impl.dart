@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_calculation.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/repositories/portfolio_repository.dart';
@@ -18,8 +22,12 @@ import 'package:saydin/features/what_if/domain/repositories/what_if_repository.d
 /// > delegasyon yerine doğrudan Dio çağrısına geçer.
 class PortfolioRepositoryImpl implements PortfolioRepository {
   final WhatIfRepository _whatIfRepository;
+  final ErrorReporter _reporter;
 
-  const PortfolioRepositoryImpl(this._whatIfRepository);
+  const PortfolioRepositoryImpl(
+    this._whatIfRepository, {
+    ErrorReporter reporter = const ErrorReporter(),
+  }) : _reporter = reporter;
 
   @override
   Future<List<PortfolioItemOutcome>> calculateItems({
@@ -43,12 +51,22 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
             item: item,
             calculation: _toCalculation(result),
           );
-        } catch (_) {
+        } catch (e, st) {
           // Per-item izolasyon: bir kalem (örn. backend 503) çökerse `rethrow`
           // tüm `Future.wait`'i reddederdi. Hatalı kalemi `calculation: null`
           // ile işaretle; use case partial-success akışını sürdürür. Hata
           // detayı use case / BLoC katmanında ele alınır (data katmanı bağımlılık
           // yaymaz).
+          //
+          // AppError (beklenen ağ hatası, örn. ServerError) sessizce işaretlenir.
+          // Ama beklenmedik programlama hatası (TypeError vb.) telemetrisiz
+          // "veri yok" gibi maskelenmesin → fire-and-forget raporla (L-2).
+          // Raporu await ETME: `Future.wait` paralelliğini bloklamaz.
+          if (e is! AppError) {
+            unawaited(
+              _reporter.report(e, st, context: 'portfolio_item_calculate'),
+            );
+          }
           return PortfolioItemOutcome(item: item);
         }
       }),

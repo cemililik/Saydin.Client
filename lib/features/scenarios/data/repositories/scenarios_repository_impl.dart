@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:saydin/core/constants/api_endpoints.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
@@ -9,9 +10,10 @@ import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/domain/repositories/scenarios_repository.dart';
 
 /// Dio çağrılarını yapar ve `DioException`'ı bu katmanda [AppError]'a
-/// dönüştürür — BLoC yalnızca [AppError] görür (Dio import etmez). Silme
-/// idempotency'si (404 = zaten yok) de burada ele alınır (F-11-03 semantiği
-/// data katmanına taşındı).
+/// dönüştürür — BLoC Dio import etmez. Silme idempotency'si (404 = zaten yok)
+/// de burada ele alınır (F-11-03 semantiği data katmanına taşındı). Beklenmedik
+/// parse hataları (FormatException/TypeError) burada YAKALANMAZ; BLoC'un generic
+/// catch'inde [UnknownError]'a sarılır.
 class ScenariosRepositoryImpl implements ScenariosRepository {
   final Dio _dio;
   final DioErrorMapper _errorMapper;
@@ -28,7 +30,7 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
   Future<List<SavedScenario>> getScenarios({String plan = 'free'}) async {
     try {
       final response = await _dio.get<List<dynamic>>(
-        '/v1/scenarios',
+        ApiEndpoints.scenarios,
         queryParameters: {'plan': plan},
       );
       final list = response.data ?? [];
@@ -65,7 +67,7 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        '/v1/scenarios',
+        ApiEndpoints.scenarios,
         data: {
           'assetSymbol': assetSymbol,
           'assetDisplayName': assetDisplayName,
@@ -91,7 +93,7 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
   @override
   Future<void> deleteScenario(String id) async {
     try {
-      await _dio.delete<void>('/v1/scenarios/$id');
+      await _dio.delete<void>('${ApiEndpoints.scenarios}/$id');
     } on DioException catch (e) {
       // F-11-03: silme idempotent. 404 = kaynak zaten yok (sunucuda silinmiş /
       // çift dokunuş) = istenen son durum → sessiz başarı, hata fırlatma.

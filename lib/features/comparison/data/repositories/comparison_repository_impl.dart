@@ -7,7 +7,9 @@ import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 import 'package:saydin/features/comparison/domain/repositories/comparison_repository.dart';
 
 /// Dio çağrısını yapar ve `DioException`'ı bu katmanda [AppError]'a
-/// dönüştürür — BLoC yalnızca [AppError] görür (F-10-12).
+/// dönüştürür — BLoC Dio import etmez (F-10-12). Beklenmedik parse hataları
+/// (FormatException/TypeError) burada YAKALANMAZ; BLoC'un generic catch'inde
+/// [UnknownError]'a sarılır.
 class ComparisonRepositoryImpl implements ComparisonRepository {
   final Dio _dio;
   final DioErrorMapper _errorMapper;

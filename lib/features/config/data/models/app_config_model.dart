@@ -29,11 +29,20 @@ class AppConfigModel extends AppConfig {
     );
   }
 
-  // Wire string ('free'/'premium') → enum. Bilinmeyen/eksik/yanlış-tipli
-  // değer güvenli varsayılan SubscriptionTier.free'e düşer (config asla
-  // uygulamayı bloklamaz — diğer alanlarla aynı defensive semantik).
-  static SubscriptionTier _tier(Object? v) => SubscriptionTier.values
-      .firstWhere((t) => t.name == v, orElse: () => SubscriptionTier.free);
+  // Wire string ('free'/'premium') → enum. Backend kanonik-olmayan casing
+  // ("Premium"/"PREMIUM") gönderirse ödeme yapan kullanıcı sessizce premium'u
+  // kaybetmesin diye string küçük harfe indirgenip karşılaştırılır (L-4).
+  // Bilinmeyen/eksik/yanlış-tipli (non-String) değer güvenli varsayılan
+  // SubscriptionTier.free'e düşer (config asla uygulamayı bloklamaz — diğer
+  // alanlarla aynı defensive semantik; yön fail-closed: en kısıtlı tier).
+  static SubscriptionTier _tier(Object? v) {
+    final key = v is String ? v.toLowerCase() : v;
+    return SubscriptionTier.values.firstWhere(
+      (t) => t.name == key,
+      orElse: () => SubscriptionTier.free,
+    );
+  }
+
   // bool VEYA num (0/1) kabul: backend flag'i int gönderirse de doğru okunur
   // (örn. dca:0 → false). Böylece uzaktan özellik kapatma int gövdede de çalışır.
   static bool _bool(Object? v, bool d) =>
