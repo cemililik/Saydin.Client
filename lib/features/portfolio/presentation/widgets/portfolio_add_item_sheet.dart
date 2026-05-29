@@ -4,7 +4,7 @@ import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
 import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
-import 'package:saydin/features/portfolio/portfolio_constants.dart';
+import 'package:saydin/features/portfolio/domain/portfolio_constants.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/widgets/amount_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/asset_selector.dart';

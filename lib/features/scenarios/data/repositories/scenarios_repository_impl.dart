@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/scenarios/data/models/saved_scenario_model.dart';
@@ -28,7 +30,10 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
       try {
         scenarios.add(SavedScenarioModel.fromJson(e as Map<String, dynamic>));
       } catch (err, st) {
-        await _reporter.report(err, st, context: 'get_scenarios_parse');
+        // Raporlamayı await ETME: birden çok bozuk satırda ardışık ağ
+        // istekleri döngüyü bloklayıp geçerli senaryoların gösterimini
+        // geciktirir. Arka planda fire-and-forget.
+        unawaited(_reporter.report(err, st, context: 'get_scenarios_parse'));
       }
     }
     return scenarios;

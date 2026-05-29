@@ -47,7 +47,11 @@ class DioErrorMapper {
   /// `null`. Index erişiminden önce çağrılır (blind cast/NoSuchMethodError önler).
   static Map<String, dynamic>? _asMap(Object? value) {
     if (value is Map<String, dynamic>) return value;
-    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is Map) {
+      // `Map<String,dynamic>.from` non-String key'de `k as String` ile
+      // TypeError atardı (hot path'te). Key'leri toString ile güvenle çevir.
+      return value.map((key, val) => MapEntry(key.toString(), val));
+    }
     return null;
   }
 

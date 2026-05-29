@@ -66,6 +66,23 @@ void main() {
       );
     });
 
+    test(
+      'aralık dışı tarih ("2020-13-45") silent rollover yerine FormatException',
+      () {
+        // DateTime(2020,13,45) sessizce 2021-02-14'e kayardı; round-trip
+        // doğrulaması bunu yakalar.
+        expect(
+          () => SavedScenarioModel.fromJson(baseJson(buyDate: '2020-13-45')),
+          throwsFormatException,
+        );
+      },
+    );
+
+    test('type yanlış tipte (int) → TypeError değil, whatIf default', () {
+      final m = SavedScenarioModel.fromJson(baseJson()..['type'] = 42);
+      expect(m.type, ScenarioType.whatIf);
+    });
+
     test('bozuk createdAt → FormatException', () {
       expect(
         () => SavedScenarioModel.fromJson(baseJson(createdAt: 'not-a-date')),

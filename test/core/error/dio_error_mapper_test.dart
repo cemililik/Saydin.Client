@@ -38,18 +38,23 @@ void main() {
     test(
       'map_429WithoutResetAt_returnsDailyLimitErrorWithTomorrowUtcMidnight',
       () {
-        final e = make(DioExceptionType.badResponse, statusCode: 429);
-        final error = mapper.map(e) as DailyLimitError;
+        DateTime tomorrowMidnight(DateTime d) {
+          final t = d.toUtc().add(const Duration(days: 1));
+          return DateTime.utc(t.year, t.month, t.day);
+        }
 
-        final nowUtc = DateTime.now().toUtc();
-        final tomorrowUtc = nowUtc.add(const Duration(days: 1));
-        final expectedDate = DateTime.utc(
-          tomorrowUtc.year,
-          tomorrowUtc.month,
-          tomorrowUtc.day,
+        // UTC gece yarısı straddle'ında flaky olmasın: map() kendi now()'unu
+        // kullanır; test now()'u farklı güne düşerse her iki olasılığı kabul et.
+        final before = DateTime.now();
+        final error =
+            mapper.map(make(DioExceptionType.badResponse, statusCode: 429))
+                as DailyLimitError;
+        final after = DateTime.now();
+
+        expect(
+          error.resetAt,
+          anyOf(tomorrowMidnight(before), tomorrowMidnight(after)),
         );
-
-        expect(error.resetAt, equals(expectedDate));
       },
     );
 

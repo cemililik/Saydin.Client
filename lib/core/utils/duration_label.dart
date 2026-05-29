@@ -14,7 +14,10 @@ class DurationLabel {
   /// [start]–[end] arası süre etiketi. [end] null ise bugün (yerel, date-only).
   static String format(AppLocalizations l10n, DateTime start, DateTime? end) {
     final e = end ?? _todayLocal();
-    final months = (e.year - start.year) * 12 + e.month - start.month;
+    var months = (e.year - start.year) * 12 + e.month - start.month;
+    // Ay-günü henüz dolmadıysa bir ay düş (takvim-yaşı mantığı): 31 Oca → 1 Şub
+    // "1 ay" değil 1 gündür; aksi halde kısa ay-sınırı aralıkları şişer.
+    if (e.day < start.day) months -= 1;
     if (months < 1) {
       return l10n.durationDays(e.difference(start).inDays.abs());
     }

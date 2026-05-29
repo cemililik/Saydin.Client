@@ -11,7 +11,7 @@ import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
-import 'package:saydin/features/portfolio/portfolio_constants.dart';
+import 'package:saydin/features/portfolio/domain/portfolio_constants.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_event.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_state.dart';

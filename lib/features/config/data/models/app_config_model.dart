@@ -29,9 +29,18 @@ class AppConfigModel extends AppConfig {
   }
 
   static String _str(Object? v, String d) => v is String ? v : d;
-  static bool _bool(Object? v, bool d) => v is bool ? v : d;
-  // num kabul edip toInt() — 20 ve 20.0 her ikisi de geçerli sayılır.
-  static int _int(Object? v, int d) => v is num ? v.toInt() : d;
-  static Map<String, dynamic> _map(Object? v) =>
-      v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
+  // bool VEYA num (0/1) kabul: backend flag'i int gönderirse de doğru okunur
+  // (örn. dca:0 → false). Böylece uzaktan özellik kapatma int gövdede de çalışır.
+  static bool _bool(Object? v, bool d) =>
+      v is bool ? v : (v is num ? v != 0 : d);
+  // num kabul edip toInt() (20 ve 20.0 geçerli); negatif limit anlamsız → default.
+  static int _int(Object? v, int d) {
+    final n = v is num ? v.toInt() : d;
+    return n < 0 ? d : n;
+  }
+
+  // Map key'leri non-String olabilir → `Map.from` yerine toString ile güvenle çevir.
+  static Map<String, dynamic> _map(Object? v) => v is Map
+      ? v.map((key, val) => MapEntry(key.toString(), val))
+      : <String, dynamic>{};
 }

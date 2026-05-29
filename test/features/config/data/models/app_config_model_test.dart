@@ -56,13 +56,17 @@ void main() {
       expect(m.features.priceHistoryMonths, 12);
     });
 
-    test('bool flag yanlış tipte (0/1) → default true', () {
-      final m = AppConfigModel.fromJson(const {
-        'features': {'comparison': 1, 'dca': 0},
-      });
+    test(
+      'bool flag int 0/1 olarak gelirse tolere edilir (M3: 1→true, 0→false)',
+      () {
+        final m = AppConfigModel.fromJson(const {
+          'features': {'comparison': 1, 'dca': 0},
+        });
 
-      expect(m.features.comparison, isTrue);
-      expect(m.features.dca, isTrue);
-    });
+        // 0/1 artık fail-open default'a düşmüyor; backend int flag'i respeklenir.
+        expect(m.features.comparison, isTrue);
+        expect(m.features.dca, isFalse);
+      },
+    );
   });
 }

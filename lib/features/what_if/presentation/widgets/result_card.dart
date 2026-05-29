@@ -258,11 +258,15 @@ class _ResultCardState extends State<ResultCard>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _AnimatedRow(
-                    l10n.cumulativeInflation,
-                    result.cumulativeInflationPercent!.toDouble(),
-                    formatter: _pctSignedFormatter,
-                  ),
+                  // M2: bölüm realProfitLossPercent'e göre gate'li; ama
+                  // cumulativeInflationPercent backend'den ayrı/null gelebilir
+                  // — kendi null-check'ine al (divergent-null crash'i önle).
+                  if (result.cumulativeInflationPercent != null)
+                    _AnimatedRow(
+                      l10n.cumulativeInflation,
+                      result.cumulativeInflationPercent!.toDouble(),
+                      formatter: _pctSignedFormatter,
+                    ),
                   _AnimatedRow(
                     l10n.realReturn,
                     result.realProfitLossPercent!.toDouble(),
