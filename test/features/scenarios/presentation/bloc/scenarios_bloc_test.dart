@@ -389,5 +389,88 @@ void main() {
             .having((s) => s.scenarios, 'scenarios', [existingScenario]),
       ],
     );
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'F-11-03: 404 idempotent — kalem kaldırılmış kalır, Failure YOK',
+      build: buildBloc,
+      seed: () => ScenariosLoaded([existingScenario]),
+      setUp: () => when(() => mockDeleteScenario(any())).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/v1/scenarios/abc-123'),
+          type: DioExceptionType.badResponse,
+          response: Response(
+            requestOptions: RequestOptions(path: '/v1/scenarios/abc-123'),
+            statusCode: 404,
+          ),
+        ),
+      ),
+      act: (bloc) => bloc.add(const ScenarioDeleteRequested('abc-123')),
+      // Yalnızca optimistic kaldırma; 404 hata olarak gösterilmez (rollback yok).
+      expect: () => [
+        isA<ScenariosLoaded>().having((s) => s.scenarios, 'scenarios', isEmpty),
+      ],
+    );
+  });
+
+  group('ScenariosBloc — F-11-08 duplicate mode ayrımı', () {
+    final reverseScenario = SavedScenario(
+      id: 'rev-1',
+      assetSymbol: 'USDTRY',
+      assetDisplayName: 'Dolar/TL',
+      buyDate: DateTime(2020, 1, 1),
+      sellDate: DateTime(2021, 1, 1),
+      amount: Decimal.fromInt(10000),
+      amountType: 'try',
+      createdAt: DateTime(2026, 1, 1),
+      extraData: const {'mode': 'reverse'},
+    );
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'ters senaryo varken aynı alanlı normal senaryo duplicate sayılmaz',
+      build: buildBloc,
+      seed: () => ScenariosLoaded([reverseScenario]),
+      setUp: () => stubSaveAny(
+        SavedScenario(
+          id: 'new-id',
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: Decimal.fromInt(10000),
+          amountType: 'try',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ),
+      act: (bloc) => bloc.add(
+        ScenarioSaveRequested(
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: 10000,
+          amountType: 'try',
+          // extraData yok → normal mod; reverse'den farklı → duplicate DEĞİL
+        ),
+      ),
+      expect: () => [isA<ScenariosSaving>(), isA<ScenariosSaved>()],
+    );
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'aynı mode (reverse) ise duplicate sayılır',
+      build: buildBloc,
+      seed: () => ScenariosLoaded([reverseScenario]),
+      act: (bloc) => bloc.add(
+        ScenarioSaveRequested(
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: 10000,
+          amountType: 'try',
+          extraData: const {'mode': 'reverse'},
+        ),
+      ),
+      expect: () => [isA<ScenariosDuplicate>()],
+    );
   });
 }
