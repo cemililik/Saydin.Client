@@ -1,6 +1,9 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:decimal/decimal.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/domain/usecases/delete_scenario.dart';
 import 'package:saydin/features/scenarios/domain/usecases/get_scenarios.dart';
@@ -22,10 +25,37 @@ void main() {
 
   setUp(() {
     registerFallbackValue(DateTime(2020));
+    registerFallbackValue(ScenarioType.whatIf);
     mockGetScenarios = MockGetScenarios();
     mockSaveScenario = MockSaveScenario();
     mockDeleteScenario = MockDeleteScenario();
   });
+
+  ScenariosBloc buildBloc() =>
+      ScenariosBloc(mockGetScenarios, mockSaveScenario, mockDeleteScenario);
+
+  // connectionError → DioErrorMapper.map → NoInternetError. NoInternetError
+  // reporter tetiklemez (yalnızca Unknown/ServerError raporlanır), bu yüzden
+  // testler Sentry'ye dokunmadan emit yolunu doğrular.
+  DioException connError() => DioException(
+    requestOptions: RequestOptions(path: '/scenarios'),
+    type: DioExceptionType.connectionError,
+  );
+
+  void stubSaveAny(SavedScenario result) {
+    when(
+      () => mockSaveScenario(
+        assetSymbol: any(named: 'assetSymbol'),
+        assetDisplayName: any(named: 'assetDisplayName'),
+        buyDate: any(named: 'buyDate'),
+        sellDate: any(named: 'sellDate'),
+        amount: any(named: 'amount'),
+        amountType: any(named: 'amountType'),
+        type: any(named: 'type'),
+        extraData: any(named: 'extraData'),
+      ),
+    ).thenAnswer((_) async => result);
+  }
 
   final existingScenario = SavedScenario(
     id: 'abc-123',
@@ -33,7 +63,7 @@ void main() {
     assetDisplayName: 'Dolar/TL',
     buyDate: DateTime(2020, 1, 1),
     sellDate: DateTime(2021, 1, 1),
-    amount: 10000,
+    amount: Decimal.fromInt(10000),
     amountType: 'try',
     createdAt: DateTime(2026, 1, 1),
   );
@@ -113,7 +143,7 @@ void main() {
             assetDisplayName: 'Dolar/TL',
             buyDate: DateTime(2020, 1, 1),
             sellDate: DateTime(2021, 1, 1),
-            amount: 5000, // farklı miktar
+            amount: Decimal.fromInt(5000), // farklı miktar
             amountType: 'try',
             createdAt: DateTime(2026, 1, 1),
           ),
@@ -160,7 +190,7 @@ void main() {
             assetSymbol: 'BTC',
             assetDisplayName: 'Bitcoin',
             buyDate: DateTime(2021, 1, 1),
-            amount: 5000,
+            amount: Decimal.fromInt(5000),
             amountType: 'try',
             createdAt: DateTime(2026, 1, 1),
           ),
@@ -182,6 +212,181 @@ void main() {
           'scenarios',
           hasLength(2),
         ),
+      ],
+    );
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'sadece type farklıysa duplicate sayılmaz (type sözleşmesi)',
+      build: buildBloc,
+      seed: () => ScenariosLoaded([existingScenario]), // type: whatIf (default)
+      setUp: () => stubSaveAny(
+        SavedScenario(
+          id: 'new-id',
+          type: ScenarioType.portfolio,
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: Decimal.fromInt(10000),
+          amountType: 'try',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ),
+      act: (bloc) => bloc.add(
+        ScenarioSaveRequested(
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: 10000, // aynı tutar ama...
+          amountType: 'try',
+          type: ScenarioType.portfolio, // ...farklı type → duplicate DEĞİL
+        ),
+      ),
+      expect: () => [isA<ScenariosSaving>(), isA<ScenariosSaved>()],
+    );
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'save DioException → ScenariosFailure (AppError taşır), liste korunur',
+      build: buildBloc,
+      seed: () => ScenariosLoaded([existingScenario]),
+      setUp: () {
+        when(
+          () => mockSaveScenario(
+            assetSymbol: any(named: 'assetSymbol'),
+            assetDisplayName: any(named: 'assetDisplayName'),
+            buyDate: any(named: 'buyDate'),
+            sellDate: any(named: 'sellDate'),
+            amount: any(named: 'amount'),
+            amountType: any(named: 'amountType'),
+            type: any(named: 'type'),
+            extraData: any(named: 'extraData'),
+          ),
+        ).thenThrow(connError());
+      },
+      act: (bloc) => bloc.add(
+        ScenarioSaveRequested(
+          assetSymbol: 'BTC',
+          assetDisplayName: 'Bitcoin',
+          buyDate: DateTime(2021, 1, 1),
+          amount: 5000,
+          amountType: 'try',
+        ),
+      ),
+      expect: () => [
+        isA<ScenariosSaving>(),
+        isA<ScenariosFailure>()
+            .having((s) => s.error, 'error', isA<NoInternetError>())
+            .having((s) => s.scenarios, 'scenarios', [existingScenario]),
+      ],
+    );
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'geçersiz (NaN) tutar Decimal.zero\'a coerce edilmez → yanlış duplicate olmaz',
+      build: buildBloc,
+      // Tutarı 0 olan, diğer tüm alanları eşleşen mevcut bir senaryo. Eski
+      // `?? Decimal.zero` davranışında NaN→0 bununla yanlış-pozitif duplicate
+      // yapardı; yeni davranışta NaN→null → duplicate atlanır, kaydetmeye gider.
+      seed: () => ScenariosLoaded([
+        SavedScenario(
+          id: 'zero-amt',
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: Decimal.zero,
+          amountType: 'try',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ]),
+      setUp: () => stubSaveAny(
+        SavedScenario(
+          id: 'new-id',
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: Decimal.fromInt(5000),
+          amountType: 'try',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ),
+      act: (bloc) => bloc.add(
+        ScenarioSaveRequested(
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount:
+              double.nan, // parse edilemez → Decimal.zero'a coerce EDİLMEMELİ
+          amountType: 'try',
+        ),
+      ),
+      // Duplicate DEĞİL → kaydetmeye gider (ScenariosDuplicate emit edilmez).
+      expect: () => [isA<ScenariosSaving>(), isA<ScenariosSaved>()],
+    );
+  });
+
+  group('ScenariosBloc — ScenariosRequested', () {
+    blocTest<ScenariosBloc, ScenariosState>(
+      'başarılı yükleme: Loading → Loaded',
+      build: buildBloc,
+      setUp: () => when(
+        () => mockGetScenarios(plan: any(named: 'plan')),
+      ).thenAnswer((_) async => [existingScenario]),
+      act: (bloc) => bloc.add(const ScenariosRequested()),
+      expect: () => [
+        isA<ScenariosLoading>(),
+        isA<ScenariosLoaded>().having((s) => s.scenarios, 'scenarios', [
+          existingScenario,
+        ]),
+      ],
+    );
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'DioException → ScenariosFailure(NoInternetError)',
+      build: buildBloc,
+      setUp: () => when(
+        () => mockGetScenarios(plan: any(named: 'plan')),
+      ).thenThrow(connError()),
+      act: (bloc) => bloc.add(const ScenariosRequested()),
+      expect: () => [
+        isA<ScenariosLoading>(),
+        isA<ScenariosFailure>().having(
+          (s) => s.error,
+          'error',
+          isA<NoInternetError>(),
+        ),
+      ],
+    );
+  });
+
+  group('ScenariosBloc — ScenarioDeleteRequested', () {
+    blocTest<ScenariosBloc, ScenariosState>(
+      'başarılı silme: optimistic kaldırma, listeden düşer',
+      build: buildBloc,
+      seed: () => ScenariosLoaded([existingScenario]),
+      setUp: () =>
+          when(() => mockDeleteScenario(any())).thenAnswer((_) async {}),
+      act: (bloc) => bloc.add(const ScenarioDeleteRequested('abc-123')),
+      expect: () => [
+        isA<ScenariosLoaded>().having((s) => s.scenarios, 'scenarios', isEmpty),
+      ],
+    );
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'silme hatası → optimistic kaldırma sonra rollback (Failure original taşır)',
+      build: buildBloc,
+      seed: () => ScenariosLoaded([existingScenario]),
+      setUp: () => when(() => mockDeleteScenario(any())).thenThrow(connError()),
+      act: (bloc) => bloc.add(const ScenarioDeleteRequested('abc-123')),
+      expect: () => [
+        // 1) optimistic: hemen listeden kaldır
+        isA<ScenariosLoaded>().having((s) => s.scenarios, 'scenarios', isEmpty),
+        // 2) hata: original listeyi geri yükleyen Failure
+        isA<ScenariosFailure>()
+            .having((s) => s.error, 'error', isA<NoInternetError>())
+            .having((s) => s.scenarios, 'scenarios', [existingScenario]),
       ],
     );
   });

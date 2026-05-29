@@ -33,6 +33,8 @@ jobs:
       build_number: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - id: ver
         name: Read pubspec.yaml version
@@ -40,6 +42,18 @@ jobs:
           VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d '[:space:]')
           if [ -z "$VERSION" ]; then
             echo "❌ pubspec.yaml içinde version alanı bulunamadı"
+            exit 1
+          fi
+          # GUVENLIK: pubspec.yaml fork PR'da saldirgan-kontrollu. `tr -d`
+          # sadece boslugu eler; command substitution / IFS dizimi gecer. Bu
+          # cikti downstream build adimlarinda build-name argumani olarak
+          # run: blokuna interpole edildigi icin (fork PR tetikleyicisi
+          # pull_request) format dogrulanmazsa command injection olur.
+          # NOT: bu satirlar run: bloku icinde; Actions sablon ifadelerini
+          # burada da degerlendirir, o yuzden yorumda template sozdizimi yok.
+          # Strict numeric guard:
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Geçersiz pubspec versiyon formatı: $VERSION (beklenen: X.Y.Z)"
             exit 1
           fi
           echo "version_name=$VERSION" >> $GITHUB_OUTPUT
@@ -53,6 +67,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -112,6 +128,71 @@ jobs:
           files: coverage/lcov.info
           fail_ci_if_error: false
 
+  # ── Dependency Vulnerability Scan (F-02-10) ────────────────────────────────
+  # pub.dev paketlerini ve diğer SBOM'da görünen ekosistem'leri OSV.dev
+  # database'ine karşı tarar. Yeni CVE'ler yayınlandığında erken sinyal.
+  #
+  # `continue-on-error: true` ile build merge gate'i yapılmaz (yayın
+  # vermenden önce CVE detayını insan değerlendirir) ama bulgular adım
+  # exit code'una rağmen GitHub Step Summary'e yazılır → reviewer PR
+  # ekranında görünür hale gelir.
+  osv-scan:
+    name: OSV Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: version
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run osv-scanner
+        id: osv
+        uses: google/osv-scanner-action/osv-scanner-action@v1.9.1
+        with:
+          scan-args: |-
+            --recursive
+            --skip-git
+            --format=table
+            --output=osv-report.txt
+            ./
+        continue-on-error: true
+
+      - name: Publish OSV findings to Step Summary
+        if: always()
+        run: |
+          {
+            echo "## 🛡️ OSV Vulnerability Scan"
+            echo ""
+            if [ "${{ steps.osv.outcome }}" = "success" ]; then
+              echo "✅ **No vulnerabilities found** in dependencies."
+            else
+              echo "⚠️ **Vulnerabilities detected** — review before merge."
+              echo ""
+              echo '```'
+              if [ -f osv-report.txt ]; then
+                cat osv-report.txt
+              else
+                echo "(osv-report.txt missing — runner failed before output)"
+              fi
+              echo '```'
+              echo ""
+              echo "Action: triage findings; bump or pin affected package."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload OSV report artifact
+        if: always() && hashFiles('osv-report.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: osv-report-${{ github.sha }}
+          path: osv-report.txt
+          # Aynı içerik zaten Step Summary'de (run ile saklanır); artifact
+          # yalnızca kısa süreli indirme kolaylığı için — uzun retention gerek yok.
+          retention-days: 1
+
   # ── Android Debug Build (PR + development push — sanity) ──────────────────
   build-android:
     name: Build Android APK (Debug)
@@ -123,6 +204,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -146,11 +229,18 @@ jobs:
         run: yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
 
       - name: Build APK (debug)
+        # Defense-in-depth: version job zaten format doğruluyor, ama
+        # template değerleri intermediate env var üzerinden geçirilip
+        # `run:`'a doğrudan interpole edilmez (GitHub güvenlik tavsiyesi).
+        env:
+          BUILD_NAME: ${{ needs.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+          API_URL: ${{ vars.API_URL_STAGING }}
         run: |
           flutter build apk --debug \
-            --build-name=${{ needs.version.outputs.version_name }} \
-            --build-number=${{ needs.version.outputs.build_number }} \
-            --dart-define=API_BASE_URL=${{ vars.API_URL_STAGING }} \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=API_BASE_URL="$API_URL" \
             --dart-define=APP_ENV=development
 
       - name: Upload APK artifact
@@ -171,6 +261,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # Apple ITMS-90725: 28 Nisan 2026'dan itibaren App Store Connect
       # iOS 26 SDK altında derlenmiş build'leri reddediyor.
@@ -192,9 +284,14 @@ jobs:
         run: flutter gen-l10n
 
       - name: Build iOS (no codesign)
+        # Defense-in-depth: bkz. Build APK adımı — intermediate env var.
+        env:
+          BUILD_NAME: ${{ needs.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+          API_URL: ${{ vars.API_URL_STAGING }}
         run: |
           flutter build ios --debug --no-codesign \
-            --build-name=${{ needs.version.outputs.version_name }} \
-            --build-number=${{ needs.version.outputs.build_number }} \
-            --dart-define=API_BASE_URL=${{ vars.API_URL_STAGING }} \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=API_BASE_URL="$API_URL" \
             --dart-define=APP_ENV=development

@@ -1,9 +1,50 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!--
+      Backup politikası — katmanlı savunma (defense-in-depth):
+
+      `allowBackup="false"` PRIMARY mekanizmadır; bu set iken Android sistem
+      tüm backup attribute'larını yok sayar (developer.android.com:
+      "no backup or restore of the application is ever performed").
+      Yani `fullBackupContent` ve `dataExtractionRules` şu an aktif değil.
+
+      Bu XML'leri YİNE DE tanımlı tutuyoruz çünkü:
+        - İleride bir nedenle `allowBackup="true"` yapılırsa (örn. user-
+          opt-in backup feature) XML kuralları "exclude all" default'una
+          devreye girer ve sessizce veri sızması engellenir.
+        - Static analysis araçları (Android Lint, lint task) backup spec
+          eksikliğini warning olarak işaretliyor; explicit tanım sustur.
+
+      Eğer ileride backup gerçekten açılırsa şu kontrol listesi:
+        1. backup_rules.xml içindeki <exclude>'leri gözden geçir.
+        2. data_extraction_rules.xml hem cloud-backup hem device-transfer
+           politikalarını ayrı ayrı tanımlar.
+        3. KVKK Madde 12 ile uyum testi (silinen veri backup'tan dönmesin).
+    -->
     <application
         android:label="Saydın"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
+        <!--
+          allowBackup="false": kullanıcı Google hesabıyla auto-backup
+          alsa bile uygulama verisi yedeklenmez. Finansal hesaplama
+          girdileri, asset arama geçmişi, device ID Google Drive'a
+          gitmez (KVKK 12/GDPR 17 — silinen veri cloud'dan geri
+          gelmemeli). `backup_rules.xml` + `data_extraction_rules.xml`
+          defense in-depth: ileride selektif backup'a geçilirse base
+          policy yine "exclude all" olur.
+
+          MainActivity android:exported="true": Flutter app'in tek bir
+          launcher activity'si var, intent-filter MAIN/LAUNCHER ile dış
+          dünyaya sadece launcher olarak görünüyor (deep link, share
+          target, MIME handler yok). Android 12+ (API 31) intent-filter
+          olan activity'lerde exported'ı explicit `true`/`false` ister;
+          launcher exported olmalı yoksa "uygulamayı aç" çalışmaz.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

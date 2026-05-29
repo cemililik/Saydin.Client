@@ -165,7 +165,9 @@ class DcaShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(result.totalInvestedTry),
+                                _tryFormatter.format(
+                                  result.totalInvestedTry.toDouble(),
+                                ),
                                 style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w600,
@@ -193,7 +195,9 @@ class DcaShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(result.currentValueTry),
+                                _tryFormatter.format(
+                                  result.currentValueTry.toDouble(),
+                                ),
                                 style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
@@ -252,7 +256,7 @@ class DcaShareCardWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '$nominalSign${_tryFormatter.format(result.profitLossTry)} '
+                          '$nominalSign${_tryFormatter.format(result.profitLossTry.toDouble())} '
                           '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
                           style: TextStyle(
                             fontSize: 15,
@@ -278,7 +282,9 @@ class DcaShareCardWidget extends StatelessWidget {
                       children: [
                         _MiniStat(
                           label: l10n.dcaPeriodicAmount,
-                          value: _tryFormatter.format(result.periodicAmount),
+                          value: _tryFormatter.format(
+                            result.periodicAmount.toDouble(),
+                          ),
                         ),
                         _MiniStat(
                           label: l10n.dcaTotalPurchases,
@@ -287,7 +293,7 @@ class DcaShareCardWidget extends StatelessWidget {
                         _MiniStat(
                           label: l10n.dcaAvgCost,
                           value: _tryFormatter.format(
-                            result.averageCostPerUnit,
+                            result.averageCostPerUnit.toDouble(),
                           ),
                         ),
                       ],

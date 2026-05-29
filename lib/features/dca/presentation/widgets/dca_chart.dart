@@ -28,11 +28,14 @@ class DcaChart extends StatelessWidget {
     const costColor = Color(0xFF757575);
     final origin = chartData.first.date;
 
+    // fl_chart `FlSpot` double bekler; grafik display-only.
+    // Decimal precision finansal aggregasyonda korunmuş; grafikte 1
+    // kuruşluk fark görsel olarak ayırt edilemez.
     final costSpots = chartData
         .map(
           (p) => FlSpot(
             p.date.difference(origin).inDays.toDouble(),
-            p.cumulativeCost,
+            p.cumulativeCost.toDouble(),
           ),
         )
         .toList();
@@ -41,7 +44,7 @@ class DcaChart extends StatelessWidget {
         .map(
           (p) => FlSpot(
             p.date.difference(origin).inDays.toDouble(),
-            p.cumulativeValue,
+            p.cumulativeValue.toDouble(),
           ),
         )
         .toList();

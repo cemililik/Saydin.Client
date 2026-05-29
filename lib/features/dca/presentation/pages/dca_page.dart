@@ -5,6 +5,7 @@ import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
+import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/skeleton_card.dart';
@@ -314,14 +315,20 @@ class _DcaPageState extends State<DcaPage> {
                                     assetDisplayName: result.assetDisplayName,
                                     buyDate: result.startDate,
                                     sellDate: result.endDate,
-                                    amount: result.periodicAmount,
+                                    // ScenarioSaveRequested.amount num bekliyor.
+                                    // periodicAmount Decimal (backend'den parse);
+                                    // .toDouble() display/save köprüsü. Tam
+                                    // precision için backend string amount
+                                    // kontratı + MoneyParser.toJsonString (Faz 4).
+                                    amount: result.periodicAmount.toDouble(),
                                     amountType: 'try',
                                     type: ScenarioType.dca,
                                     extraData: {
                                       'includeInflation':
                                           formInput.includeInflation,
                                       'period': result.period,
-                                      'periodicAmount': result.periodicAmount,
+                                      'periodicAmount': result.periodicAmount
+                                          .toDouble(),
                                     },
                                   ),
                                 );
@@ -340,14 +347,11 @@ class _DcaPageState extends State<DcaPage> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: () {
-                                  final sign = result.profitLossPercent >= 0
-                                      ? '+'
-                                      : '';
                                   final pct = result.profitLossPercent;
                                   final text = l10n.shareTextDca(
                                     result.assetDisplayName,
                                     result.totalPurchases,
-                                    '$sign${pct.toStringAsFixed(2).replaceAll('.', ',')}%',
+                                    PercentageFormatter.signed(pct),
                                   );
                                   showModalBottomSheet<void>(
                                     context: context,

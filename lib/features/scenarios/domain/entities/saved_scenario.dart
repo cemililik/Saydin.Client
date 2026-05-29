@@ -1,7 +1,12 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 
 enum ScenarioType { whatIf, comparison, portfolio, dca }
 
+/// Kaydedilmiş bir senaryo (geçmiş hesaplama).
+///
+/// `amount` Decimal — CLAUDE.md "Yasak Listesi": para için double/float
+/// YASAK. `num` da burada para tutarını taşıdığı için Decimal'a geçirildi.
 class SavedScenario extends Equatable {
   final String id;
   final ScenarioType type;
@@ -9,7 +14,7 @@ class SavedScenario extends Equatable {
   final String assetDisplayName;
   final DateTime buyDate;
   final DateTime? sellDate;
-  final num amount;
+  final Decimal amount;
   final String amountType;
   final String? label;
   final DateTime createdAt;

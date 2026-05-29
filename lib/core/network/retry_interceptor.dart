@@ -1,13 +1,17 @@
 import 'dart:math';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 /// Ağ kaynaklı geçici hatalarda (connectionError, receiveTimeout) isteği
 /// üstel geri çekilme (exponential backoff) ile otomatik olarak yeniler.
 ///
 /// Yalnızca idempotent HTTP metodlarına (GET, HEAD) uygulanır.
 /// 4xx veya 5xx yanıtlar yenilenmez — bunlar domain hatasına dönüştürülür.
+///
+/// **PII notu (F-14-16 / F-05-32):** Retry telemetrisi `debugPrint` ile
+/// yazılmaz — release build'inde noise üretir ve `options.path` device
+/// log'una ID/query token sızdırabilir. Sayısal retry metrikleri ileride
+/// gerekirse Sentry breadcrumb'a (path scrub'lanmış) eklenir.
 class RetryInterceptor extends Interceptor {
   RetryInterceptor({required this.dio, this.maxRetries = 2});
 
@@ -45,10 +49,6 @@ class RetryInterceptor extends Interceptor {
     }
 
     final delay = _backoffDelay(retryCount);
-    debugPrint(
-      '[RetryInterceptor] Retrying (attempt ${retryCount + 1}/$maxRetries) '
-      '${options.method} ${options.path} after ${delay.inMilliseconds}ms',
-    );
     await Future<void>.delayed(delay);
 
     options.extra[_retryCountKey] = retryCount + 1;

@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -155,9 +156,9 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                   if (result.totalRealProfitLossTry != null)
                     _AnimatedRow(
                       l10n.portfolioRealProfitLoss,
-                      (result.totalRealProfitLossTry ?? 0).toDouble(),
+                      result.totalRealProfitLossTry!.toDouble(),
                       formatter: _trySignedFormatter,
-                      valueColor: (result.totalRealProfitLossTry ?? 0) >= 0
+                      valueColor: result.totalRealProfitLossTry! >= Decimal.zero
                           ? AppColors.profit
                           : AppColors.loss,
                     ),
@@ -185,7 +186,10 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                             AppColors.portfolioColors[i %
                                 AppColors.portfolioColors.length];
                         return PieChartSectionData(
-                          value: item.result.finalValueTry,
+                          // fl_chart double ister; pasta dilimi oranı zaten
+                          // floating-point ile temsil ediliyor — finansal
+                          // toplama Decimal'da yapıldı.
+                          value: item.result.finalValueTry.toDouble(),
                           color: color,
                           title: '${item.sharePercent.toStringAsFixed(1)}%',
                           titleStyle: const TextStyle(

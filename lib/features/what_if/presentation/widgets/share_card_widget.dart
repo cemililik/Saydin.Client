@@ -160,7 +160,9 @@ class ShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(result.initialValueTry),
+                                _tryFormatter.format(
+                                  result.initialValueTry.toDouble(),
+                                ),
                                 style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w600,
@@ -188,7 +190,9 @@ class ShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(result.finalValueTry),
+                                _tryFormatter.format(
+                                  result.finalValueTry.toDouble(),
+                                ),
                                 style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
@@ -246,7 +250,7 @@ class ShareCardWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '$nominalSign${_tryFormatter.format(result.profitLossTry)} '
+                          '$nominalSign${_tryFormatter.format(result.profitLossTry.toDouble())} '
                           '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
                           style: TextStyle(
                             fontSize: 15,

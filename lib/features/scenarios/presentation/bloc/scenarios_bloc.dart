@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
+import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/scenarios/domain/usecases/delete_scenario.dart';
 import 'package:saydin/features/scenarios/domain/usecases/get_scenarios.dart';
 import 'package:saydin/features/scenarios/domain/usecases/save_scenario.dart';
@@ -61,15 +62,31 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
   ) async {
     final current = state.scenarios;
 
-    final isDuplicate = current.any(
-      (s) =>
-          s.type == event.type &&
-          s.assetSymbol == event.assetSymbol &&
-          _isSameDay(s.buyDate, event.buyDate) &&
-          _isSameDay(s.sellDate, event.sellDate) &&
-          s.amount == event.amount &&
-          s.amountType == event.amountType,
-    );
+    // `s.amount` Decimal, `event.amount` num (form input). Daha önce
+    // `.toDouble()` üzerinden double `==` karşılaştırması vardı; bu
+    // IEEE-754 precision farkını sızdırma riski taşıyordu (ve Decimal
+    // sözleşmesiyle çelişiyordu). Event tutarını Decimal'a çevirip
+    // Decimal `==` ile karşılaştır — Decimal equality exact.
+    //
+    // `MoneyParser.tryDecimal` ham `Decimal.parse` yerine kullanılır: num
+    // NaN/Infinity'de null döner (ham `Decimal.parse` `FormatException` atıp
+    // try bloğu dışında crash ederdi). null'ı `Decimal.zero`'a COERCE ETME —
+    // geçersiz tutarı 0 gibi göstermek, amount'u 0 olan bir senaryoyla
+    // yanlış-pozitif duplicate eşleşmesi yaratır. Parse edilemiyorsa duplicate
+    // kontrolünü tümden atla (kaydetme akışı geçersiz tutarı kendi yakalar);
+    // geçerli parse'ta Decimal `==` ile exact karşılaştır.
+    final eventAmountDecimal = MoneyParser.tryDecimal(event.amount);
+    final isDuplicate =
+        eventAmountDecimal != null &&
+        current.any(
+          (s) =>
+              s.type == event.type &&
+              s.assetSymbol == event.assetSymbol &&
+              _isSameDay(s.buyDate, event.buyDate) &&
+              _isSameDay(s.sellDate, event.sellDate) &&
+              s.amount == eventAmountDecimal &&
+              s.amountType == event.amountType,
+        );
     if (isDuplicate) {
       emit(ScenariosDuplicate(current));
       return;

@@ -4,7 +4,12 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- Debug ortamında yerel geliştirme sunucusuna (10.0.2.2) HTTP ile bağlanmak için gerekli.
-         Production build'lerde bu flag aktif değildir. -->
-    <application android:usesCleartextTraffic="true" />
+    <!-- Debug variant: cleartext sadece debug network_security_config'te
+         listelenen yerel host'lar için açıktır (localhost / 127.0.0.1 /
+         10.0.2.2). `usesCleartextTraffic="true"` blanket allowlist kullanmak
+         yerine domain-config ile dar kapsamlı izin veririz; bu bir typo'lu
+         base URL'in yanlışlıkla üçüncü taraf HTTP endpoint'e gitmesine
+         karşı erken sinyal verir. -->
+    <application
+        android:networkSecurityConfig="@xml/network_security_config" />
 </manifest>

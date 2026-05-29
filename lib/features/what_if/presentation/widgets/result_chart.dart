@@ -84,7 +84,13 @@ class _ResultChartState extends State<ResultChart> {
 
     final spots = history
         .map(
-          (p) => FlSpot(p.date.difference(origin).inDays.toDouble(), p.price),
+          (p) => FlSpot(
+            p.date.difference(origin).inDays.toDouble(),
+            // fl_chart `FlSpot` double bekler; precision sadece grafik
+            // tooltip'i için yeterli, finansal toplama bu noktadan
+            // önce Decimal'da yapılmış.
+            p.price.toDouble(),
+          ),
         )
         .toList();
 
@@ -207,8 +213,13 @@ class _RangeInfoBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final delta = to.price - from.price;
-    final pct = from.price == 0 ? 0.0 : delta / from.price * 100;
+    // RangeInfoBar grafik tooltip — display-only. Decimal aritmetiği
+    // burada precision farkı yaratmaz, double'a indirip aynı formülle
+    // çalışmak okunabilirliği koruyor.
+    final fromPrice = from.price.toDouble();
+    final toPrice = to.price.toDouble();
+    final delta = toPrice - fromPrice;
+    final pct = fromPrice == 0 ? 0.0 : delta / fromPrice * 100;
     final isUp = delta >= 0;
     final color = isUp ? AppColors.profit : AppColors.loss;
     final theme = Theme.of(context);

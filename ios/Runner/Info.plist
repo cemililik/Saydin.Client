@@ -39,16 +39,52 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<!--
+	  App Transport Security (ATS) — açık politika.
+
+	  iOS varsayılanı zaten "TLS 1.2+, no cleartext", ancak App Store review
+	  bazı yan-yollarda (örn. `NSAllowsArbitraryLoadsInWebContent`) gizli
+	  istisnalar olmadığından emin olmak için explicit politikayı tercih
+	  ediyor. `NSAllowsArbitraryLoads=false` ile tüm HTTP istekleri reddedilir
+	  ve `NSExceptionDomains` yalnızca HTTP localhost (yerel geliştirme) için
+	  tanımlanır; ngrok/cloudflared tünelleri HTTPS sunduğundan ATS istisnası
+	  gerektirmez (debug build'te bile prod sürümünde override yoktur).
+
+	  Üçüncü taraf SDK'lar (Sentry, share_plus) zaten HTTPS kullanır, ATS
+	  istisnası gerektirmez.
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<false/>
+			</dict>
+		</dict>
+	</dict>
+	<!--
 	  ITMS-90683 için zorunlu. share_plus eklentisi iOS'ta "Fotoğraflara
 	  Kaydet" paylaşım sayfası seçeneği için PhotoKit framework'üne bağlanır.
 	  Saydın doğrudan fotoğraf kütüphanesini sorgulamaz, ancak kullanıcı
 	  hesaplama sonucu kartını paylaşıp sistem "Fotoğraflara Kaydet"
 	  eylemini seçtiğinde iOS bu açıklamayı izin penceresinde gösterir.
-	  Apple'ın statik analizi, bu kod yolu hiç tetiklenmese bile bu
-	  anahtarı zorunlu kılar.
+
+	  `NSPhotoLibraryAddUsageDescription` kullanıyoruz (read+write değil
+	  add-only). Saydın fotoğraf okuma izni istemiyor — sadece kaydetme.
+	  Apple App Store review minimum izin prensibini bu add-only varyantla
+	  doğrular (F-14-13).
 	-->
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Hesaplama sonucu kartını Fotoğraflar uygulamasına kaydetmek istediğinizde fotoğraf kütüphanenize erişim gerekir.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Hesaplama sonucu kartını Fotoğraflar uygulamasına kaydetmek istediğinizde fotoğraf kütüphanenize yazma izni gerekir.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

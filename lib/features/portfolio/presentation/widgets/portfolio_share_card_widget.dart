@@ -143,7 +143,9 @@ class PortfolioShareCardWidget extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            _tryFormatter.format(item.result.initialValueTry),
+                            _tryFormatter.format(
+                              item.result.initialValueTry.toDouble(),
+                            ),
                             style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFF444444),
@@ -184,7 +186,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                               const SizedBox(height: 2),
                               Text(
                                 _tryFormatter.format(
-                                  result.totalInitialValueTry,
+                                  result.totalInitialValueTry.toDouble(),
                                 ),
                                 style: const TextStyle(
                                   fontSize: 17,
@@ -213,7 +215,9 @@ class PortfolioShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(result.totalFinalValueTry),
+                                _tryFormatter.format(
+                                  result.totalFinalValueTry.toDouble(),
+                                ),
                                 style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
@@ -270,7 +274,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '$sign${_tryFormatter.format(result.totalProfitLossTry)} '
+                          '$sign${_tryFormatter.format(result.totalProfitLossTry.toDouble())} '
                           '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
                           style: TextStyle(
                             fontSize: 15,

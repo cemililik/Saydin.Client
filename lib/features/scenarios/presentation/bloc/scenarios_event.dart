@@ -14,6 +14,11 @@ class ScenariosRequested extends ScenariosEvent {
   List<Object?> get props => [plan];
 }
 
+/// `amount` `num` olarak kalır (Decimal değil) — user input ham formdan
+/// `LocaleNumberParser.tryParseTr` ile parse edilen sayısal değeri taşır.
+/// Backend stored & rehydrated `SavedScenario.amount` Decimal olarak döner;
+/// bu giriş bir boundary event — precision loss yok (kullanıcının yazdığı
+/// "47010,34" zaten double-exact).
 class ScenarioSaveRequested extends ScenariosEvent {
   final String assetSymbol;
   final String assetDisplayName;

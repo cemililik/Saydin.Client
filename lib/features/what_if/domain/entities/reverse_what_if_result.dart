@@ -1,17 +1,23 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 import 'what_if_result.dart';
 
+/// "Şu hedef kazancı bugün elde etmek için geçmişte ne kadar yatırmam
+/// gerekirdi?" hesaplama sonucu.
+///
+/// Para alanları `Decimal` (CLAUDE.md "para için double YASAK"); yüzde
+/// alanları display-only olduğu için `double`.
 class ReverseWhatIfResult extends Equatable {
   final String assetSymbol;
   final String assetDisplayName;
   final DateTime buyDate;
   final DateTime? sellDate;
-  final double buyPrice;
-  final double sellPrice;
-  final double requiredInvestmentTry;
-  final double unitsAcquired;
-  final double targetValueTry;
-  final double profitLossTry;
+  final Decimal buyPrice;
+  final Decimal sellPrice;
+  final Decimal requiredInvestmentTry;
+  final Decimal unitsAcquired;
+  final Decimal targetValueTry;
+  final Decimal profitLossTry;
   final double profitLossPercent;
   final bool isProfit;
   final List<ChartPoint> priceHistory;

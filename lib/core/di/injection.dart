@@ -5,6 +5,7 @@ import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/storage/secure_storage_factory.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
+import 'package:saydin/core/network/api_base_url_validator.dart';
 import 'package:saydin/core/network/api_client.dart';
 import 'package:saydin/features/account/data/repositories/account_data_repository_impl.dart';
 import 'package:saydin/features/account/domain/repositories/account_data_repository.dart';
@@ -54,17 +55,10 @@ Future<void> configureDependencies() async {
   // Network
   sl.registerLazySingleton<ApiClient>(() {
     const baseUrl = String.fromEnvironment('API_BASE_URL');
-    assert(
-      baseUrl.isNotEmpty,
-      'API_BASE_URL dart-define is required. '
-      'Pass --dart-define=API_BASE_URL=http://<host>:5080',
-    );
-    if (baseUrl.isEmpty) {
-      throw StateError(
-        'API_BASE_URL dart-define is required. '
-        'Pass --dart-define=API_BASE_URL=http://<host>:5080',
-      );
-    }
+    // Validator hem boş hem invalid URL hem de release'de http için
+    // `StateError` fırlatır. `assert` release build'te derlenmez —
+    // fail-loud için runtime check (`StateError`) zorunlu.
+    ApiBaseUrlValidator.validate(baseUrl);
     return ApiClient(baseUrl: baseUrl, packageInfo: packageInfo);
   });
 

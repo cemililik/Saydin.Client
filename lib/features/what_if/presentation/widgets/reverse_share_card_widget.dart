@@ -148,7 +148,7 @@ class ReverseShareCardWidget extends StatelessWidget {
                               const SizedBox(height: 2),
                               Text(
                                 _tryFormatter.format(
-                                  result.requiredInvestmentTry,
+                                  result.requiredInvestmentTry.toDouble(),
                                 ),
                                 style: const TextStyle(
                                   fontSize: 17,
@@ -177,7 +177,9 @@ class ReverseShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(result.targetValueTry),
+                                _tryFormatter.format(
+                                  result.targetValueTry.toDouble(),
+                                ),
                                 style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
@@ -235,7 +237,7 @@ class ReverseShareCardWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '$nominalSign${_tryFormatter.format(result.profitLossTry)} '
+                          '$nominalSign${_tryFormatter.format(result.profitLossTry.toDouble())} '
                           '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
                           style: TextStyle(
                             fontSize: 15,

@@ -134,7 +134,7 @@ class _ComparisonResultCardState extends State<ComparisonResultCard>
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          _tryFormatter.format(calc.finalValueTry),
+                          _tryFormatter.format(calc.finalValueTry.toDouble()),
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),

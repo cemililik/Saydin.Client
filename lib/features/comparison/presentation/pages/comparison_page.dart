@@ -7,6 +7,7 @@ import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
+import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
@@ -101,10 +102,9 @@ class _ComparisonPageState extends State<ComparisonPage> {
     final winner = result.results.firstOrNull;
     final winnerName = winner?.calculation.assetDisplayName ?? '';
     final winnerPct = winner?.calculation.profitLossPercent ?? 0;
-    final sign = winnerPct >= 0 ? '+' : '';
     final shareText = ctx.l10n.shareTextComparison(
       winnerName,
-      '$sign${winnerPct.toStringAsFixed(2).replaceAll('.', ',')}%',
+      PercentageFormatter.signed(winnerPct.toDouble()),
     );
     showModalBottomSheet<void>(
       context: ctx,

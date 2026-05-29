@@ -1,8 +1,21 @@
 # android/key.properties.example
-# Bu dosyayı android/key.properties olarak kopyalayın ve gerçek değerleri girin.
-# key.properties .gitignore'da — asla commit etmeyin.
+#
+# Yerel release build için: bu dosyayı `android/key.properties` olarak
+# kopyalayın ve aşağıdaki dört alanı gerçek değerlerle doldurun.
+#
+# - `android/key.properties` `.gitignore`'da — ASLA commit etmeyin.
+# - CI ortamında `key.properties` dosyası kullanılmaz; signing config
+#   GitHub Secrets'tan (`ANDROID_KEYSTORE_BASE64`, `ANDROID_STORE_PASSWORD`,
+#   `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) doldurulur ve
+#   `release.yml`'in `Prepare & verify signing` adımında `keytool` ile
+#   doğrulanır.
+#
+# Dosya formatı `java.util.Properties` (key=value, satır başına bir alan).
 
+# Keystore'un göreli yolu — gradle modülünden (android/app) bakıldığında.
+# Örn: `../saydin-release.jks` → repo kökünde `android/saydin-release.jks`
 storeFile=../saydin-release.jks
+
 storePassword=YOUR_STORE_PASSWORD
 keyAlias=saydin
 keyPassword=YOUR_KEY_PASSWORD

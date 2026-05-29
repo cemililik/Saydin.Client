@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
@@ -8,6 +9,7 @@ class PortfolioItemResult extends Equatable {
   final WhatIfResult result;
 
   /// Son değer üzerinden hesaplanan portföy payı (0-100).
+  /// Yüzde display-only — double yeterli, Decimal gereksiz precision.
   final double sharePercent;
 
   const PortfolioItemResult({
@@ -27,6 +29,9 @@ class PortfolioItemResult extends Equatable {
 /// kullanıcıya "X kalem hesaplanamadı" mesajı gösterir. Eski `Future.wait`
 /// fail-fast davranışı tek bir item çökünce tüm hesabı çökertir ve quota
 /// (5 paralel HTTP) boşa harcanırdı.
+///
+/// **Tip kuralı:** Para alanları `Decimal` (CLAUDE.md "para için double
+/// YASAK"); yüzde alanları display-only olduğu için `double`.
 class PortfolioResult extends Equatable {
   final List<PortfolioItemResult> items;
 
@@ -34,14 +39,14 @@ class PortfolioResult extends Equatable {
   /// "yeniden dene" akışıyla sunabilir. Tüm kalemler başarılı ise boş liste.
   final List<PortfolioItem> failedItems;
 
-  final double totalInitialValueTry;
-  final double totalFinalValueTry;
-  final double totalProfitLossTry;
+  final Decimal totalInitialValueTry;
+  final Decimal totalFinalValueTry;
+  final Decimal totalProfitLossTry;
   final double totalProfitLossPercent;
   final bool isProfit;
 
   // Enflasyon düzeltmesi — null ise hesaplanmadı / aktif değil
-  final double? totalRealProfitLossTry;
+  final Decimal? totalRealProfitLossTry;
   final double? totalRealProfitLossPercent;
   final double? totalCumulativeInflationPercent;
 

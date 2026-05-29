@@ -1,0 +1,70 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:saydin/core/network/device_info_interceptor.dart';
+
+void main() {
+  group('DeviceInfoInterceptor.minimizeOsVersion', () {
+    test('iOS ham string\'i major.minor\'a indirir', () {
+      const raw = 'Version 18.6 (Build 22G5072a) Darwin Kernel Version 24.6.0';
+      expect(DeviceInfoInterceptor.minimizeOsVersion(raw), '18.6');
+    });
+
+    test('Android sade sürüm korunur', () {
+      expect(DeviceInfoInterceptor.minimizeOsVersion('15'), '15');
+      expect(DeviceInfoInterceptor.minimizeOsVersion('13.0'), '13.0');
+    });
+
+    test('Android codename ek bilgisi soyulur', () {
+      expect(DeviceInfoInterceptor.minimizeOsVersion('14 (Q)'), '14');
+    });
+
+    test('macOS ham string\'i major.minor\'a indirir', () {
+      expect(
+        DeviceInfoInterceptor.minimizeOsVersion('Version 14.5 (Build 23F79)'),
+        '14.5',
+      );
+    });
+
+    test('match yoksa "unknown" döner', () {
+      expect(DeviceInfoInterceptor.minimizeOsVersion(''), 'unknown');
+      expect(DeviceInfoInterceptor.minimizeOsVersion('???'), 'unknown');
+    });
+
+    test('Android uname (Linux kernel) → "unknown", kernel sürümü SIZMAZ', () {
+      // Android'de Platform.operatingSystemVersion uname() döner; naif regex
+      // kernel sürümünü ("5.10") Android sürümü sanırdı. "Linux" prefix
+      // guard'ı bunu "unknown"a çevirir (backend yanıltıcı veri almaz).
+      expect(
+        DeviceInfoInterceptor.minimizeOsVersion(
+          'Linux 5.10.66-android13-4-00257-g7e35917775b8-ab9739629',
+        ),
+        'unknown',
+      );
+      expect(
+        DeviceInfoInterceptor.minimizeOsVersion('Linux 4.14.190-23725512'),
+        'unknown',
+      );
+      // Regresyon koruması: çıktı kesinlikle kernel "5.10"/"4.14" OLMAMALI.
+      expect(
+        DeviceInfoInterceptor.minimizeOsVersion('Linux 5.10.66-android13-4'),
+        isNot('5.10'),
+      );
+    });
+
+    test('iPadOS prefix ile sürüm', () {
+      // iPadOS bazen "iPadOS 18.6 (Build 22G5072a)" formatında string verir.
+      // Regex `(\d+)(?:\.(\d+))?` ilk sayıyı yakalar → "18.6".
+      expect(
+        DeviceInfoInterceptor.minimizeOsVersion('iPadOS 18.6 (Build 22G5072a)'),
+        '18.6',
+      );
+    });
+
+    test('visionOS edge case', () {
+      expect(DeviceInfoInterceptor.minimizeOsVersion('visionOS 2.0'), '2.0');
+    });
+
+    test('major sürüm sıfırla başlasa kabul', () {
+      expect(DeviceInfoInterceptor.minimizeOsVersion('0.9'), '0.9');
+    });
+  });
+}

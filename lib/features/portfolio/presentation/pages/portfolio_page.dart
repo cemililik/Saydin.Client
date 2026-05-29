@@ -8,6 +8,7 @@ import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/skeleton_card.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
+import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
@@ -106,7 +107,14 @@ class _PortfolioPageState extends State<PortfolioPage> {
         ),
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
-        amount: state.result.totalInitialValueTry,
+        // DİKKAT: `totalInitialValueTry` aritmetik-türevli bir Decimal
+        // (kalemlerin Decimal toplamı) ve backend'e KAYDEDİLİR — yalnızca
+        // display değil. ScenarioSaveRequested.amount hâlâ `num` olduğu için
+        // burada `.toDouble()` zorunlu; double ~15 anlamlı hane tuttuğundan
+        // gerçekçi tutarlarda kuruş kaybı yok ama tam-precision için backend
+        // string `amount` kontratına geçince MoneyParser.toJsonString
+        // kullanılmalı (Faz 4 — amount num→Decimal end-to-end).
+        amount: state.result.totalInitialValueTry.toDouble(),
         amountType: 'try',
         type: ScenarioType.portfolio,
         extraData: {
@@ -128,13 +136,9 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   void _showPortfolioShare(PortfolioSuccess state) {
-    final sign = state.result.totalProfitLossPercent >= 0 ? '+' : '';
-    final pct = state.result.totalProfitLossPercent
-        .toStringAsFixed(2)
-        .replaceAll('.', ',');
     final shareText = context.l10n.shareTextPortfolio(
       state.result.items.length,
-      '$sign$pct%',
+      PercentageFormatter.signed(state.result.totalProfitLossPercent),
     );
     showModalBottomSheet<void>(
       context: context,

@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
@@ -9,6 +10,11 @@ import 'package:saydin/features/what_if/domain/repositories/what_if_repository.d
 /// `BIST/THYAO` backend'de geçici 503) çökerse, geri kalan kalemler
 /// hesaplanmaya devam eder ve UI partial result gösterir. Tüm kalemler
 /// çökerse [PortfolioCalculationFailure] fırlatılır.
+///
+/// **Decimal aritmetiği:** Para alanları (initial, final, P/L) `Decimal`
+/// üzerinden toplanır — IEEE-754 toplama hatası (örn. `0.1 + 0.2`)
+/// elimine. Yüzde alanları `double` (display-only, aggregasyon precision'a
+/// hassas değil).
 class CalculatePortfolio {
   final WhatIfRepository _repository;
 
@@ -59,14 +65,24 @@ class CalculatePortfolio {
     final results = successful.map((o) => o.result!).toList(growable: false);
     final keptItems = successful.map((o) => o.item).toList(growable: false);
 
-    final totalInitial = results.fold(0.0, (sum, r) => sum + r.initialValueTry);
-    final totalFinal = results.fold(0.0, (sum, r) => sum + r.finalValueTry);
+    final totalInitial = results.fold<Decimal>(
+      Decimal.zero,
+      (sum, r) => sum + r.initialValueTry,
+    );
+    final totalFinal = results.fold<Decimal>(
+      Decimal.zero,
+      (sum, r) => sum + r.finalValueTry,
+    );
     final totalPnL = totalFinal - totalInitial;
-    final totalPct = totalInitial > 0 ? (totalPnL / totalInitial) * 100 : 0.0;
+    // Yüzde display-only, double yeterli; Decimal / Decimal Rational
+    // dönüyor — `.toDouble()` ile floor cast.
+    final totalPct = totalInitial > Decimal.zero
+        ? (totalPnL / totalInitial).toDouble() * 100
+        : 0.0;
 
     final itemResults = List.generate(keptItems.length, (i) {
-      final share = totalFinal > 0
-          ? results[i].finalValueTry / totalFinal * 100
+      final share = totalFinal > Decimal.zero
+          ? (results[i].finalValueTry / totalFinal).toDouble() * 100
           : 0.0;
       return PortfolioItemResult(
         item: keptItems[i],
@@ -76,31 +92,45 @@ class CalculatePortfolio {
     });
 
     // Enflasyon aggregasyonu — sadece tüm kalemlerde inflation verisi varsa
-    double? totalRealPnL;
+    Decimal? totalRealPnL;
     double? totalRealPct;
     double? totalInflation;
 
     if (includeInflation &&
         results.every((r) => r.realProfitLossPercent != null)) {
       // Her kalemin reel son değeri: initialValue * (1 + realPct/100)
-      double totalRealFinal = 0;
+      //
+      // Önceki implementasyon: `Decimal.parse((1 + realPct / 100).toString())`
+      // double aritmetiğine baş vuruyordu → 7.7% gibi düz değerlerde sorun
+      // yok ama 33.333% (1/3) gibi case'lerde double precision (17. ondalık)
+      // kaybı Decimal'a sızdırıyordu. Şimdi (100 + realPct) / 100 Decimal
+      // aritmetiğinde hesaplanır; intermediate double yok.
+      final hundred = Decimal.fromInt(100);
+      var totalRealFinal = Decimal.zero;
       for (final r in results) {
-        totalRealFinal +=
-            r.initialValueTry * (1 + r.realProfitLossPercent! / 100);
+        final rateDecimal = Decimal.parse(r.realProfitLossPercent!.toString());
+        // (100 + rate) / 100 → Rational; Decimal'a düşürmek için
+        // `toDecimal(scaleOnInfinitePrecision: ...)` kullan. realPct
+        // typically ≤4 ondalık olduğu için scale=10 fazlasıyla yeter.
+        final realFactor = ((hundred + rateDecimal) / hundred).toDecimal(
+          scaleOnInfinitePrecision: 10,
+        );
+        totalRealFinal += r.initialValueTry * realFactor;
       }
       totalRealPnL = totalRealFinal - totalInitial;
-      totalRealPct = totalInitial > 0
-          ? (totalRealPnL / totalInitial) * 100
+      totalRealPct = totalInitial > Decimal.zero
+          ? (totalRealPnL / totalInitial).toDouble() * 100
           : 0.0;
 
       // Ağırlıklı ortalama birikimli enflasyon (başlangıç değeri ağırlıklı)
       if (results.every((r) => r.cumulativeInflationPercent != null) &&
-          totalInitial > 0) {
+          totalInitial > Decimal.zero) {
         double weightedInfl = 0;
+        final totalInitialDouble = totalInitial.toDouble();
         for (final r in results) {
           weightedInfl +=
               r.cumulativeInflationPercent! *
-              (r.initialValueTry / totalInitial);
+              (r.initialValueTry.toDouble() / totalInitialDouble);
         }
         totalInflation = weightedInfl;
       }
@@ -113,7 +143,7 @@ class CalculatePortfolio {
       totalFinalValueTry: totalFinal,
       totalProfitLossTry: totalPnL,
       totalProfitLossPercent: totalPct,
-      isProfit: totalPnL >= 0,
+      isProfit: totalPnL >= Decimal.zero,
       totalRealProfitLossTry: totalRealPnL,
       totalRealProfitLossPercent: totalRealPct,
       totalCumulativeInflationPercent: totalInflation,

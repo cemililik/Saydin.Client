@@ -1,3 +1,4 @@
+import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 
 class SavedScenarioModel extends SavedScenario {
@@ -25,7 +26,7 @@ class SavedScenarioModel extends SavedScenario {
       sellDate: json['sellDate'] != null
           ? _parseDate(json['sellDate'] as String)
           : null,
-      amount: json['amount'] as num,
+      amount: MoneyParser.requireDecimal(json['amount'], 'amount'),
       amountType: json['amountType'] as String,
       label: json['label'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),

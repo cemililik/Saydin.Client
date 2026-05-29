@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup kuralları — Android 6+ (API 23+).
+
+  `allowBackup="false"` ile auto-backup zaten kapalı; bu dosya defense
+  in-depth olarak EKSTRA dahil-dışlama kuralları belirtir. Eğer ileride
+  selektif backup'a geçilirse base policy "exclude all" olur ve sadece
+  açık olarak `<include>` edilen dosyalar yedeklenir.
+
+  KVKK Madde 12 (veri güvenliği): finansal hesaplama girdileri, device
+  ID, paylaşım kart PNG'leri Google Drive auto-backup'ında yer almaz.
+-->
+<full-backup-content>
+    <exclude domain="root" path="."/>
+    <exclude domain="file" path="."/>
+    <exclude domain="database" path="."/>
+    <exclude domain="sharedpref" path="."/>
+    <exclude domain="external" path="."/>
+</full-backup-content>
