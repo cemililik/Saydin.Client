@@ -8,7 +8,7 @@ void main() {
   // Şablon metnini hardcode etmek yerine l10n'in kendi çıktısıyla karşılaştır:
   // hangi dal + hangi değer seçildiğini (algoritmayı) kilitler.
   group('DurationLabel.format (takvim-ayı + day-of-month ayarı)', () {
-    test('ay sınırı kısa aralık: 31 Oca → 1 Şub = 1 gün (ay şişmez)', () {
+    test('format_monthBoundaryShortRange_returnsDays', () {
       // e.day(1) < start.day(31) → months 1 düşülür → 0 → gün dalı
       expect(
         DurationLabel.format(l10n, DateTime(2020, 1, 31), DateTime(2020, 2, 1)),
@@ -16,35 +16,35 @@ void main() {
       );
     });
 
-    test('ay-içi 30 gün → 30 gün (1 ay değil)', () {
+    test('format_withinSameMonth_30DaysNotMonth', () {
       expect(
         DurationLabel.format(l10n, DateTime(2020, 1, 1), DateTime(2020, 1, 31)),
         l10n.durationDays(30),
       );
     });
 
-    test('tam aylar: 1 Oca → 1 Mar = 2 ay', () {
+    test('format_fullMonths_returnsMonths', () {
       expect(
         DurationLabel.format(l10n, DateTime(2020, 1, 1), DateTime(2020, 3, 1)),
         l10n.durationMonths(2),
       );
     });
 
-    test('tam yıl: 1 Oca 2020 → 1 Oca 2021 = 1 yıl', () {
+    test('format_fullYear_returnsYears', () {
       expect(
         DurationLabel.format(l10n, DateTime(2020, 1, 1), DateTime(2021, 1, 1)),
         l10n.durationYears(1),
       );
     });
 
-    test('yıl + ay: 1 Oca 2020 → 1 Nis 2021 = 1 yıl 3 ay', () {
+    test('format_yearPlusMonths_returnsYearsMonths', () {
       expect(
         DurationLabel.format(l10n, DateTime(2020, 1, 1), DateTime(2021, 4, 1)),
         l10n.durationYearsMonths(1, 3),
       );
     });
 
-    test('artık yıl: 29 Şub 2020 → 28 Şub 2021 = 11 ay (gün dolmadı)', () {
+    test('format_leapYearEndBeforeDay_returnsMonths', () {
       // months = 12; e.day(28) < start.day(29) → 11 ay
       expect(
         DurationLabel.format(
@@ -56,7 +56,7 @@ void main() {
       );
     });
 
-    test('end null → bugüne kadar, throw etmez', () {
+    test('format_nullEnd_returnsNormally', () {
       expect(
         () => DurationLabel.format(l10n, DateTime(2020, 1, 1), null),
         returnsNormally,

@@ -43,7 +43,7 @@ void main() {
 
   group('PortfolioBloc — F-09-09 maxItems guard', () {
     blocTest<PortfolioBloc, PortfolioState>(
-      'limit altında ekleme → liste büyür',
+      'onItemAdded_belowMaxItems_appendsItem',
       build: build,
       seed: () => PortfolioEditing(items: items(2)),
       act: (b) => b.add(addEvent()),
@@ -53,7 +53,7 @@ void main() {
     );
 
     blocTest<PortfolioBloc, PortfolioState>(
-      'maxItems\'tayken ekleme no-op (state emit edilmez, liste büyümez)',
+      'onItemAdded_atMaxItems_noOp',
       build: build,
       seed: () => PortfolioEditing(items: items(PortfolioConstants.maxItems)),
       act: (b) => b.add(addEvent()),
