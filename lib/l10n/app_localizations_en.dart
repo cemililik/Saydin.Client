@@ -660,6 +660,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dcaStartDateRequired => 'Please enter start date';
 
   @override
+  String get dcaEndBeforeStart => 'End date cannot be before start date';
+
+  @override
   String get dcaPeriodWeekly => 'Weekly';
 
   @override

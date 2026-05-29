@@ -309,6 +309,7 @@
   "dcaStartDate": "Başlangıç Tarihi",
   "dcaEndDate": "Bitiş Tarihi (opsiyonel)",
   "dcaStartDateRequired": "Başlangıç tarihi giriniz",
+  "dcaEndBeforeStart": "Bitiş tarihi başlangıç tarihinden önce olamaz",
   "dcaPeriodWeekly": "Haftalık",
   "dcaPeriodMonthly": "Aylık",
   "dcaPeriodLabel": "Periyot",

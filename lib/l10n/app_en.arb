@@ -309,6 +309,7 @@
   "dcaStartDate": "Start Date",
   "dcaEndDate": "End Date (optional)",
   "dcaStartDateRequired": "Please enter start date",
+  "dcaEndBeforeStart": "End date cannot be before start date",
   "dcaPeriodWeekly": "Weekly",
   "dcaPeriodMonthly": "Monthly",
   "dcaPeriodLabel": "Period",

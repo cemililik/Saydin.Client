@@ -43,7 +43,10 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
     PortfolioAssetsRequested event,
     Emitter<PortfolioState> emit,
   ) async {
-    if (state.assets.isNotEmpty) return;
+    // assets.isNotEmpty post-load durumunu yakalar; uçuştaki fetch sırasında
+    // (state PortfolioAssetsLoading, assets hâlâ boş) ikinci bir istek gelirse
+    // mükerrer _getAssets + last-writer-wins yarışını önlemek için onu da ele.
+    if (state.assets.isNotEmpty || state is PortfolioAssetsLoading) return;
     emit(
       PortfolioAssetsLoading(
         items: state.items,

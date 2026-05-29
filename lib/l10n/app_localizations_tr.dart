@@ -659,6 +659,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get dcaStartDateRequired => 'Başlangıç tarihi giriniz';
 
   @override
+  String get dcaEndBeforeStart =>
+      'Bitiş tarihi başlangıç tarihinden önce olamaz';
+
+  @override
   String get dcaPeriodWeekly => 'Haftalık';
 
   @override

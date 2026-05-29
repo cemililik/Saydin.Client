@@ -346,16 +346,22 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     try {
       final assets = await _getAssets();
 
-      if (hadResult) {
+      // hadResult tek başına formInput'un dolu olduğunu GARANTİ etmez; replay
+      // dereferanslanan alanların kendisini kontrol et (sonuç varlığını değil).
+      // ComparisonBloc._onLanguageChanged ile aynı kanonik guard.
+      final sym = savedForm.selectedSymbol;
+      final buy = savedForm.buyDate;
+      final amt = savedForm.amount;
+      if (hadResult && sym != null && buy != null && amt != null) {
         // Önceki hesaplama sonucu vardı — yeni asset'lerle yeniden hesapla
         emit(WhatIfCalculating(assets, formInput: savedForm));
         try {
           if (savedForm.calculationMode == CalculationMode.reverse) {
             final result = await _calculateReverseWhatIf(
-              assetSymbol: savedForm.selectedSymbol!,
-              buyDate: savedForm.buyDate!,
+              assetSymbol: sym,
+              buyDate: buy,
               sellDate: savedForm.sellDate,
-              targetAmount: savedForm.amount!,
+              targetAmount: amt,
               targetAmountType: savedForm.amountType,
               includeInflation: savedForm.includeInflation,
             );
@@ -368,10 +374,10 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
             );
           } else {
             final result = await _calculateWhatIf(
-              assetSymbol: savedForm.selectedSymbol!,
-              buyDate: savedForm.buyDate!,
+              assetSymbol: sym,
+              buyDate: buy,
               sellDate: savedForm.sellDate,
-              amount: savedForm.amount!,
+              amount: amt,
               amountType: savedForm.amountType,
               includeInflation: savedForm.includeInflation,
             );

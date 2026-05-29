@@ -1285,6 +1285,12 @@ abstract class AppLocalizations {
   /// **'Başlangıç tarihi giriniz'**
   String get dcaStartDateRequired;
 
+  /// No description provided for @dcaEndBeforeStart.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bitiş tarihi başlangıç tarihinden önce olamaz'**
+  String get dcaEndBeforeStart;
+
   /// No description provided for @dcaPeriodWeekly.
   ///
   /// In tr, this message translates to:
