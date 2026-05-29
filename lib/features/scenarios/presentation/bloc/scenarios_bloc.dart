@@ -80,7 +80,7 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     // type=whatIf taşır; ayrım extraData['mode']'da. Mode duplicate anahtarına
     // dahil edilmezse aynı asset+tarih+tutarlı bir normal ve bir ters senaryo
     // çakışır ve ikincisi kaydedilemez.
-    final eventMode = event.extraData?['mode'] as String?;
+    final eventMode = _mode(event.extraData);
     final isDuplicate =
         eventAmountDecimal != null &&
         current.any(
@@ -91,7 +91,7 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
               _isSameDay(s.sellDate, event.sellDate) &&
               s.amount == eventAmountDecimal &&
               s.amountType == event.amountType &&
-              (s.extraData?['mode'] as String?) == eventMode,
+              _mode(s.extraData) == eventMode,
         );
     if (isDuplicate) {
       emit(ScenariosDuplicate(current));
@@ -126,6 +126,14 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
         ),
       );
     }
+  }
+
+  /// `extraData['mode']`'u defensive okur — non-String/eksikte `null`
+  /// (`as String?` non-String'de throw ederdi; PR genelindeki `is String`
+  /// stiliyle tutarlı).
+  static String? _mode(Map<String, dynamic>? extraData) {
+    final m = extraData?['mode'];
+    return m is String ? m : null;
   }
 
   static bool _isSameDay(DateTime? a, DateTime? b) {

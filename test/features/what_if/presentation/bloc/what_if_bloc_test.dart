@@ -1,7 +1,9 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
+import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_reverse_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_what_if.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
@@ -153,6 +155,56 @@ void main() {
       ),
       seed: () => WhatIfAssetsLoaded([assetWithRange]),
       act: (bloc) => bloc.add(const WhatIfSymbolChanged('USDTRY')),
+      expect: () => [
+        isA<WhatIfAssetsLoaded>().having(
+          (s) => s.formInput.selectedSymbol,
+          'selectedSymbol',
+          'USDTRY',
+        ),
+      ],
+    );
+  });
+
+  // F-07-06: WhatIfSuccess'te formInput zorunlu alanları (buyDate/amount) null
+  // olabilir; dil değişimi replay'i `hadResult && sym/buy/amt != null` ile
+  // gate'lenir. Eski kod savedForm.buyDate!/amount! ile crash ederdi.
+  group('WhatIfBloc — WhatIfLanguageChanged null guard (F-07-06)', () {
+    WhatIfResult fixtureResult() => WhatIfResult(
+      assetSymbol: 'USDTRY',
+      assetDisplayName: 'Dolar/TL',
+      buyDate: DateTime.utc(2021, 1, 1),
+      sellDate: DateTime.utc(2022, 1, 1),
+      buyPrice: Decimal.one,
+      sellPrice: Decimal.fromInt(2),
+      unitsAcquired: Decimal.fromInt(100),
+      initialValueTry: Decimal.fromInt(100),
+      finalValueTry: Decimal.fromInt(200),
+      profitLossTry: Decimal.fromInt(100),
+      profitLossPercent: 100,
+      isProfit: true,
+    );
+
+    blocTest<WhatIfBloc, WhatIfState>(
+      'onLanguageChanged_successWithNullFormFields_fallsBackToAssetsLoadedNoCrash',
+      build: () => WhatIfBloc(
+        mockGetAssets,
+        mockCalculateWhatIf,
+        mockCalculateReverseWhatIf,
+      ),
+      setUp: () =>
+          when(() => mockGetAssets()).thenAnswer((_) async => [assetWithRange]),
+      seed: () => WhatIfSuccess(
+        assets: [assetWithRange],
+        result: fixtureResult(),
+        // selectedSymbol dolu ama buyDate + amount null → guard tetiklenir
+        formInput: const WhatIfFormInput(
+          selectedSymbol: 'USDTRY',
+          amountType: 'try',
+        ),
+      ),
+      act: (bloc) => bloc.add(const WhatIfLanguageChanged()),
+      // Guard çalışırsa WhatIfCalculating'e GİRMEDEN AssetsLoaded'a düşer;
+      // çalışmazsa Calculating + null-check crash olurdu.
       expect: () => [
         isA<WhatIfAssetsLoaded>().having(
           (s) => s.formInput.selectedSymbol,
