@@ -451,6 +451,14 @@ jobs:
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
       - name: Set TestFlight release notes
+        # H-1: kozmetik release-notes ekleme adımı release-ios job'ını
+        # KIRMAMALI. Bu adım IPA TestFlight'a yüklendikten SONRA çalışır; build
+        # App Store Connect'te işlenmesi (Apple-tarafı) 15+ dk sürebilir.
+        # exit 1 burada release-ios'u fail eder → `needs: release-ios` olan
+        # github-release job'ı ATLANIR (başarılı iki store yüklemesine rağmen
+        # GitHub Release oluşmaz). continue-on-error ile: ::error:: anotasyonu
+        # görünür kalır (fail-loud) ama job/dependent'ler bloke OLMAZ.
+        continue-on-error: true
         shell: bash
         env:
           ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
@@ -512,7 +520,10 @@ jobs:
           # `set -u` güvenliği için döngü öncesi başlat (döngü hiç dönmese bile).
           BUILD_ID=""
           PROCESSING=""
-          for i in $(seq 1 30); do
+          # 40×30s = 20 dk: Apple build işleme süresi sık sık 15 dk'yı aşar.
+          # Adım non-blocking (continue-on-error) olduğundan uzun pencere yalnız
+          # yavaş vakada bekler; build erken bulununca döngü kırılır.
+          for i in $(seq 1 40); do
             BUILDS=$(curl -sg \
               -H "Authorization: Bearer $JWT" \
               "https://api.appstoreconnect.apple.com/v1/builds?filter[version]=${BUILD_NUMBER}&filter[app]=${APP_ID}&limit=1") || true
@@ -524,7 +535,7 @@ jobs:
               echo "✅ Build bulundu: $BUILD_ID"
               break
             fi
-            echo "  Deneme $i/30 — durum: ${PROCESSING:-bulunamadı}, 30s bekleniyor..."
+            echo "  Deneme $i/40 — durum: ${PROCESSING:-bulunamadı}, 30s bekleniyor..."
             sleep 30
           done
 

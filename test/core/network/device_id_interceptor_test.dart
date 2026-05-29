@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -127,6 +129,42 @@ void main() {
     expect(a.headers['X-Device-ID'], isNotEmpty);
     expect(a.headers['X-Device-ID'], b.headers['X-Device-ID']);
   });
+
+  // L-2: çözümleme uçuştayken resetCache (hesap silme) araya girerse, silinmiş
+  // ESKİ ID cache'e geri YAZILMAMALI (epoch guard). Sonraki istek taze ID alır.
+  test(
+    'reset during in-flight resolve does not repopulate cache with old id',
+    () async {
+      final gate = Completer<String?>();
+      var reads = 0;
+      when(() => storage.read(key: any(named: 'key'))).thenAnswer((_) {
+        reads++;
+        return reads == 1 ? gate.future : Future.value('new-id');
+      });
+      when(
+        () => storage.write(
+          key: any(named: 'key'),
+          value: any(named: 'value'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final first = RequestOptions(path: '/v1/first');
+      final firstFuture = interceptor.onRequest(first, _CapturingHandler());
+
+      // Hesap silme: çözümleme beklerken cache + in-flight sıfırlanır.
+      interceptor.resetCache();
+      // Gate'i ESKİ id ile tamamla (silinmeden önce okunmuş gibi).
+      gate.complete('old-id');
+      await firstFuture;
+
+      // Sonraki istek: cache eski id ile DOLMADIĞI için taze çözümlenir → 'new-id'.
+      final second = RequestOptions(path: '/v1/second');
+      await interceptor.onRequest(second, _CapturingHandler());
+
+      expect(second.headers['X-Device-ID'], 'new-id');
+      expect(second.headers['X-Device-ID'], isNot('old-id'));
+    },
+  );
 }
 
 class _CapturingHandler extends RequestInterceptorHandler {}

@@ -321,8 +321,11 @@ class UnknownError          extends AppError { ... } // catch-all + DioException
 - **`AssetNotFoundError`** — backend 404 `asset-not-found` (önceden tüm 404'ler
   `PriceNotFoundError`'a indirgeniyordu; silinmiş varlık replay'inde yanıltıcı
   "fiyat bulunamadı" mesajı çıkıyordu — F-05-11).
-- **`MalformedResponseError`** — sunucu 2xx döndü ama gövde boş/ayrıştırılamaz
+- **`MalformedResponseError`** — sunucu 2xx döndü ama gövde **boş/eksik**
   (`ServerError(statusCode: 200)` anlamsal tuhaflığı yerine — F-07-08).
+  `fromJson` parse hataları bu varyanta EŞLENMEZ → kasıtlı olarak `UnknownError`
+  olur (repo'lar yalnızca `on DioException` yakalar; parse beklenmedikleri BLoC
+  generic catch'ine düşer).
 
 ### Backend hata sözleşmesi (RFC-7807 ProblemDetails)
 

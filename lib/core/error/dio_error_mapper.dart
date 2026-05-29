@@ -1,3 +1,5 @@
+import 'dart:io' show SocketException;
+
 import 'package:dio/dio.dart';
 import 'app_error.dart';
 
@@ -26,15 +28,31 @@ class DioErrorMapper {
 
   AppError map(DioException e) {
     // ── Ağ seviyesi (HTTP yanıtı yok) ─────────────────────────────────────
-    if (e.type == DioExceptionType.connectionError) {
-      return const NoInternetError();
-    }
-    if (e.type == DioExceptionType.unknown) {
-      // F-05-10: `unknown` "internet yok" DEĞİL — istek sırasında oluşan
-      // beklenmeyen bir hatadır (cast/parse/iptal/sertifika). NoInternet'e
-      // eşlemek kullanıcıyı yanıltır ("bağlantınızı kontrol edin" derken sorun
-      // bağlantı değildir) ve gerçek hatayı observability'den gizler.
-      return UnknownError(cause: e.error ?? e);
+    switch (e.type) {
+      case DioExceptionType.connectionError:
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+        // Bağlantı sınıfı: kopma + tüm timeout'lar → NoInternetError. Mobilde
+        // sık görülür; kullanıcıya "bağlantını kontrol et" ve Sentry'ye
+        // raporlanmaz. Eskiden timeout'lar ServerError(null)'a düşüp hem
+        // gürültü hem yanıltıcı "sunucu hatası" üretiyordu (M-1).
+        return const NoInternetError();
+      case DioExceptionType.unknown:
+        // F-05-10: `unknown` çoğu zaman beklenmeyen bir hatadır (cast/iptal).
+        // AMA Dio v5'te gerçek bağlantı kopması SocketException olarak `unknown`
+        // içinde yüzeye çıkabilir → onu NoInternet'e indir (M-2). HandshakeException
+        // SocketException ALT TÜRÜ DEĞİLDİR; sertifika/güvenlik sinyali olarak
+        // UnknownError'da kalır ve raporlanır.
+        if (e.error is SocketException) return const NoInternetError();
+        return UnknownError(cause: e.error ?? e);
+      case DioExceptionType.cancel:
+      case DioExceptionType.badCertificate:
+      case DioExceptionType.badResponse:
+        // Aşağıda status/type ile ele alınır. badCertificate güvenlik sinyali
+        // olarak ServerError'a düşüp raporlanır (kasıtlı). cancel bu uygulamada
+        // CancelToken kullanılmadığından pratikte oluşmaz.
+        break;
     }
 
     final data = _asMap(e.response?.data);
@@ -52,6 +70,13 @@ class DioErrorMapper {
           return ScenarioLimitError(limit: _intExtension(data, 'limit') ?? 5);
         case 'daily-limit-exceeded':
           return DailyLimitError(resetAt: _resetAt(data));
+        // L-3: `scenario-not-found` (404) kasıtlı olarak ele alınmıyor.
+        // İstemcide tek 404-üreten senaryo yolu deleteScenario'dur ve orada 404
+        // idempotent başarı olarak (mapper'dan ÖNCE) yutulur; tekil senaryo
+        // GET-by-id yoktur → bu type pratikte mapper'a ulaşmaz, status 404
+        // fallback'inde PriceNotFoundError'a düşer (zararsız). İleride tekil
+        // senaryo GET eklenirse burada bir ScenarioNotFoundError varyantı + case
+        // gerekir (aksi halde yanlış "fiyat bulunamadı" mesajı çıkar).
       }
       // Diğer tanınan tipler (validation/feature-disabled/external-api/
       // internal-error) için ayrı bir AppError varyantı yok → status fallback

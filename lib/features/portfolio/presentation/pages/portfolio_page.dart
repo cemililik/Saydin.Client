@@ -193,13 +193,18 @@ class _PortfolioPageState extends State<PortfolioPage> {
 
   String _errorMessage(AppError error, AppLocalizations l10n) =>
       switch (error) {
+        // M-3: joker `_` yerine tüm varyantlar açıkça listelenir — sealed
+        // exhaustiveness derleme-zamanı garantisi portfolio'da da korunur
+        // (yeni AppError varyantı eklenince sessizce errorGeneric'e düşmez,
+        // derleme hatası verir; diğer 4 sayfayla tutarlı).
         PriceNotFoundError() => l10n.errorPriceNotFound,
         AssetNotFoundError() => l10n.errorAssetNotFound,
         DailyLimitError() => l10n.errorDailyLimit,
+        ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
         NoInternetError() => l10n.errorNoInternet,
         ServerError() => l10n.errorServer,
         MalformedResponseError() => l10n.errorMalformed,
-        _ => l10n.errorGeneric,
+        UnknownError() => l10n.errorGeneric,
       };
 
   @override

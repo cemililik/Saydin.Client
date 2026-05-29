@@ -22,6 +22,12 @@ class DeviceIdInterceptor extends Interceptor {
   String? _cachedDeviceId;
   Future<String>? _inFlight;
 
+  /// Çözümleme "kuşağı". resetCache her çağrıldığında artar; devam eden bir
+  /// [_resolveDeviceId] tamamlanırken kuşak değiştiyse cache'e YAZMAZ —
+  /// böylece hesap silme sırasında uçuşta olan bir çözümleme, silinmiş eski
+  /// ID'yi cache'e geri koyamaz (L-2 hardening).
+  int _epoch = 0;
+
   @override
   Future<void> onRequest(
     RequestOptions options,
@@ -38,6 +44,7 @@ class DeviceIdInterceptor extends Interceptor {
   void resetCache() {
     _cachedDeviceId = null;
     _inFlight = null;
+    _epoch++;
   }
 
   Future<String> _getOrCreateDeviceId() {
@@ -49,23 +56,25 @@ class DeviceIdInterceptor extends Interceptor {
   }
 
   Future<String> _resolveDeviceId() async {
+    // Bu çözümlemenin kuşağı; tamamlanırken reset araya girdiyse cache'e yazma.
+    final myEpoch = _epoch;
     try {
       final stored = await _storage.read(key: _storageKey);
       if (stored != null) {
-        _cachedDeviceId = stored;
+        if (myEpoch == _epoch) _cachedDeviceId = stored;
         return stored;
       }
       // İlk kez: üret + ÖNCE cache'le (oturum kararlılığı), SONRA kalıcı yaz.
       // Yazma çökerse aşağıdaki catch aynı üretilmiş ID'yi korur.
       final generated = const Uuid().v4();
-      _cachedDeviceId = generated;
+      if (myEpoch == _epoch) _cachedDeviceId = generated;
       await _storage.write(key: _storageKey, value: generated);
       return generated;
     } catch (_) {
       // Storage erişilemez (read/write çöktü). Üretilmiş bir ID varsa onu KORU;
       // yoksa bir kez üret ve sabitle — oturum boyunca değişmez.
       final ephemeral = _cachedDeviceId ?? const Uuid().v4();
-      _cachedDeviceId = ephemeral;
+      if (myEpoch == _epoch) _cachedDeviceId = ephemeral;
       return ephemeral;
     }
   }

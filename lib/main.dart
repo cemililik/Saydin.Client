@@ -85,10 +85,20 @@ void main() {
       // bloğu çalışmaz — startup pass ikinci savunma hattı (KVKK Madde 12).
       unawaited(ShareCardRenderer.cleanupStaleShareFiles());
       // PII olmayan cihaz/uygulama etiketlerini Sentry scope'una ekle (F-05-07).
-      await configureSentryDeviceScope(
-        packageInfo: sl<PackageInfo>(),
-        platform: sl<PlatformInfo>(),
-      );
+      // M-5: bu KRİTİK OLMAYAN telemetri adımı `runApp`'i bloke etmemeli — aksi
+      // halde scope yazımındaki beklenmeyen bir hata kullanıcıyı beyaz ekranda
+      // bırakır. sl<>() çözümlemesi try DIŞINDA: DI hatası (kritik) hâlâ
+      // fail-fast; yalnızca Sentry scope yazımı izole edilir.
+      final packageInfo = sl<PackageInfo>();
+      final platformInfo = sl<PlatformInfo>();
+      try {
+        await configureSentryDeviceScope(
+          packageInfo: packageInfo,
+          platform: platformInfo,
+        );
+      } catch (e, st) {
+        await Sentry.captureException(e, stackTrace: st);
+      }
       runApp(
         DefaultAssetBundle(
           bundle: SentryAssetBundle(),

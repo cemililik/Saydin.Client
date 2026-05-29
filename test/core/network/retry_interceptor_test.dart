@@ -31,12 +31,17 @@ void main() {
     interceptor = RetryInterceptor(dio: dio, maxRetries: 2);
   });
 
+  late RequestOptions lastOptions;
+
   DioException error({
     required DioExceptionType type,
     String method = 'GET',
     int? statusCode,
+    int? retryCount,
   }) {
     final options = RequestOptions(path: '/v1/assets', method: method);
+    if (retryCount != null) options.extra['_retryCount'] = retryCount;
+    lastOptions = options;
     return DioException(
       requestOptions: options,
       type: type,
@@ -56,16 +61,20 @@ void main() {
   }
 
   group('retries (idempotent GET)', () {
-    test('connectionError_isRetried', () async {
-      stubFetchSuccess();
-      final handler = _FakeErrorHandler();
-      await interceptor.onError(
-        error(type: DioExceptionType.connectionError),
-        handler,
-      );
-      verify(() => dio.fetch<dynamic>(any())).called(1);
-      expect(handler.resolveCalled, isTrue);
-    });
+    // L-5: bağlantı + timeout sınıfının tamamı yeniden denenir.
+    for (final type in [
+      DioExceptionType.connectionError,
+      DioExceptionType.receiveTimeout,
+      DioExceptionType.connectionTimeout,
+    ]) {
+      test('${type.name}_isRetried', () async {
+        stubFetchSuccess();
+        final handler = _FakeErrorHandler();
+        await interceptor.onError(error(type: type), handler);
+        verify(() => dio.fetch<dynamic>(any())).called(1);
+        expect(handler.resolveCalled, isTrue);
+      });
+    }
 
     for (final status in [502, 503, 504]) {
       test('badResponse_${status}_isRetried (F-05-09)', () async {
@@ -114,6 +123,46 @@ void main() {
       );
       verifyNever(() => dio.fetch<dynamic>(any()));
       expect(handler.nextCalled, isTrue);
+    });
+  });
+
+  // L-5: tükenme, retry-then-fail ve sayaç doğrulaması.
+  group('edge cases', () {
+    test('maxRetries_reached_doesNotRetryAgain (sonsuz retry yok)', () async {
+      final handler = _FakeErrorHandler();
+      // _retryCount == maxRetries (2) → tekrar denenmez.
+      await interceptor.onError(
+        error(type: DioExceptionType.connectionError, retryCount: 2),
+        handler,
+      );
+      verifyNever(() => dio.fetch<dynamic>(any()));
+      expect(handler.nextCalled, isTrue);
+    });
+
+    test('retry_thenFetchFails_callsNextNotResolve', () async {
+      when(() => dio.fetch<dynamic>(any())).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/v1/assets'),
+          type: DioExceptionType.connectionError,
+        ),
+      );
+      final handler = _FakeErrorHandler();
+      await interceptor.onError(
+        error(type: DioExceptionType.connectionError),
+        handler,
+      );
+      expect(handler.nextCalled, isTrue);
+      expect(handler.resolveCalled, isFalse);
+    });
+
+    test('successfulRetry_incrementsRetryCount', () async {
+      stubFetchSuccess();
+      final handler = _FakeErrorHandler();
+      await interceptor.onError(
+        error(type: DioExceptionType.connectionError),
+        handler,
+      );
+      expect(lastOptions.extra['_retryCount'], 1);
     });
   });
 }

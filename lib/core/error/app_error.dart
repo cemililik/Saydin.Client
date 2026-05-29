@@ -41,12 +41,19 @@ class ServerError extends AppError {
   const ServerError({this.statusCode});
 }
 
-/// Sunucu 2xx döndürdü ama gövde boş/ayrıştırılamaz — sözleşme ihlali
-/// (F-07-08). [ServerError]'dan ayrı tutulur: `ServerError` HTTP hata
-/// statüsünü (4xx/5xx) temsil eder; `MalformedResponseError` ise "başarı
-/// statüsü ama beklenmeyen/eksik gövde" durumudur (örn. 200 + `null` body
-/// ya da `fromJson` parse hatası). Böylece `ServerError(statusCode: 200)`
+/// Sunucu 2xx döndürdü ama gövde **boş/eksik** — sözleşme ihlali (F-07-08).
+/// [ServerError]'dan ayrı tutulur: `ServerError` HTTP hata statüsünü (4xx/5xx)
+/// temsil eder; `MalformedResponseError` ise "başarı statüsü ama gövde yok"
+/// durumudur (örn. 200 + `null` body). Böylece `ServerError(statusCode: 200)`
 /// gibi anlamsal olarak tuhaf bir değer üretmek zorunda kalmayız.
+///
+/// NOT (L-1): `fromJson` PARSE hataları (FormatException/TypeError) bu varyanta
+/// EŞLENMEZ. Repo'lar `on DioException` ile yalnızca tipli ağ hatalarını
+/// yakalar; parse hataları kasıtlı olarak BLoC'un generic catch'ine düşüp
+/// [UnknownError]'a sarılır (sözleşme: tipli ağ hataları AppError, beklenmedik
+/// parse hataları UnknownError — bkz. `calculate_parseError_propagatesNotSwallowed`).
+/// [cause] şu an boş-gövde yolunda doldurulmaz; [UnknownError.cause] ile
+/// simetri ve ileride tanı için ayrılmıştır.
 class MalformedResponseError extends AppError {
   final Object? cause;
   const MalformedResponseError({this.cause});

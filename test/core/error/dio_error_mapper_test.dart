@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:saydin/core/error/app_error.dart';
@@ -6,18 +8,23 @@ import 'package:saydin/core/error/dio_error_mapper.dart';
 void main() {
   const mapper = DioErrorMapper();
 
-  DioException make(DioExceptionType type, {int? statusCode, dynamic data}) =>
-      DioException(
-        requestOptions: RequestOptions(),
-        type: type,
-        response: statusCode != null
-            ? Response(
-                requestOptions: RequestOptions(),
-                statusCode: statusCode,
-                data: data,
-              )
-            : null,
-      );
+  DioException make(
+    DioExceptionType type, {
+    int? statusCode,
+    dynamic data,
+    Object? error,
+  }) => DioException(
+    requestOptions: RequestOptions(),
+    type: type,
+    error: error,
+    response: statusCode != null
+        ? Response(
+            requestOptions: RequestOptions(),
+            statusCode: statusCode,
+            data: data,
+          )
+        : null,
+  );
 
   group('DioErrorMapper', () {
     test('map_connectionError_returnsNoInternetError', () {
@@ -194,6 +201,49 @@ void main() {
       final e = make(DioExceptionType.badResponse, statusCode: 502);
       final error = mapper.map(e) as ServerError;
       expect(error.statusCode, 502);
+    });
+
+    // M-1: timeout sınıfı (connection/receive/send) → NoInternetError
+    // (ServerError(null) gürültüsü değil; Sentry'ye raporlanmaz).
+    for (final t in [
+      DioExceptionType.connectionTimeout,
+      DioExceptionType.receiveTimeout,
+      DioExceptionType.sendTimeout,
+    ]) {
+      test('map_${t.name}_returnsNoInternetError', () {
+        expect(mapper.map(make(t)), isA<NoInternetError>());
+      });
+    }
+
+    // M-2: `unknown` içinde SocketException → gerçek bağlantı kopması → NoInternet.
+    test('map_unknownWithSocketException_returnsNoInternetError', () {
+      final e = make(
+        DioExceptionType.unknown,
+        error: const SocketException('Connection failed'),
+      );
+      expect(mapper.map(e), isA<NoInternetError>());
+    });
+
+    // M-2: `unknown` içinde HandshakeException (SocketException ALT TÜRÜ DEĞİL) →
+    // güvenlik/sertifika sinyali → UnknownError'da kalır (raporlanır).
+    test('map_unknownWithHandshakeException_returnsUnknownError', () {
+      final e = make(
+        DioExceptionType.unknown,
+        error: const HandshakeException('cert rejected'),
+      );
+      expect(mapper.map(e), isA<UnknownError>());
+    });
+
+    // L-5: tip yok + status 400/403 → ServerError(status) (validation/feature-
+    // disabled için ayrı varyant yok; status fallback'ine düşer).
+    test('map_400WithoutType_returnsServerError400', () {
+      final e = make(DioExceptionType.badResponse, statusCode: 400);
+      expect((mapper.map(e) as ServerError).statusCode, 400);
+    });
+
+    test('map_403WithoutType_returnsServerError403', () {
+      final e = make(DioExceptionType.badResponse, statusCode: 403);
+      expect((mapper.map(e) as ServerError).statusCode, 403);
     });
   });
 }

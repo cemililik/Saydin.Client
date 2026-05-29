@@ -65,7 +65,9 @@ class OnboardingCubit extends Cubit<OnboardingStatus> {
     try {
       await _repository.completeOnboarding();
     } catch (e, st) {
-      await _reporter.report(e, st, context: 'onboarding_complete');
+      // L-4: raporu fire-and-forget yap — yavaş Sentry gönderimi kullanıcının
+      // uygulamaya girişini geciktirmesin (scenarios_repository_impl deseni).
+      unawaited(_reporter.report(e, st, context: 'onboarding_complete'));
     }
     if (isClosed) return;
     emit(OnboardingStatus.completed);
