@@ -343,7 +343,7 @@ jobs:
       #      → %10 staged rollout. Play Console'dan elle %25 → %50 → %100.
       - name: Upload to Play Store (RC → internal draft)
         if: needs.detect-channel.outputs.is_rc == 'true'
-        uses: r0adkll/upload-google-play@v1.1.3
+        uses: r0adkll/upload-google-play@v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.saydin.saydin
@@ -354,7 +354,7 @@ jobs:
 
       - name: Upload to Play Store (Production → staged 10%)
         if: needs.detect-channel.outputs.is_rc == 'false'
-        uses: r0adkll/upload-google-play@v1.1.3
+        uses: r0adkll/upload-google-play@v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.saydin.saydin
