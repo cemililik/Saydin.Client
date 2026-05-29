@@ -1,12 +1,17 @@
 import 'package:dio/dio.dart';
+import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/scenarios/data/models/saved_scenario_model.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/domain/repositories/scenarios_repository.dart';
 
 class ScenariosRepositoryImpl implements ScenariosRepository {
   final Dio _dio;
+  final ErrorReporter _reporter;
 
-  ScenariosRepositoryImpl(this._dio);
+  ScenariosRepositoryImpl(
+    this._dio, {
+    ErrorReporter reporter = const ErrorReporter(),
+  }) : _reporter = reporter;
 
   @override
   Future<List<SavedScenario>> getScenarios({String plan = 'free'}) async {
@@ -15,9 +20,18 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
       queryParameters: {'plan': plan},
     );
     final list = response.data ?? [];
-    return list
-        .map((e) => SavedScenarioModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    // Tek bozuk/eksik satır (örn. geçersiz tarih) tüm senaryo listesini
+    // düşürmesin: her satırı izole et, hatalıyı atla ve raporla. Kullanıcı
+    // diğer geçerli senaryolarını görmeye devam eder.
+    final scenarios = <SavedScenario>[];
+    for (final e in list) {
+      try {
+        scenarios.add(SavedScenarioModel.fromJson(e as Map<String, dynamic>));
+      } catch (err, st) {
+        await _reporter.report(err, st, context: 'get_scenarios_parse');
+      }
+    }
+    return scenarios;
   }
 
   @override

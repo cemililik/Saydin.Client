@@ -18,22 +18,30 @@ class SavedScenarioModel extends SavedScenario {
 
   factory SavedScenarioModel.fromJson(Map<String, dynamic> json) {
     return SavedScenarioModel(
-      id: json['id'] as String,
+      id: _requireString(json['id'], 'id'),
       type: _parseType(json['type'] as String?),
-      assetSymbol: json['assetSymbol'] as String,
-      assetDisplayName: json['assetDisplayName'] as String,
-      buyDate: _parseDate(json['buyDate'] as String),
-      sellDate: json['sellDate'] != null
-          ? _parseDate(json['sellDate'] as String)
-          : null,
+      assetSymbol: _requireString(json['assetSymbol'], 'assetSymbol'),
+      assetDisplayName: _requireString(
+        json['assetDisplayName'],
+        'assetDisplayName',
+      ),
+      buyDate: _parseDate(json['buyDate']),
+      sellDate: json['sellDate'] != null ? _parseDate(json['sellDate']) : null,
       amount: MoneyParser.requireDecimal(json['amount'], 'amount'),
-      amountType: json['amountType'] as String,
+      amountType: _requireString(json['amountType'], 'amountType'),
       label: json['label'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: _parseDate(json['createdAt']),
       extraData: json['extraData'] != null
           ? Map<String, dynamic>.from(json['extraData'] as Map)
           : null,
     );
+  }
+
+  /// Blind `as String` yerine tip-güvenli string okuma — yanlış tip için
+  /// temiz `FormatException` (raw TypeError değil). DcaResponseModel paterni.
+  static String _requireString(Object? value, String field) {
+    if (value is String) return value;
+    throw FormatException('saved scenario: $field string değil ($value)');
   }
 
   /// `ScenariosRepositoryImpl._typeToString` ile **simetrik** olmalı.
@@ -47,12 +55,23 @@ class SavedScenarioModel extends SavedScenario {
     _ => ScenarioType.whatIf,
   };
 
-  static DateTime _parseDate(String value) {
+  /// Tarih parse — `createdAt` (ISO timestamp) ve `buyDate/sellDate`
+  /// ("yyyy-MM-dd") biçimlerini güvenle ele alır. Önce `DateTime.tryParse`,
+  /// sonra parça-bazlı `int.tryParse` (uzunluk kontrollü). Geçersizde raw
+  /// RangeError/FormatException yerine açıklayıcı `FormatException`.
+  static DateTime _parseDate(Object? value) {
+    if (value is! String) {
+      throw FormatException('saved scenario: tarih string değil ($value)');
+    }
+    final iso = DateTime.tryParse(value);
+    if (iso != null) return iso;
     final parts = value.split('-');
-    return DateTime(
-      int.parse(parts[0]),
-      int.parse(parts[1]),
-      int.parse(parts[2]),
-    );
+    if (parts.length == 3) {
+      final y = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      final d = int.tryParse(parts[2]);
+      if (y != null && m != null && d != null) return DateTime(y, m, d);
+    }
+    throw FormatException('saved scenario: geçersiz tarih ($value)');
   }
 }
