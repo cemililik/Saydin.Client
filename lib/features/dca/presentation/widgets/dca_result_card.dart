@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 import 'package:saydin/features/dca/presentation/widgets/dca_chart.dart';
@@ -76,16 +77,9 @@ class _DcaResultCardState extends State<DcaResultCard>
     return NumberFormat('#,##0.########', 'tr_TR').format(value);
   }
 
-  String _formatDuration(AppLocalizations l10n) {
-    final days = result.endDate.difference(result.startDate).inDays.abs();
-    if (days < 30) return l10n.durationDays(days);
-    if (days < 365) return l10n.durationMonths(days ~/ 30);
-    final years = days ~/ 365;
-    final months = (days % 365) ~/ 30;
-    return months > 0
-        ? l10n.durationYearsMonths(years, months)
-        : l10n.durationYears(years);
-  }
+  // Ortak [DurationLabel]'a delege (F-07-20).
+  String _formatDuration(AppLocalizations l10n) =>
+      DurationLabel.format(l10n, result.startDate, result.endDate);
 
   @override
   Widget build(BuildContext context) {

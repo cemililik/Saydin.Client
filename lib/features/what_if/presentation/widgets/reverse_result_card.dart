@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
 import 'package:saydin/features/what_if/domain/entities/reverse_what_if_result.dart';
 import 'package:saydin/features/what_if/presentation/widgets/result_chart.dart';
@@ -117,17 +118,9 @@ class _ReverseResultCardState extends State<ReverseResultCard>
     );
   }
 
-  String _formatDuration(AppLocalizations l10n) {
-    final end = result.sellDate ?? DateTime.now();
-    final days = end.difference(result.buyDate).inDays.abs();
-    if (days < 30) return l10n.durationDays(days);
-    if (days < 365) return l10n.durationMonths(days ~/ 30);
-    final years = days ~/ 365;
-    final months = (days % 365) ~/ 30;
-    return months > 0
-        ? l10n.durationYearsMonths(years, months)
-        : l10n.durationYears(years);
-  }
+  // Ortak [DurationLabel]'a delege (F-07-20).
+  String _formatDuration(AppLocalizations l10n) =>
+      DurationLabel.format(l10n, result.buyDate, result.sellDate);
 
   @override
   Widget build(BuildContext context) {

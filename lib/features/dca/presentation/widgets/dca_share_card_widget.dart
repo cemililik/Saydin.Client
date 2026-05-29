@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
@@ -23,20 +24,12 @@ class DcaShareCardWidget extends StatelessWidget {
   );
   static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
 
+  // Ortak [DurationLabel]'a delege (F-07-20).
   static String _durationLabel(
     AppLocalizations l10n,
     DateTime start,
     DateTime end,
-  ) {
-    final months = (end.year - start.year) * 12 + end.month - start.month;
-    if (months < 1) return l10n.durationDays(end.difference(start).inDays);
-    if (months < 12) return l10n.durationMonths(months);
-    final years = months ~/ 12;
-    final rem = months % 12;
-    return rem > 0
-        ? l10n.durationYearsMonths(years, rem)
-        : l10n.durationYears(years);
-  }
+  ) => DurationLabel.format(l10n, start, end);
 
   @override
   Widget build(BuildContext context) {

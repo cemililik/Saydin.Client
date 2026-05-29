@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:saydin/core/constants/date_constants.dart';
 
 class DateInput extends StatefulWidget {
   final String label;
@@ -62,8 +63,11 @@ class _DateInputState extends State<DateInput> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveFirst = widget.firstDate ?? DateTime(2010);
-    final effectiveLast = widget.lastDate ?? DateTime.now();
+    final now = DateTime.now();
+    final effectiveFirst = widget.firstDate ?? DateConstants.earliestPriceDate;
+    // Date-only normalize: picker tarih bazlı, saat/tz bileşeni taşımasın.
+    final effectiveLast =
+        widget.lastDate ?? DateTime(now.year, now.month, now.day);
 
     return TextFormField(
       readOnly: true,
