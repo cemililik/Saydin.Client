@@ -1,4 +1,5 @@
 import 'package:saydin/features/config/domain/entities/app_config.dart';
+import 'package:saydin/features/config/domain/entities/subscription_tier.dart';
 
 class AppConfigModel extends AppConfig {
   const AppConfigModel({
@@ -15,7 +16,7 @@ class AppConfigModel extends AppConfig {
     // tipli alan throw etmek yerine default'a düşer.
     final f = _map(json['features']);
     return AppConfigModel(
-      tier: _str(json['tier'], 'free'),
+      tier: _tier(json['tier']),
       dailyCalculationLimit: _int(json['dailyCalculationLimit'], 20),
       maxSavedScenarios: _int(json['maxSavedScenarios'], 10),
       features: AppFeatureFlags(
@@ -28,7 +29,20 @@ class AppConfigModel extends AppConfig {
     );
   }
 
-  static String _str(Object? v, String d) => v is String ? v : d;
+  // Wire string ('free'/'premium') → enum. Backend kanonik-olmayan casing
+  // ("Premium"/"PREMIUM") gönderirse ödeme yapan kullanıcı sessizce premium'u
+  // kaybetmesin diye string küçük harfe indirgenip karşılaştırılır (L-4).
+  // Bilinmeyen/eksik/yanlış-tipli (non-String) değer güvenli varsayılan
+  // SubscriptionTier.free'e düşer (config asla uygulamayı bloklamaz — diğer
+  // alanlarla aynı defensive semantik; yön fail-closed: en kısıtlı tier).
+  static SubscriptionTier _tier(Object? v) {
+    final key = v is String ? v.toLowerCase() : v;
+    return SubscriptionTier.values.firstWhere(
+      (t) => t.name == key,
+      orElse: () => SubscriptionTier.free,
+    );
+  }
+
   // bool VEYA num (0/1) kabul: backend flag'i int gönderirse de doğru okunur
   // (örn. dca:0 → false). Böylece uzaktan özellik kapatma int gövdede de çalışır.
   static bool _bool(Object? v, bool d) =>

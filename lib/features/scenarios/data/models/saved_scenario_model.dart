@@ -69,19 +69,17 @@ class SavedScenarioModel extends SavedScenario {
   /// round-trip ile doğrulanır (DateTime.tryParse de "2020-02-30"u rollover
   /// edebildiği için ISO-only timestamp dışında ona güvenilmez). Geçersizde
   /// raw RangeError yerine açıklayıcı `FormatException`.
+  static final _dateOnlyPattern = RegExp(r'^\d{1,4}-\d{1,2}-\d{1,2}$');
+
   static DateTime _parseDate(Object? value) {
     if (value is! String) {
       throw FormatException('saved scenario: tarih string değil ($value)');
     }
-    // ISO timestamp (createdAt) — saat/tz içerir, tryParse uygun.
-    if (value.contains('T')) {
-      final ts = DateTime.tryParse(value);
-      if (ts != null) return ts;
-      throw FormatException('saved scenario: geçersiz timestamp ($value)');
-    }
-    // Date-only "yyyy-MM-dd": parça + aralık doğrulaması (rollover'ı yakala).
-    final parts = value.split('-');
-    if (parts.length == 3) {
+    // Salt "yyyy-MM-dd" (buyDate/sellDate): parça + aralık doğrulaması.
+    // DateTime.tryParse "2020-13-45"i sessizce kaydırabildiği için bu biçimde
+    // ona güvenmeyiz; round-trip ile rollover'ı yakalarız.
+    if (_dateOnlyPattern.hasMatch(value)) {
+      final parts = value.split('-');
       final y = int.tryParse(parts[0]);
       final m = int.tryParse(parts[1]);
       final d = int.tryParse(parts[2]);
@@ -89,7 +87,12 @@ class SavedScenarioModel extends SavedScenario {
         final dt = DateTime(y, m, d);
         if (dt.year == y && dt.month == m && dt.day == d) return dt;
       }
+      throw FormatException('saved scenario: geçersiz tarih ($value)');
     }
+    // Timestamp (createdAt) — 'T'- VEYA boşluk-ayraçlı ISO, offset/tz dahil.
+    // tryParse her ikisini de tolere eder (DateTime.parse uyumlu davranış).
+    final ts = DateTime.tryParse(value);
+    if (ts != null) return ts;
     throw FormatException('saved scenario: geçersiz tarih ($value)');
   }
 }

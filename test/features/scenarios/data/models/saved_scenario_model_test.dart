@@ -83,6 +83,27 @@ void main() {
       expect(m.type, ScenarioType.whatIf);
     });
 
+    test(
+      'createdAt boşluk-ayraçlı ISO ("2026-01-01 12:00:00") tolere edilir',
+      () {
+        // 'T' yerine boşluk kullanan backend'ler de kabul edilmeli (eski
+        // DateTime.parse davranışı korunur; sessizce listeden düşmesin).
+        final m = SavedScenarioModel.fromJson(
+          baseJson(createdAt: '2026-01-01 12:00:00'),
+        );
+        expect(m.createdAt.year, 2026);
+        expect(m.createdAt.month, 1);
+        expect(m.createdAt.day, 1);
+      },
+    );
+
+    test('createdAt T-ayraçlı ISO da tolere edilir', () {
+      final m = SavedScenarioModel.fromJson(
+        baseJson(createdAt: '2026-01-01T12:00:00Z'),
+      );
+      expect(m.createdAt.toUtc().year, 2026);
+    });
+
     test('bozuk createdAt → FormatException', () {
       expect(
         () => SavedScenarioModel.fromJson(baseJson(createdAt: 'not-a-date')),

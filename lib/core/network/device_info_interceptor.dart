@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:saydin/core/platform/platform_info.dart';
 
 /// Her istekte cihaz ve uygulama bilgisi header'larını ekler.
 /// Backend activity logging sistemi bu bilgileri kullanır.
@@ -18,9 +17,9 @@ class DeviceInfoInterceptor extends Interceptor {
   final String _osVersion;
   final String _appVersion;
 
-  DeviceInfoInterceptor(PackageInfo packageInfo)
-    : _os = Platform.operatingSystem,
-      _osVersion = minimizeOsVersion(Platform.operatingSystemVersion),
+  DeviceInfoInterceptor(PackageInfo packageInfo, PlatformInfo platform)
+    : _os = platform.operatingSystem,
+      _osVersion = minimizeOsVersion(platform.operatingSystemVersion),
       _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
   @override

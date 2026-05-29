@@ -1,22 +1,21 @@
 import 'package:decimal/decimal.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
-import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
-import 'package:saydin/features/what_if/domain/repositories/what_if_repository.dart';
+import 'package:saydin/features/portfolio/domain/repositories/portfolio_repository.dart';
 
-/// Tüm portföy kalemlerini paralel hesaplar, toplam sonucu döner.
+/// Portföy kalemlerinin kalem-başına sonucunu [PortfolioRepository]'den alır
+/// ve toplam sonucu (Decimal aritmetiğiyle) hesaplar.
 ///
-/// Per-item try/catch ile fail-fast davranışı önlenir: bir kalem (örn
-/// `BIST/THYAO` backend'de geçici 503) çökerse, geri kalan kalemler
-/// hesaplanmaya devam eder ve UI partial result gösterir. Tüm kalemler
-/// çökerse [PortfolioCalculationFailure] fırlatılır.
+/// Per-item hesaplama + hata izolasyonu **repository katmanına** taşındı
+/// (F-09-01): bir kalem çökerse repo onu `calculation: null` ile döner, use
+/// case bu kalemleri `failedItems`'a düşürüp partial result üretir. Tüm
+/// kalemler çökerse [PortfolioCalculationFailure] fırlatılır.
 ///
 /// **Decimal aritmetiği:** Para alanları (initial, final, P/L) `Decimal`
-/// üzerinden toplanır — IEEE-754 toplama hatası (örn. `0.1 + 0.2`)
-/// elimine. Yüzde alanları `double` (display-only, aggregasyon precision'a
-/// hassas değil).
+/// üzerinden toplanır — IEEE-754 toplama hatası (örn. `0.1 + 0.2`) elimine.
+/// Yüzde alanları `double` (display-only, aggregasyon precision'a hassas değil).
 class CalculatePortfolio {
-  final WhatIfRepository _repository;
+  final PortfolioRepository _repository;
 
   const CalculatePortfolio(this._repository);
 
@@ -28,31 +27,16 @@ class CalculatePortfolio {
   }) async {
     assert(items.isNotEmpty, 'Portföyde en az 1 kalem olmalı');
 
-    final outcomes = await Future.wait(
-      items.map((item) async {
-        try {
-          final r = await _repository.calculate(
-            assetSymbol: item.assetSymbol,
-            buyDate: buyDate,
-            sellDate: sellDate,
-            amount: item.amount,
-            amountType: item.amountType,
-            includeInflation: includeInflation,
-          );
-          return _ItemOutcome(item: item, result: r);
-        } catch (_) {
-          // İlk hatada `rethrow` etsek `Future.wait` tüm kalemleri reddederdi.
-          // Per-item ayrı outcome ile partial-success akışı korunur. Hata
-          // detayı caller'a BLoC level'da Sentry'ye gider (use-case katmanı
-          // bağımlılık yaymaz).
-          return _ItemOutcome(item: item);
-        }
-      }),
+    final outcomes = await _repository.calculateItems(
+      items: items,
+      buyDate: buyDate,
+      sellDate: sellDate,
+      includeInflation: includeInflation,
     );
 
-    final successful = outcomes.where((o) => o.result != null).toList();
+    final successful = outcomes.where((o) => o.isSuccess).toList();
     final failedItems = outcomes
-        .where((o) => o.result == null)
+        .where((o) => !o.isSuccess)
         .map((o) => o.item)
         .toList(growable: false);
 
@@ -62,7 +46,11 @@ class CalculatePortfolio {
       );
     }
 
-    final results = successful.map((o) => o.result!).toList(growable: false);
+    final results = successful
+        // `!` güvenli: PortfolioItemOutcome.isSuccess => calculation != null,
+        // successful zaten isSuccess ile filtrelendi.
+        .map((o) => o.calculation!)
+        .toList(growable: false);
     final keptItems = successful.map((o) => o.item).toList(growable: false);
 
     final totalInitial = results.fold<Decimal>(
@@ -86,7 +74,7 @@ class CalculatePortfolio {
           : 0.0;
       return PortfolioItemResult(
         item: keptItems[i],
-        result: results[i],
+        calculation: results[i],
         sharePercent: share,
       );
     });
@@ -159,11 +147,4 @@ class PortfolioCalculationFailure implements Exception {
 
   @override
   String toString() => 'PortfolioCalculationFailure: $message';
-}
-
-class _ItemOutcome {
-  final PortfolioItem item;
-  final WhatIfResult? result;
-
-  const _ItemOutcome({required this.item, this.result});
 }

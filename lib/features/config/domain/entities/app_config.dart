@@ -1,7 +1,8 @@
 import 'package:equatable/equatable.dart';
+import 'package:saydin/features/config/domain/entities/subscription_tier.dart';
 
 class AppConfig extends Equatable {
-  final String tier;
+  final SubscriptionTier tier;
 
   /// 0 = sınırsız
   final int dailyCalculationLimit;
@@ -18,13 +19,13 @@ class AppConfig extends Equatable {
     required this.features,
   });
 
-  bool get isPremium => tier == 'premium';
+  bool get isPremium => tier == SubscriptionTier.premium;
   bool get isUnlimitedCalculations => dailyCalculationLimit == 0;
   bool get isUnlimitedScenarios => maxSavedScenarios == 0;
 
   /// Tüm özellikler açık, limit yok — backend yanıt vermeden önce kullanılacak varsayılan.
   static const defaultConfig = AppConfig(
-    tier: 'free',
+    tier: SubscriptionTier.free,
     dailyCalculationLimit: 20,
     maxSavedScenarios: 10,
     features: AppFeatureFlags(

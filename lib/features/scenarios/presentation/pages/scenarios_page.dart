@@ -84,7 +84,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
   @override
   void initState() {
     super.initState();
-    final plan = context.read<AppConfigCubit>().state.tier;
+    final plan = context.read<AppConfigCubit>().state.tier.name;
     context.read<ScenariosBloc>().add(ScenariosRequested(plan: plan));
   }
 
@@ -169,7 +169,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              final plan = context.read<AppConfigCubit>().state.tier;
+              final plan = context.read<AppConfigCubit>().state.tier.name;
               context.read<ScenariosBloc>().add(ScenariosRequested(plan: plan));
             },
             child: ListView.separated(
