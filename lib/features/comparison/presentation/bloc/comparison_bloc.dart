@@ -65,7 +65,9 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
       final assets = await _getAssets();
       emit(ComparisonAssetsLoaded(assets: assets));
     } on AppError catch (error, st) {
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'comparison_get_assets');
       }
       emit(
@@ -206,7 +208,9 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
       );
     } on AppError catch (error, st) {
       if (requestSeq != _requestSeq) return;
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'comparison_calculate');
       }
       emit(

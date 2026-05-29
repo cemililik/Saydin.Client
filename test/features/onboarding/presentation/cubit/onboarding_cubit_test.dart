@@ -1,11 +1,14 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
 import 'package:saydin/features/onboarding/domain/repositories/onboarding_repository.dart';
 import 'package:saydin/features/onboarding/presentation/cubit/onboarding_cubit.dart';
 
 class _MockRepository extends Mock implements OnboardingRepository {}
+
+class _MockErrorReporter extends Mock implements ErrorReporter {}
 
 /// F-12-09: onboarding durumu ad-hoc `bool? + setState`'ten cubit'e taşındı.
 /// Bu testler taşınan yaşam-döngüsü mantığını kapsar: load/complete/restart,
@@ -13,10 +16,17 @@ class _MockRepository extends Mock implements OnboardingRepository {}
 void main() {
   late _MockRepository repository;
   late AppLifecycleEvents lifecycleEvents;
+  late _MockErrorReporter reporter;
+
+  setUpAll(() => registerFallbackValue(StackTrace.empty));
 
   setUp(() {
     repository = _MockRepository();
     lifecycleEvents = AppLifecycleEvents();
+    reporter = _MockErrorReporter();
+    when(
+      () => reporter.report(any(), any(), context: any(named: 'context')),
+    ).thenAnswer((_) async {});
   });
 
   tearDown(() async {
@@ -59,6 +69,23 @@ void main() {
     act: (cubit) => cubit.complete(),
     expect: () => [OnboardingStatus.completed],
     verify: (_) => verify(() => repository.completeOnboarding()).called(1),
+  );
+
+  // F-12-18 / F-05-28: kalıcı kayıt çökse bile kullanıcı içeri girebilmeli
+  // (completed emit edilir) ve hata raporlanmalı — kullanıcı onboarding'te
+  // kilitlenmez.
+  blocTest<OnboardingCubit, OnboardingStatus>(
+    'complete_storageFails_stillEmitsCompleted_andReports',
+    setUp: () => when(
+      () => repository.completeOnboarding(),
+    ).thenThrow(Exception('disk full')),
+    build: () =>
+        OnboardingCubit(repository, lifecycleEvents, reporter: reporter),
+    act: (cubit) => cubit.complete(),
+    expect: () => [OnboardingStatus.completed],
+    verify: (_) => verify(
+      () => reporter.report(any(), any(), context: 'onboarding_complete'),
+    ).called(1),
   );
 
   blocTest<OnboardingCubit, OnboardingStatus>(

@@ -7,11 +7,30 @@ import 'package:path_provider/path_provider.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:share_plus/share_plus.dart';
 
+/// Paylaşım kartı render edilemediğinde fırlatılır (F-05-22). Eskiden bu
+/// durumlar sessizce `return` ediliyordu: kullanıcı "Paylaş"a basıyor, hiçbir
+/// şey olmuyor ve neden olduğu hiçbir yere yazılmıyordu. Artık tipli hata
+/// fırlatılır; çağıran katman kullanıcıya snackbar gösterir ve Sentry'ye
+/// raporlar.
+class ShareCardException implements Exception {
+  /// Makine-okunur sebep (PII içermez — Sentry'ye güvenle gider):
+  /// `boundary_null` (RepaintBoundary context'i yok) veya
+  /// `encode_failed` (PNG byte kodlaması başarısız).
+  final String reason;
+  const ShareCardException(this.reason);
+
+  @override
+  String toString() => 'ShareCardException($reason)';
+}
+
 /// [RepaintBoundary] ile işaretlenmiş widget'ı PNG olarak yakalar ve
 /// platform paylaşım sayfasını açar.
 ///
 /// [shareText]: WhatsApp / Twitter gibi uygulamalarda görünecek metin.
 /// Belirtilmezse varsayılan marka metni kullanılır.
+///
+/// Render başarısız olursa [ShareCardException] fırlatır — çağıran katman
+/// yakalayıp kullanıcıya geri bildirir ve raporlar.
 class ShareCardRenderer {
   ShareCardRenderer._();
 
@@ -28,7 +47,11 @@ class ShareCardRenderer {
   }) async {
     final boundary =
         key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null) return;
+    // F-05-22: sessiz `return` yerine tipli hata — kullanıcı "Paylaş"a basıp
+    // hiçbir şey olmaması + sebebin hiçbir yere yazılmaması durumunu kır.
+    if (boundary == null) {
+      throw const ShareCardException('boundary_null');
+    }
 
     // Resolve l10n before async gap.
     final l10n = context.l10n;
@@ -40,7 +63,9 @@ class ShareCardRenderer {
 
     final image = await boundary.toImage(pixelRatio: pixelRatio);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    if (byteData == null) return;
+    if (byteData == null) {
+      throw const ShareCardException('encode_failed');
+    }
 
     final bytes = byteData.buffer.asUint8List();
     final tempDir = await getTemporaryDirectory();

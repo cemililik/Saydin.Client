@@ -461,6 +461,13 @@ jobs:
           VERSION: ${{ needs.detect-channel.outputs.version_name }}
           BUILD_NUMBER: ${{ needs.detect-channel.outputs.build_number }}
         run: |
+          # F-02-07: hata toleransı sertleştirildi — herhangi bir komut (pipe
+          # dahil) başarısız olursa adım durur; tanımsız değişken kullanımı hata
+          # verir; IFS yalnızca newline/tab (güvenli word-split). Aşağıda
+          # bilinçli olarak başarısızlığa toleranslı komutlar `|| true` taşır.
+          set -euo pipefail
+          IFS=$'\n\t'
+
           # ── 1. JWT token oluştur (App Store Connect API) ───────────────
           HEADER=$(printf '{"alg":"ES256","kid":"%s","typ":"JWT"}' "$KEY_ID" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
           NOW=$(date +%s)
@@ -483,25 +490,35 @@ jobs:
           # filter[xxx] query param'lari kullaniyor; curl varsayilan olarak
           # URL'lerdeki [...] ifadesini URL globbing olarak parse ediyor.
           BUNDLE_ID="${IOS_BUNDLE_ID}"
+          # Geçici ağ/parse hatasında `|| true` ile boşa düş → aşağıdaki açık
+          # kontrol temiz bir hata mesajı üretir (pipefail aborte etmesin).
           APP_RESPONSE=$(curl -sg \
             -H "Authorization: Bearer $JWT" \
-            "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}")
-          APP_ID=$(echo "$APP_RESPONSE" | jq -r '.data[0].id // empty')
+            "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}") || true
+          APP_ID=$(printf '%s' "$APP_RESPONSE" | jq -r '.data[0].id // empty' 2>/dev/null || true)
 
           if [ -z "$APP_ID" ]; then
-            echo "⚠️  App bulunamadı (bundleId=${BUNDLE_ID}), release notes atlanıyor"
-            exit 0
+            # F-02-04: sessiz `exit 0` yerine fail-loud. IPA TestFlight'a
+            # yüklendi ama release notes eklenemiyorsa bu gerçek bir sorundur —
+            # pipeline kırmızı olmalı. `::error::` GitHub Actions'ın yerleşik
+            # bildirimini tetikler (Slack için ileride SLACK_WEBHOOK secret'ı
+            # eklenip burada bir notify adımı koşullanabilir).
+            echo "::error::App bulunamadı (bundleId=${BUNDLE_ID}) — TestFlight release notes eklenemedi."
+            exit 1
           fi
 
           echo "⏳ Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te aranıyor (app=$APP_ID)..."
 
+          # `set -u` güvenliği için döngü öncesi başlat (döngü hiç dönmese bile).
+          BUILD_ID=""
+          PROCESSING=""
           for i in $(seq 1 30); do
             BUILDS=$(curl -sg \
               -H "Authorization: Bearer $JWT" \
-              "https://api.appstoreconnect.apple.com/v1/builds?filter[version]=${BUILD_NUMBER}&filter[app]=${APP_ID}&limit=1")
+              "https://api.appstoreconnect.apple.com/v1/builds?filter[version]=${BUILD_NUMBER}&filter[app]=${APP_ID}&limit=1") || true
 
-            BUILD_ID=$(echo "$BUILDS" | jq -r '.data[0].id // empty')
-            PROCESSING=$(echo "$BUILDS" | jq -r '.data[0].attributes.processingState // empty')
+            BUILD_ID=$(printf '%s' "$BUILDS" | jq -r '.data[0].id // empty' 2>/dev/null || true)
+            PROCESSING=$(printf '%s' "$BUILDS" | jq -r '.data[0].attributes.processingState // empty' 2>/dev/null || true)
 
             if [ -n "$BUILD_ID" ] && [ "$PROCESSING" = "VALID" ]; then
               echo "✅ Build bulundu: $BUILD_ID"
@@ -511,16 +528,19 @@ jobs:
             sleep 30
           done
 
-          if [ -z "$BUILD_ID" ]; then
-            echo "⚠️  Build bulunamadı, release notes atlanıyor"
-            exit 0
+          if [ -z "${BUILD_ID}" ]; then
+            # F-02-04: build App Store Connect'te işlenmediyse release notes
+            # eklenemez → sessiz `exit 0` yerine fail-loud (IPA yüklendi ama
+            # notlar elle eklenmeli).
+            echo "::error::Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te bulunamadı (30 deneme) — TestFlight release notes eklenemedi; notları elle ekleyin."
+            exit 1
           fi
 
           LOCALIZATIONS=$(curl -s \
             -H "Authorization: Bearer $JWT" \
-            "https://api.appstoreconnect.apple.com/v1/builds/${BUILD_ID}/betaBuildLocalizations")
+            "https://api.appstoreconnect.apple.com/v1/builds/${BUILD_ID}/betaBuildLocalizations") || true
 
-          TR_ID=$(echo "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="tr") | .id // empty')
+          TR_ID=$(printf '%s' "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="tr") | .id // empty' 2>/dev/null || true)
           if [ -n "$TR_ID" ]; then
             curl -s -X PATCH \
               -H "Authorization: Bearer $JWT" \
@@ -535,7 +555,7 @@ jobs:
               -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"${BUILD_ID}\"}}},\"attributes\":{\"locale\":\"tr\",\"whatsNew\":$(echo "$NOTES_TR" | jq -Rs .)}}}"
           fi
 
-          EN_ID=$(echo "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="en-US") | .id // empty')
+          EN_ID=$(printf '%s' "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="en-US") | .id // empty' 2>/dev/null || true)
           if [ -n "$EN_ID" ]; then
             curl -s -X PATCH \
               -H "Authorization: Bearer $JWT" \

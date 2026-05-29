@@ -107,6 +107,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorNoInternet => 'No internet connection.';
 
   @override
+  String get errorAssetNotFound => 'This asset is no longer available.';
+
+  @override
+  String get errorMalformed =>
+      'Received an unexpected response from the server. Please try again.';
+
+  @override
   String get retry => 'Retry';
 
   @override
@@ -295,6 +302,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sharingInProgress => 'Preparing...';
+
+  @override
+  String get shareError => 'Couldn\'t create the share card. Please try again.';
 
   @override
   String get tabPortfolio => 'Portfolio';
@@ -668,6 +678,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dcaTitle => 'DCA Simulation';
+
+  @override
+  String get dcaNoAssets => 'No assets available right now.';
 
   @override
   String get dcaStartDate => 'Start Date';

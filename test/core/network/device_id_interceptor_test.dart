@@ -82,6 +82,51 @@ void main() {
       expect(options.headers['X-Device-ID'], isNotEmpty);
     },
   );
+
+  // F-05-14 / F-14-11: write çökerse üretilen ID atılmaz; aynı oturumda
+  // (sonraki isteklerde) aynı ID kullanılır.
+  test('write hatasında üretilen ID korunur ve sabit kalır', () async {
+    when(
+      () => storage.read(key: any(named: 'key')),
+    ).thenAnswer((_) async => null);
+    when(
+      () => storage.write(
+        key: any(named: 'key'),
+        value: any(named: 'value'),
+      ),
+    ).thenThrow(Exception('keystore unavailable'));
+
+    final first = RequestOptions(path: '/v1/a');
+    await interceptor.onRequest(first, _CapturingHandler());
+    final second = RequestOptions(path: '/v1/b');
+    await interceptor.onRequest(second, _CapturingHandler());
+
+    final id = first.headers['X-Device-ID'] as String;
+    expect(id, isNotEmpty);
+    expect(
+      second.headers['X-Device-ID'],
+      id,
+      reason: 'Ephemeral ID sabit kalmalı',
+    );
+  });
+
+  // F-05-14 / F-14-11: storage tamamen erişilemezken paralel ilk istekler
+  // AYNI ephemeral ID'yi almalı (in-flight tekilleştirme) — divergence yok.
+  test('read hatasında paralel istekler aynı ephemeral ID alır', () async {
+    when(
+      () => storage.read(key: any(named: 'key')),
+    ).thenThrow(Exception('keystore unavailable'));
+
+    final a = RequestOptions(path: '/v1/a');
+    final b = RequestOptions(path: '/v1/b');
+    await Future.wait([
+      interceptor.onRequest(a, _CapturingHandler()),
+      interceptor.onRequest(b, _CapturingHandler()),
+    ]);
+
+    expect(a.headers['X-Device-ID'], isNotEmpty);
+    expect(a.headers['X-Device-ID'], b.headers['X-Device-ID']);
+  });
 }
 
 class _CapturingHandler extends RequestInterceptorHandler {}

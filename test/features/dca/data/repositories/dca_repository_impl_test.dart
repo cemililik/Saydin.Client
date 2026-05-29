@@ -76,15 +76,11 @@ void main() {
       expect(result.currentValueTry, Decimal.parse('15000.0'));
     });
 
-    test('calculate_nullBody_throwsServerError', () async {
+    test('calculate_nullBody_throwsMalformedResponse', () async {
       stubPost(okResponse(null));
 
-      await expectLater(
-        calc(),
-        throwsA(
-          isA<ServerError>().having((e) => e.statusCode, 'statusCode', 200),
-        ),
-      );
+      // F-07-08: 2xx + boş gövde → MalformedResponseError.
+      await expectLater(calc(), throwsA(isA<MalformedResponseError>()));
     });
 
     test('calculate_connectionError_throwsNoInternet', () async {

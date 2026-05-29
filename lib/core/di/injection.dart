@@ -54,8 +54,11 @@ import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
 final sl = GetIt.instance;
 
 Future<void> configureDependencies() async {
-  // PackageInfo (async — uygulama başlangıcında bir kez çözümlenir)
+  // PackageInfo (async — uygulama başlangıcında bir kez çözümlenir).
+  // Singleton olarak kaydedilir: hem network katmanı hem de Sentry cihaz
+  // scope'u (F-05-07) aynı instance'ı paylaşır.
   final packageInfo = await PackageInfo.fromPlatform();
+  sl.registerSingleton<PackageInfo>(packageInfo);
 
   // Platform & locale soyutlamaları — network katmanı dart:io/global state'e
   // sızmasın diye DI ile enjekte edilir (F-05-06, F-12-17). Tek instance:
@@ -90,14 +93,16 @@ Future<void> configureDependencies() async {
     () => OnboardingRepositoryImpl(SharedPreferencesAsync()),
   );
   sl.registerLazySingleton(
-    () => OnboardingCubit(sl(), sl<AppLifecycleEvents>()),
+    () => OnboardingCubit(sl(), sl<AppLifecycleEvents>(), reporter: sl()),
   );
 
   // Settings
   sl.registerLazySingleton<SettingsRepository>(
     () => SettingsRepositoryImpl(SharedPreferencesAsync()),
   );
-  sl.registerLazySingleton(() => SettingsCubit(sl(), sl<LocaleProvider>()));
+  sl.registerLazySingleton(
+    () => SettingsCubit(sl(), sl<LocaleProvider>(), reporter: sl()),
+  );
 
   // Legal — statik içerik, network çağrısı yok
   sl.registerLazySingleton<LegalRepository>(() => const LegalRepositoryImpl());
@@ -123,13 +128,13 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<FavoritesRepository>(
     () => FavoritesRepositoryImpl(SharedPreferencesAsync()),
   );
-  sl.registerLazySingleton(() => FavoritesCubit(sl()));
+  sl.registerLazySingleton(() => FavoritesCubit(sl(), reporter: sl()));
 
   // App Config
   sl.registerLazySingleton<AppConfigRepository>(
     () => AppConfigRepositoryImpl(sl<ApiClient>().dio),
   );
-  sl.registerLazySingleton(() => AppConfigCubit(sl()));
+  sl.registerLazySingleton(() => AppConfigCubit(sl(), reporter: sl()));
 
   // Repositories — DioErrorMapper repo katmanına enjekte edilir; BLoC'lar
   // yalnızca AppError görür (F-07-02/F-08-17/F-10-12; Dio sızıntısı kapatıldı).

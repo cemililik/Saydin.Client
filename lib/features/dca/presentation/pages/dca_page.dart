@@ -105,10 +105,12 @@ class _DcaPageState extends State<DcaPage> {
   String _errorMessage(AppError error, AppLocalizations l10n) =>
       switch (error) {
         PriceNotFoundError() => l10n.errorPriceNotFound,
+        AssetNotFoundError() => l10n.errorAssetNotFound,
         DailyLimitError() => l10n.errorDailyLimit,
         ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
         NoInternetError() => l10n.errorNoInternet,
         ServerError() => l10n.errorServer,
+        MalformedResponseError() => l10n.errorMalformed,
         UnknownError() => l10n.errorGeneric,
       };
 
@@ -158,6 +160,14 @@ class _DcaPageState extends State<DcaPage> {
         builder: (context, state) {
           if (state is DcaAssetsLoading) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          // F-08-10: boş varlık listesi → açık boş-durum + tekrar dene.
+          if (state is DcaEmpty) {
+            return _DcaEmptyState(
+              onRetry: () =>
+                  context.read<DcaBloc>().add(const DcaAssetsRequested()),
+            );
           }
 
           final assets = switch (state) {
@@ -412,6 +422,49 @@ class _DcaPageState extends State<DcaPage> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// DCA varlık listesi boş döndüğünde gösterilen boş-durum (F-08-10):
+/// semantic ikon + açıklama + tekrar dene. Renkler tema-aware.
+class _DcaEmptyState extends StatelessWidget {
+  const _DcaEmptyState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 48,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.dcaNoAssets,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.retry),
+            ),
+          ],
+        ),
       ),
     );
   }

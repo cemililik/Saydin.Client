@@ -40,9 +40,10 @@ class DcaRepositoryImpl implements DcaRepository {
         },
       );
       final data = response.data;
-      // 200 + boş gövde → ServerError (hardcoded TR FormatException yerine).
+      // 2xx + boş gövde → MalformedResponseError (F-07-08; tip-güvenli, "başarı
+      // statüsü ama eksik gövde" anlamı `ServerError`'dan ayrı taşınır).
       if (data == null) {
-        throw ServerError(statusCode: response.statusCode);
+        throw const MalformedResponseError();
       }
       return DcaResponseModel.fromJson(data);
     } on DioException catch (e) {

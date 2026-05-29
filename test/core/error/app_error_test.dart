@@ -34,5 +34,21 @@ void main() {
       final error = UnknownError(cause: cause);
       expect(error.cause, equals(cause));
     });
+
+    test('AssetNotFoundError_created_isAppError', () {
+      const error = AssetNotFoundError();
+      expect(error, isA<AppError>());
+    });
+
+    test('MalformedResponseError_created_isAppError', () {
+      const error = MalformedResponseError();
+      expect(error, isA<AppError>());
+    });
+
+    test('MalformedResponseError_withCause_carriesCause', () {
+      final cause = Exception('bad body');
+      final error = MalformedResponseError(cause: cause);
+      expect(error.cause, equals(cause));
+    });
   });
 }

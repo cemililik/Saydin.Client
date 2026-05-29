@@ -131,15 +131,11 @@ void main() {
       expect(result.finalValueTry, Decimal.parse('14285.71'));
     });
 
-    test('calculate_nullBody_throwsServerError', () async {
+    test('calculate_nullBody_throwsMalformedResponse', () async {
       stubPost(okResponse(null));
 
-      await expectLater(
-        calc(),
-        throwsA(
-          isA<ServerError>().having((e) => e.statusCode, 'statusCode', 200),
-        ),
-      );
+      // F-07-08: 2xx + boş gövde → MalformedResponseError (ServerError(200) değil).
+      await expectLater(calc(), throwsA(isA<MalformedResponseError>()));
     });
 
     test('calculate_connectionError_throwsNoInternet', () async {
@@ -187,10 +183,10 @@ void main() {
       targetAmountType: 'try',
     );
 
-    test('calculateReverse_nullBody_throwsServerError', () async {
+    test('calculateReverse_nullBody_throwsMalformedResponse', () async {
       stubPost(okResponse(null));
 
-      expect(reverse(), throwsA(isA<ServerError>()));
+      expect(reverse(), throwsA(isA<MalformedResponseError>()));
     });
 
     test('calculateReverse_connectionError_throwsNoInternet', () async {

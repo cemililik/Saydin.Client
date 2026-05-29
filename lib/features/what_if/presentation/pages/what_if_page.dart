@@ -113,10 +113,12 @@ class _WhatIfPageState extends State<WhatIfPage> {
   String _errorMessage(AppError error, AppLocalizations l10n) =>
       switch (error) {
         PriceNotFoundError() => l10n.errorPriceNotFound,
+        AssetNotFoundError() => l10n.errorAssetNotFound,
         DailyLimitError() => l10n.errorDailyLimit,
         ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
         NoInternetError() => l10n.errorNoInternet,
         ServerError() => l10n.errorServer,
+        MalformedResponseError() => l10n.errorMalformed,
         UnknownError() => l10n.errorGeneric,
       };
 

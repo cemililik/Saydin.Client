@@ -194,9 +194,11 @@ class _PortfolioPageState extends State<PortfolioPage> {
   String _errorMessage(AppError error, AppLocalizations l10n) =>
       switch (error) {
         PriceNotFoundError() => l10n.errorPriceNotFound,
+        AssetNotFoundError() => l10n.errorAssetNotFound,
         DailyLimitError() => l10n.errorDailyLimit,
         NoInternetError() => l10n.errorNoInternet,
         ServerError() => l10n.errorServer,
+        MalformedResponseError() => l10n.errorMalformed,
         _ => l10n.errorGeneric,
       };
 

@@ -1,46 +1,85 @@
 import 'package:dio/dio.dart';
 import 'app_error.dart';
 
-/// Dio exception'larını domain AppError'a dönüştürür.
+/// Dio exception'larını domain [AppError]'a dönüştürür.
 /// BLoC ve repository katmanları Dio'yu doğrudan bilmez.
+///
+/// **Backend sözleşmesi (RFC-7807 ProblemDetails).** Saydın API hataları
+/// `application/problem+json` döndürür ve ayırt edici alan `type` URI'sidir
+/// (örn. `https://saydin.app/errors/daily-limit-exceeded`). Backend'deki
+/// `IExceptionHandler` zinciri her domain exception için sabit bir `type` +
+/// HTTP status üretir. Bu yüzden mapper **önce `type`'a**, yoksa HTTP status'e
+/// bakar (F-05-11). `api-contract.md`'deki eski `{ "error": "CODE" }` zarfı
+/// güncel değildir — kaynak doğrusu backend `*ExceptionHandler.cs` dosyalarıdır.
+///
+/// **Extensions düzleştirme.** ASP.NET `ProblemDetails.Extensions`'ı
+/// `[JsonExtensionData]` ile **üst seviyeye düzleştirerek** serialize eder:
+/// `{ "type": ..., "status": 429, "limit": 10, "resetAt": "..." }` — nested
+/// bir `"extensions"` objesi olarak DEĞİL. Eski mapper yalnızca nested okuyup
+/// gerçek `resetAt`/`limit`'i kaçırıyordu; `resetAt` yalnızca fallback değeri
+/// (yarın UTC gece yarısı) backend'in hesabıyla birebir aynı olduğu için bu
+/// hata gözden kaçmıştı. Burada hem düz hem nested okunur (savunmacı).
 class DioErrorMapper {
   const DioErrorMapper();
 
+  static const _errorBase = 'https://saydin.app/errors/';
+
   AppError map(DioException e) {
-    if (e.type == DioExceptionType.connectionError ||
-        e.type == DioExceptionType.unknown) {
+    // ── Ağ seviyesi (HTTP yanıtı yok) ─────────────────────────────────────
+    if (e.type == DioExceptionType.connectionError) {
       return const NoInternetError();
     }
+    if (e.type == DioExceptionType.unknown) {
+      // F-05-10: `unknown` "internet yok" DEĞİL — istek sırasında oluşan
+      // beklenmeyen bir hatadır (cast/parse/iptal/sertifika). NoInternet'e
+      // eşlemek kullanıcıyı yanıltır ("bağlantınızı kontrol edin" derken sorun
+      // bağlantı değildir) ve gerçek hatayı observability'den gizler.
+      return UnknownError(cause: e.error ?? e);
+    }
 
+    final data = _asMap(e.response?.data);
     final status = e.response?.statusCode;
 
-    if (status == 404) return const PriceNotFoundError();
-
-    // Backend/proxy bazen non-Map gövde döndürür (HTML hata sayfası, düz
-    // string, List). `dynamic` üzerinde `[]` erişimi o durumda
-    // NoSuchMethodError fırlatır ve `on DioException` handler'ını atlatırdı.
-    // Önce Map'e daralt; değilse alan okumaları atlanır, ServerError'a düşülür.
-    final data = _asMap(e.response?.data);
-    final ext = _asMap(data?['extensions']);
-
-    if (status == 422) {
-      final type = data?['type'];
-      if (type == 'https://saydin.app/errors/scenario-limit-exceeded') {
-        final limitRaw = ext?['limit'];
-        final limit = limitRaw is num ? limitRaw.toInt() : 5;
-        return ScenarioLimitError(limit: limit);
+    // ── RFC-7807 `type` URI birincil ayraç ────────────────────────────────
+    final type = data?['type'];
+    if (type is String && type.startsWith(_errorBase)) {
+      switch (type.substring(_errorBase.length)) {
+        case 'price-not-found':
+          return const PriceNotFoundError();
+        case 'asset-not-found':
+          return const AssetNotFoundError();
+        case 'scenario-limit-exceeded':
+          return ScenarioLimitError(limit: _intExtension(data, 'limit') ?? 5);
+        case 'daily-limit-exceeded':
+          return DailyLimitError(resetAt: _resetAt(data));
       }
+      // Diğer tanınan tipler (validation/feature-disabled/external-api/
+      // internal-error) için ayrı bir AppError varyantı yok → status fallback
+      // ile ServerError'a düşerler. (feature-disabled paywall'ı Faz 4.)
     }
 
-    if (status == 429) {
-      final resetAtRaw = ext?['resetAt'];
-      final resetAt = resetAtRaw is String
-          ? DateTime.tryParse(resetAtRaw) ?? _tomorrowMidnight()
-          : _tomorrowMidnight();
-      return DailyLimitError(resetAt: resetAt);
-    }
+    // ── `type` yok/tanınmıyor → HTTP status (savunma + eski sözleşme) ──────
+    if (status == 404) return const PriceNotFoundError();
+    if (status == 429) return DailyLimitError(resetAt: _resetAt(data));
 
     return ServerError(statusCode: status);
+  }
+
+  /// Limit alanını önce düz (`data['limit']`), sonra nested
+  /// (`data['extensions']['limit']`) konumdan okur; sayı değilse `null`.
+  static int? _intExtension(Map<String, dynamic>? data, String key) {
+    final raw = data?[key] ?? _asMap(data?['extensions'])?[key];
+    return raw is num ? raw.toInt() : null;
+  }
+
+  /// `resetAt`'i düz/nested okuyup ISO-8601 (offset'li `O` formatı dahil)
+  /// parse eder; yoksa yarın UTC gece yarısına düşer.
+  static DateTime _resetAt(Map<String, dynamic>? data) {
+    final raw = data?['resetAt'] ?? _asMap(data?['extensions'])?['resetAt'];
+    if (raw is String) {
+      return DateTime.tryParse(raw) ?? _tomorrowMidnight();
+    }
+    return _tomorrowMidnight();
   }
 
   /// `dynamic` gövdeyi güvenle `Map<String, dynamic>`'e daraltır; Map değilse

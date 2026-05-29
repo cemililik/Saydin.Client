@@ -62,7 +62,9 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       final assets = await _getAssets();
       emit(WhatIfAssetsLoaded(assets, formInput: _formInput));
     } on AppError catch (error, st) {
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'get_assets');
       }
       emit(
@@ -252,7 +254,9 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
         ),
       );
     } on AppError catch (error, st) {
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'calculate_what_if');
       }
       emit(
@@ -304,7 +308,9 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
         ),
       );
     } on AppError catch (error, st) {
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'reverse_calculate_what_if');
       }
       emit(

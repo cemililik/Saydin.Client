@@ -49,6 +49,26 @@ void main() {
     currentUnitPrice: Decimal.fromInt(2),
   );
 
+  // F-08-10: boş varlık listesi DcaEmpty üretir (DcaAssetsLoaded([]) değil) —
+  // sayfa açık boş-durum gösterir, çıkmaz boş form değil.
+  group('DcaBloc — boş varlık listesi (F-08-10)', () {
+    blocTest<DcaBloc, DcaState>(
+      'onAssetsRequested_emptyList_emitsDcaEmpty',
+      build: () => DcaBloc(getAssets, calculateDca),
+      setUp: () => when(() => getAssets()).thenAnswer((_) async => <Asset>[]),
+      act: (bloc) => bloc.add(const DcaAssetsRequested()),
+      expect: () => [isA<DcaAssetsLoading>(), isA<DcaEmpty>()],
+    );
+
+    blocTest<DcaBloc, DcaState>(
+      'onAssetsRequested_nonEmptyList_emitsDcaAssetsLoaded',
+      build: () => DcaBloc(getAssets, calculateDca),
+      setUp: () => when(() => getAssets()).thenAnswer((_) async => [asset]),
+      act: (bloc) => bloc.add(const DcaAssetsRequested()),
+      expect: () => [isA<DcaAssetsLoading>(), isA<DcaAssetsLoaded>()],
+    );
+  });
+
   // F-08-07: WhatIfBloc ile aynı kanonik guard — DcaSuccess'te formInput
   // zorunlu alanları (startDate/periodicAmount) null olabilir; dil değişimi
   // replay'i bunları null-check eder. Eski kod savedForm.startDate!/

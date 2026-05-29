@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:saydin/core/platform/platform_info.dart';
 
@@ -47,7 +46,10 @@ class DeviceInfoInterceptor extends Interceptor {
   /// (Faz 4 / master review 05-core-infrastructure önerisi).
   ///
   /// Match yoksa `"unknown"` döner — ham veri ASLA propagate edilmez.
-  @visibleForTesting
+  ///
+  /// Paylaşılan saf yardımcı: hem bu interceptor'ın `X-Device-OS-Version`
+  /// header'ı hem de Sentry cihaz scope'u (F-05-07) AYNI minimizasyonu
+  /// kullanır — header ile telemetri tutarlı kalır.
   static String minimizeOsVersion(String raw) {
     // uname çıktısı (Android + masaüstü Linux) parse edilemez kernel
     // sürümü taşır — release/SDK değil. Yanıltıcı veri yaymamak için ele.

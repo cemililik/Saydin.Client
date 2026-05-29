@@ -63,7 +63,9 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
         ),
       );
     } on AppError catch (error, st) {
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'portfolio_get_assets');
       }
       emit(

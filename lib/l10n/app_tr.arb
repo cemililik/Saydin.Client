@@ -37,6 +37,8 @@
     }
   },
   "errorNoInternet": "İnternet bağlantısı yok.",
+  "errorAssetNotFound": "Bu varlık artık mevcut değil.",
+  "errorMalformed": "Sunucudan beklenmeyen bir yanıt alındı. Lütfen tekrar deneyin.",
   "retry": "Tekrar Dene",
   "tryAgain": "Tekrar Hesapla",
   "scenariosTitle": "Senaryolarım",
@@ -134,6 +136,7 @@
   "shareResult": "Paylaş",
   "sharePreviewTitle": "Paylaşım Önizlemesi",
   "sharingInProgress": "Hazırlanıyor...",
+  "shareError": "Paylaşım kartı oluşturulamadı. Lütfen tekrar deneyin.",
 
   "tabPortfolio": "Portföy",
   "portfolioTitle": "Portföy Oluşturucu",
@@ -322,6 +325,7 @@
 
   "tabDca": "Birikim",
   "dcaTitle": "Düzenli Yatırım Simülasyonu",
+  "dcaNoAssets": "Şu anda gösterilecek varlık yok.",
   "dcaStartDate": "Başlangıç Tarihi",
   "dcaEndDate": "Bitiş Tarihi (opsiyonel)",
   "dcaStartDateRequired": "Başlangıç tarihi giriniz",

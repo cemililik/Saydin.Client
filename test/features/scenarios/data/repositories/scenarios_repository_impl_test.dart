@@ -226,15 +226,11 @@ void main() {
       expect(scenario.assetSymbol, 'USDTRY');
     });
 
-    test('saveScenario_nullBody_throwsServerError', () async {
+    test('saveScenario_nullBody_throwsMalformedResponse', () async {
       stubPost(okResponse(null));
 
-      await expectLater(
-        save(),
-        throwsA(
-          isA<ServerError>().having((e) => e.statusCode, 'statusCode', 200),
-        ),
-      );
+      // F-07-08: 2xx + boş gövde → MalformedResponseError.
+      await expectLater(save(), throwsA(isA<MalformedResponseError>()));
     });
 
     test(

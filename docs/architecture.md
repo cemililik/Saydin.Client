@@ -287,8 +287,12 @@ instance'ı paylaşır.
 ### RetryInterceptor
 
 - Kapsam: yalnızca GET ve HEAD (idempotent)
-- Tetikleyici: `connectionError`, `receiveTimeout`, `connectionTimeout`
-- Yenilenmeyenler: 4xx, 5xx — bunlar domain hatasına dönüştürülür
+- Tetikleyici: `connectionError`, `receiveTimeout`, `connectionTimeout` **ve geçici
+  5xx: 502/503/504** (Faz 6 — F-05-09). Bunlar gateway/erişilemezlik/upstream
+  hatalarıdır (örn. backend `external-api` 502'si, deploy/restart 503/504) ve
+  geçicidir.
+- Yenilenmeyenler: tüm 4xx (deterministik domain/validation) **ve 500**
+  (`internal-error` — genelde deterministik; retry yükü artırır, çözmez).
 - Gecikme: `min(200 * 2^attempt, 2000) + jitter(0..100)` ms
 
 ## Hata Yönetimi
@@ -297,18 +301,52 @@ instance'ı paylaşır.
 
 ```dart
 sealed class AppError { ... }
-class PriceNotFoundError extends AppError { ... }   // 404
-class DailyLimitError   extends AppError {           // 429
+class PriceNotFoundError    extends AppError { ... } // 404 price-not-found
+class AssetNotFoundError    extends AppError { ... } // 404 asset-not-found (Faz 6)
+class DailyLimitError       extends AppError {        // 429 daily-limit-exceeded
   final DateTime resetAt;
 }
-class NoInternetError   extends AppError { ... }    // connectionError
-class ServerError       extends AppError {           // 5xx
+class ScenarioLimitError    extends AppError {        // 422 scenario-limit-exceeded
+  final int limit;
+}
+class NoInternetError       extends AppError { ... } // connectionError
+class ServerError           extends AppError {        // 5xx / 4xx (eşlenmemiş)
   final int? statusCode;
 }
-class UnknownError      extends AppError { ... }    // catch-all
+class MalformedResponseError extends AppError { ... } // 2xx + boş/bozuk gövde (Faz 6)
+class UnknownError          extends AppError { ... } // catch-all + DioException 'unknown'
 ```
 
-`sealed` keyword'ü exhaustive `switch` sağlar: yeni hata tipi eklenip widget güncellenmezse **derleme hatası** alınır.
+`sealed` keyword'ü exhaustive `switch` sağlar: yeni hata tipi eklenip widget güncellenmezse **derleme hatası** alınır. Faz 6'da iki yeni varyant eklendi:
+- **`AssetNotFoundError`** — backend 404 `asset-not-found` (önceden tüm 404'ler
+  `PriceNotFoundError`'a indirgeniyordu; silinmiş varlık replay'inde yanıltıcı
+  "fiyat bulunamadı" mesajı çıkıyordu — F-05-11).
+- **`MalformedResponseError`** — sunucu 2xx döndü ama gövde boş/ayrıştırılamaz
+  (`ServerError(statusCode: 200)` anlamsal tuhaflığı yerine — F-07-08).
+
+### Backend hata sözleşmesi (RFC-7807 ProblemDetails)
+
+Backend hataları **`application/problem+json`** döndürür; ayırt edici alan
+`type` URI'sidir (örn. `https://saydin.app/errors/daily-limit-exceeded`).
+`DioErrorMapper` **önce `type`'a**, yoksa HTTP status'e bakar.
+
+| `type` URI | HTTP | AppError |
+|---|---|---|
+| `price-not-found` | 404 | `PriceNotFoundError` |
+| `asset-not-found` | 404 | `AssetNotFoundError` |
+| `scenario-limit-exceeded` | 422 | `ScenarioLimitError(limit)` |
+| `daily-limit-exceeded` | 429 | `DailyLimitError(resetAt)` |
+| `validation` | 400 | `ServerError(400)` |
+| `feature-disabled` | 403 | `ServerError(403)` (paywall → Faz 4) |
+| `external-api` | 502 | `ServerError(502)` (retry'lenebilir) |
+| `internal-error` | 500 | `ServerError(500)` |
+
+> **Extensions düzleştirme (kritik):** ASP.NET `ProblemDetails.Extensions`'ı
+> `[JsonExtensionData]` ile **üst seviyeye düzleştirir** (`{ "type":…, "limit":10,
+> "resetAt":… }`), nested `"extensions"` objesi olarak DEĞİL. Mapper hem düz hem
+> nested okur (savunmacı). Eski sürüm yalnız nested okuyup `resetAt`/`limit`'i
+> kaçırıyordu — `resetAt` fallback'i backend'le aynı değeri ürettiği için fark
+> edilmemişti.
 
 ### Akış
 
@@ -320,13 +358,13 @@ BLoC katmanı Dio'yu hiç import etmez, yalnızca `AppError` görür (CLAUDE.md
 Repository (data katmanı)
     │  try { dio.get/post(...) } on DioException catch (e)
     ▼
-DioErrorMapper.map(e)  ← HTTP kodu → AppError; repo `throw AppError`
-    │  (200 + boş gövde → ServerError; silme 404 → idempotent sessiz başarı)
+DioErrorMapper.map(e)  ← RFC-7807 `type` (yoksa status) → AppError; repo `throw`
+    │  (2xx + boş gövde → MalformedResponseError; silme 404 → idempotent başarı)
     ▼
 BLoC                   ← `on AppError catch` — state'e koyar, mesaj üretmez
     │                    (parse hatası gibi beklenmedikler generic catch → UnknownError)
     │
-    ├─ ServerError / UnknownError ──► ErrorReporter.report() → Sentry
+    ├─ ServerError / UnknownError / MalformedResponseError ─► ErrorReporter → Sentry
     │
     └─ diğerleri ───────────────────► Sentry'ye gönderilmez (beklenen akış)
     │
@@ -345,11 +383,33 @@ Widget (BlocConsumer listener)
 DSN `--dart-define=SENTRY_DSN=<dsn>` ile enjekte edilir. DSN boşsa Sentry sessizce devre dışı kalır.
 
 ```dart
-// Yalnızca beklenmedik hatalar raporlanır
-if (error is UnknownError || error is ServerError) {
+// Yalnızca beklenmedik / sunucu-tarafı hatalar raporlanır
+if (error is UnknownError ||
+    error is ServerError ||
+    error is MalformedResponseError) {
   await _reporter.report(e, st, context: 'calculate_what_if');
 }
 ```
+
+### Küresel hata yakalama (Faz 6 — F-05-02)
+
+`main()` uygulamayı `SentryFlutter.init(appRunner:)` ile başlatır; bu
+`runZonedGuarded` içinde çalışır ve `FlutterError.onError` +
+`PlatformDispatcher.instance.onError` kancalarını otomatik bağlar. Başlangıç
+işleri (`initializeDateFormatting`, `configureDependencies`, scope) `appRunner`
+**içine** alınmıştır → `runApp`'ten önceki init hataları da aynı guard'a düşer.
+Manuel ikinci bir `runZonedGuarded` eklenmez (çift raporlama olurdu).
+
+**Sentry cihaz scope'u (F-05-07):** `configureSentryDeviceScope` yalnızca
+**PII OLMAYAN** etiketler ekler — `os`, `os_version` (header'la aynı
+minimizasyon), `app_version`. `X-Device-ID`/kullanıcı kimliği ASLA eklenmez
+(KVKK: device ID PII'dir); Sentry `user` set edilmez.
+
+### ShareCardRenderer hataları (F-05-22)
+
+`ShareCardRenderer.shareFromKey` artık boundary/encode başarısızlığında sessizce
+`return` etmez — tipli `ShareCardException` fırlatır. `SharePreviewSheet` bunu
+yakalar: kullanıcıya snackbar gösterir ve `ErrorReporter`'a raporlar.
 
 ## Lokalizasyon (L10n)
 

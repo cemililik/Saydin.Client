@@ -107,6 +107,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get errorNoInternet => 'İnternet bağlantısı yok.';
 
   @override
+  String get errorAssetNotFound => 'Bu varlık artık mevcut değil.';
+
+  @override
+  String get errorMalformed =>
+      'Sunucudan beklenmeyen bir yanıt alındı. Lütfen tekrar deneyin.';
+
+  @override
   String get retry => 'Tekrar Dene';
 
   @override
@@ -295,6 +302,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get sharingInProgress => 'Hazırlanıyor...';
+
+  @override
+  String get shareError =>
+      'Paylaşım kartı oluşturulamadı. Lütfen tekrar deneyin.';
 
   @override
   String get tabPortfolio => 'Portföy';
@@ -667,6 +678,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get dcaTitle => 'Düzenli Yatırım Simülasyonu';
+
+  @override
+  String get dcaNoAssets => 'Şu anda gösterilecek varlık yok.';
 
   @override
   String get dcaStartDate => 'Başlangıç Tarihi';
