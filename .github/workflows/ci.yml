@@ -44,11 +44,14 @@ jobs:
             echo "❌ pubspec.yaml içinde version alanı bulunamadı"
             exit 1
           fi
-          # GÜVENLIK: pubspec.yaml fork PR'da saldırgan-kontrollü. `tr -d`
-          # sadece boşluğu eler; `$(...)`/`${IFS}` geçer. Bu çıktı downstream
-          # build adımlarında `--build-name=${{ ... }}` ile `run:`'a interpole
-          # edildiği için (fork PR tetikleyicisi `pull_request`) format
-          # doğrulanmazsa command injection olur. Strict numeric guard:
+          # GUVENLIK: pubspec.yaml fork PR'da saldirgan-kontrollu. `tr -d`
+          # sadece boslugu eler; command substitution / IFS dizimi gecer. Bu
+          # cikti downstream build adimlarinda build-name argumani olarak
+          # run: blokuna interpole edildigi icin (fork PR tetikleyicisi
+          # pull_request) format dogrulanmazsa command injection olur.
+          # NOT: bu satirlar run: bloku icinde; Actions sablon ifadelerini
+          # burada da degerlendirir, o yuzden yorumda template sozdizimi yok.
+          # Strict numeric guard:
           if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "❌ Geçersiz pubspec versiyon formatı: $VERSION (beklenen: X.Y.Z)"
             exit 1
