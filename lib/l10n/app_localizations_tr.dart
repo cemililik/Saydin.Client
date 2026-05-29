@@ -132,6 +132,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scenarioDeleted => 'Senaryo silindi.';
 
   @override
+  String scenarioSavedAtSnapshot(String date) {
+    return '$date tarihinde kaydedildi — o günkü sonuç';
+  }
+
+  @override
   String get deleteScenario => 'Sil';
 
   @override
@@ -347,6 +352,20 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get portfolioMinItems => 'En az 1 varlık ekleyin.';
+
+  @override
+  String portfolioMaxItems(int count) {
+    return 'En fazla $count varlık ekleyebilirsiniz.';
+  }
+
+  @override
+  String get portfolioAmountTooLarge =>
+      'Tutar çok büyük. Lütfen daha küçük bir değer girin.';
+
+  @override
+  String portfolioAmountTooManyDecimals(int decimals) {
+    return 'Tutarda en fazla $decimals ondalık hane kullanılabilir.';
+  }
 
   @override
   String portfolioHistoryLimit(int months) {
@@ -657,6 +676,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get dcaStartDateRequired => 'Başlangıç tarihi giriniz';
+
+  @override
+  String get dcaEndBeforeStart =>
+      'Bitiş tarihi başlangıç tarihinden önce olamaz';
 
   @override
   String get dcaPeriodWeekly => 'Haftalık';

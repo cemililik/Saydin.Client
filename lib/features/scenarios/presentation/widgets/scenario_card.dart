@@ -106,6 +106,35 @@ Widget _dateRow(BuildContext context, String label) {
   );
 }
 
+final _savedAtFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
+
+/// F-11-04: Kartta gösterilen getiri/yüzde değerleri kayıt anına ait SABİT
+/// bir snapshot'tır (güncel piyasa değeri değil). Kayıt tarihi + "o günkü
+/// sonuç" uyarısı bunu kullanıcıya açıkça belirtir.
+Widget _savedAtRow(BuildContext context, DateTime createdAt) {
+  final theme = Theme.of(context);
+  return Row(
+    children: [
+      Icon(
+        Icons.history_outlined,
+        size: 12,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+      const SizedBox(width: 4),
+      Expanded(
+        child: Text(
+          context.l10n.scenarioSavedAtSnapshot(
+            _savedAtFormatter.format(createdAt),
+          ),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
 // ── WhatIf kartı ─────────────────────────────────────────────────────────────
 
 class _WhatIfCard extends StatelessWidget {
@@ -202,6 +231,8 @@ class _WhatIfCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     _dateRow(context, '$buyLabel → $sellLabel'),
+                    const SizedBox(height: 3),
+                    _savedAtRow(context, scenario.createdAt),
                     const SizedBox(height: 3),
                     Row(
                       children: [
@@ -313,6 +344,8 @@ class _DcaCard extends StatelessWidget {
                     const SizedBox(height: 5),
                     _dateRow(context, '$buyLabel → $sellLabel'),
                     const SizedBox(height: 3),
+                    _savedAtRow(context, scenario.createdAt),
+                    const SizedBox(height: 3),
                     Row(
                       children: [
                         Icon(
@@ -422,6 +455,8 @@ class _ComparisonCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     _dateRow(context, '$buyLabel → $sellLabel'),
+                    const SizedBox(height: 3),
+                    _savedAtRow(context, scenario.createdAt),
                     if (winnerName.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Row(
@@ -543,6 +578,8 @@ class _PortfolioCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     _dateRow(context, '$buyLabel → $sellLabel'),
+                    const SizedBox(height: 3),
+                    _savedAtRow(context, scenario.createdAt),
                     const SizedBox(height: 3),
                     Row(
                       children: [

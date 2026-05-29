@@ -70,6 +70,16 @@ class _DcaPageState extends State<DcaPage> {
       ).showSnackBar(SnackBar(content: Text(l10n.dcaStartDateRequired)));
       return;
     }
+    // DateInput picker'ları aralığı sınırlasa da, kullanıcı önce bitişi sonra
+    // başlangıcı ileriye taşırsa eski bitiş başlangıçtan önce kalabilir.
+    // Ters aralığı backend'e göndermeden inline reddet.
+    final endDate = formInput.endDate;
+    if (endDate != null && endDate.isBefore(startDate)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.dcaEndBeforeStart)));
+      return;
+    }
 
     final amount = LocaleNumberParser.tryParseTr(_amountController.text);
     if (amount == null || amount <= 0) {

@@ -205,14 +205,19 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
     try {
       final assets = await _getAssets();
 
-      if (hadResult) {
+      // hadResult formInput dolu olduğunu garanti etmez; replay dereferanslanan
+      // alanları kontrol et (WhatIfBloc._onLanguageChanged ile aynı pattern).
+      final sym = savedForm.selectedSymbol;
+      final start = savedForm.startDate;
+      final amt = savedForm.periodicAmount;
+      if (hadResult && sym != null && start != null && amt != null) {
         emit(DcaCalculating(assets, formInput: savedForm));
         try {
           final result = await _calculateDca(
-            assetSymbol: savedForm.selectedSymbol!,
-            startDate: savedForm.startDate!,
+            assetSymbol: sym,
+            startDate: start,
             endDate: savedForm.endDate,
-            periodicAmount: savedForm.periodicAmount!,
+            periodicAmount: amt,
             period: savedForm.period,
             amountType: savedForm.amountType,
             includeInflation: savedForm.includeInflation,

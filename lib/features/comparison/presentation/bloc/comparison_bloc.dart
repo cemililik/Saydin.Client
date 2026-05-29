@@ -166,6 +166,11 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   ) async {
     final loaded = _loaded;
     if (loaded == null) return;
+    // buyDate/amount eksikse hesaplama yapma. Page guard'ları bunu önler ama
+    // replay/edge path'lerde aşağıdaki `!` crash'ini eleyen defense-in-depth.
+    final buyDate = loaded.buyDate;
+    final amount = loaded.amount;
+    if (buyDate == null || amount == null) return;
 
     // Bu istek için anlık snapshot. `_invalidateInflightRequests` (form
     // mutasyon handler'ları) sayacı ileri taşırsa uçuştaki cevap atılır.
@@ -186,9 +191,9 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     try {
       final result = await _compareWhatIf(
         assetSymbols: loaded.selectedSymbols,
-        buyDate: loaded.buyDate!,
+        buyDate: buyDate,
         sellDate: loaded.sellDate,
-        amount: loaded.amount!,
+        amount: amount,
         amountType: loaded.amountType,
         includeInflation: loaded.includeInflation,
       );

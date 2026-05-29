@@ -45,6 +45,10 @@
   "saveScenario": "Kaydet",
   "scenarioSaved": "Senaryo kaydedildi.",
   "scenarioDeleted": "Senaryo silindi.",
+  "scenarioSavedAtSnapshot": "{date} tarihinde kaydedildi — o günkü sonuç",
+  "@scenarioSavedAtSnapshot": {
+    "placeholders": { "date": { "type": "String" } }
+  },
   "deleteScenario": "Sil",
   "undo": "Geri Al",
   "tabCalculate": "Hesapla",
@@ -102,6 +106,9 @@
   "premiumFeature": "Premium",
   "realReturn": "Reel Getiri",
   "realProfitLoss": "Reel Kar / Zarar",
+  "@realProfitLoss": {
+    "description": "Reel kar/zarar etiketi. TL tutarı, backend reel-TL alanı eklenene kadar istemcide nominal yatırım × reel getiri % ile YAKLAŞIK hesaplanır (F-07-12)."
+  },
   "cumulativeInflation": "Birikimli Enflasyon",
   "inflationSectionTitle": "Enflasyon Düzeltmesi",
   "dateAdjustedNote": "Tarih düzeltmesi uygulandı",
@@ -149,6 +156,15 @@
   "portfolioChartTitle": "Son Değer Dağılımı",
   "portfolioBuyDateRequired": "Başlangıç tarihi giriniz",
   "portfolioMinItems": "En az 1 varlık ekleyin.",
+  "portfolioMaxItems": "En fazla {count} varlık ekleyebilirsiniz.",
+  "@portfolioMaxItems": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "portfolioAmountTooLarge": "Tutar çok büyük. Lütfen daha küçük bir değer girin.",
+  "portfolioAmountTooManyDecimals": "Tutarda en fazla {decimals} ondalık hane kullanılabilir.",
+  "@portfolioAmountTooManyDecimals": {
+    "placeholders": { "decimals": { "type": "int" } }
+  },
   "portfolioHistoryLimit": "Ücretsiz planda son {months} aya ait tarih seçilebilir.",
   "@portfolioHistoryLimit": {
     "placeholders": {
@@ -309,6 +325,7 @@
   "dcaStartDate": "Başlangıç Tarihi",
   "dcaEndDate": "Bitiş Tarihi (opsiyonel)",
   "dcaStartDateRequired": "Başlangıç tarihi giriniz",
+  "dcaEndBeforeStart": "Bitiş tarihi başlangıç tarihinden önce olamaz",
   "dcaPeriodWeekly": "Haftalık",
   "dcaPeriodMonthly": "Aylık",
   "dcaPeriodLabel": "Periyot",

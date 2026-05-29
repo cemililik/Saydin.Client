@@ -1,7 +1,10 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
+import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
+import 'package:saydin/features/portfolio/domain/portfolio_constants.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/widgets/amount_input.dart';
 import 'package:saydin/features/what_if/presentation/widgets/asset_selector.dart';
@@ -74,11 +77,34 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
       ).showSnackBar(SnackBar(content: Text(context.l10n.assetRequired)));
       return;
     }
+    final l10n = context.l10n;
     final amount = LocaleNumberParser.tryParseTr(_amountController.text);
-    if (amount == null || amount <= 0) {
+    // null / NaN / Infinity (isFinite hepsini eler) / <=0 reddet.
+    if (amount == null || !amount.isFinite || amount <= 0) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.validAmountRequired)));
+      ).showSnackBar(SnackBar(content: Text(l10n.validAmountRequired)));
+      return;
+    }
+    // Üst sınır: astronomik girişleri (aggregasyon + quota) engelle.
+    if (amount > PortfolioConstants.maxItemAmount) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.portfolioAmountTooLarge)));
+      return;
+    }
+    // Ondalık hane sınırı: TL kuruş (2), birim/gram (4). Decimal.toString()
+    // kanonik '.' ayraç kullanır (binlik yok) → güvenilir hane sayımı.
+    final maxDecimals = _amountType == 'try' ? 2 : 4;
+    final decStr = (MoneyParser.tryDecimal(amount) ?? Decimal.zero).toString();
+    final dotIdx = decStr.indexOf('.');
+    final decimalCount = dotIdx >= 0 ? decStr.length - dotIdx - 1 : 0;
+    if (decimalCount > maxDecimals) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.portfolioAmountTooManyDecimals(maxDecimals)),
+        ),
+      );
       return;
     }
     widget.onSave(

@@ -38,18 +38,23 @@ void main() {
     test(
       'map_429WithoutResetAt_returnsDailyLimitErrorWithTomorrowUtcMidnight',
       () {
-        final e = make(DioExceptionType.badResponse, statusCode: 429);
-        final error = mapper.map(e) as DailyLimitError;
+        DateTime tomorrowMidnight(DateTime d) {
+          final t = d.toUtc().add(const Duration(days: 1));
+          return DateTime.utc(t.year, t.month, t.day);
+        }
 
-        final nowUtc = DateTime.now().toUtc();
-        final tomorrowUtc = nowUtc.add(const Duration(days: 1));
-        final expectedDate = DateTime.utc(
-          tomorrowUtc.year,
-          tomorrowUtc.month,
-          tomorrowUtc.day,
+        // UTC gece yarısı straddle'ında flaky olmasın: map() kendi now()'unu
+        // kullanır; test now()'u farklı güne düşerse her iki olasılığı kabul et.
+        final before = DateTime.now();
+        final error =
+            mapper.map(make(DioExceptionType.badResponse, statusCode: 429))
+                as DailyLimitError;
+        final after = DateTime.now();
+
+        expect(
+          error.resetAt,
+          anyOf(tomorrowMidnight(before), tomorrowMidnight(after)),
         );
-
-        expect(error.resetAt, equals(expectedDate));
       },
     );
 
@@ -75,6 +80,53 @@ void main() {
     test('map_503_returnsServerError', () {
       final e = make(DioExceptionType.badResponse, statusCode: 503);
       expect(mapper.map(e), isA<ServerError>());
+    });
+
+    // F-05-12: non-Map gövde (HTML/string/List/null) `[]` erişiminde
+    // NoSuchMethodError atmamalı; güvenle ServerError/DailyLimitError'a düşmeli.
+    test('map_422WithStringBody_returnsServerErrorNoThrow', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 422,
+        data: '<html>504 Gateway Timeout</html>',
+      );
+      final error = mapper.map(e) as ServerError;
+      expect(error.statusCode, 422);
+    });
+
+    test('map_429WithListBody_returnsDailyLimitErrorNoThrow', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 429,
+        data: const ['unexpected', 'list'],
+      );
+      expect(mapper.map(e), isA<DailyLimitError>());
+    });
+
+    test('map_422ScenarioLimit_validMap_returnsScenarioLimitError', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 422,
+        data: {
+          'type': 'https://saydin.app/errors/scenario-limit-exceeded',
+          'extensions': {'limit': 10},
+        },
+      );
+      final error = mapper.map(e) as ScenarioLimitError;
+      expect(error.limit, 10);
+    });
+
+    test('map_422ScenarioLimit_wrongTypeLimit_fallsBackTo5', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 422,
+        data: {
+          'type': 'https://saydin.app/errors/scenario-limit-exceeded',
+          'extensions': {'limit': 'not-a-number'},
+        },
+      );
+      final error = mapper.map(e) as ScenarioLimitError;
+      expect(error.limit, 5);
     });
   });
 }

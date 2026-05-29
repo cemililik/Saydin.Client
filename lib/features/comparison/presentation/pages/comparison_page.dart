@@ -53,11 +53,20 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   void _onCompare(ComparisonState state) {
     FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState?.validate() != true) return;
     if (state.selectedSymbols.length < 2) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.compareMinAssets)));
+      return;
+    }
+    // buyDate Form validator'ı değil (read-only onChanged alanı), bu yüzden
+    // formKey.validate() yakalamaz. Bloc'taki loaded.buyDate! crash'ini
+    // önlemek için burada açıkça kontrol et.
+    if (state.buyDate == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.buyDateRequired)));
       return;
     }
     final amount = LocaleNumberParser.tryParseTr(_amountController.text);

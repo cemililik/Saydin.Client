@@ -132,6 +132,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scenarioDeleted => 'Scenario deleted.';
 
   @override
+  String scenarioSavedAtSnapshot(String date) {
+    return 'Saved on $date — result as of that date';
+  }
+
+  @override
   String get deleteScenario => 'Delete';
 
   @override
@@ -347,6 +352,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get portfolioMinItems => 'Add at least 1 asset.';
+
+  @override
+  String portfolioMaxItems(int count) {
+    return 'You can add at most $count assets.';
+  }
+
+  @override
+  String get portfolioAmountTooLarge =>
+      'Amount is too large. Please enter a smaller value.';
+
+  @override
+  String portfolioAmountTooManyDecimals(int decimals) {
+    return 'Amount can have at most $decimals decimal places.';
+  }
 
   @override
   String portfolioHistoryLimit(int months) {
@@ -658,6 +677,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dcaStartDateRequired => 'Please enter start date';
+
+  @override
+  String get dcaEndBeforeStart => 'End date cannot be before start date';
 
   @override
   String get dcaPeriodWeekly => 'Weekly';
