@@ -94,7 +94,16 @@ class DioErrorMapper {
     if (status == 429) return DailyLimitError(resetAt: _resetAt(data));
     // 403 = plan-kapısı. Gövdede `type` olmasa/tanınmasa bile (ör. ağ geçidi
     // gövdeyi yutarsa) paywall'ı yakala — aksi halde "Sunucu hatası"na düşerdi.
-    if (status == 403) return const FeatureDisabledError();
+    // featureKey gövdede hâlâ varsa korunur (özelliğe özgü mesaj kurtarılır).
+    // NOT: Backend bugün YALNIZ feature-disabled için 403 döner (RequireDeviceId
+    // guard'ı 400 verir). İleride farklı bir 403 type'ı eklenirse, bu çıplak
+    // fallback'e DÜŞMEDEN ÖNCE yukarıdaki `type` switch'inde ele alınmalı —
+    // aksi halde yanlışlıkla paywall mesajı gösterilir.
+    if (status == 403) {
+      return FeatureDisabledError(
+        featureKey: _stringExtension(data, 'feature'),
+      );
+    }
 
     return ServerError(statusCode: status);
   }

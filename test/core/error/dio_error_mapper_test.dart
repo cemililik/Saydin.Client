@@ -292,5 +292,20 @@ void main() {
       final error = mapper.map(e) as FeatureDisabledError;
       expect(error.featureKey, isNull);
     });
+
+    // 403 + tanınmayan type AMA gövdede `feature` varsa, status fallback'i
+    // featureKey'i korur (özelliğe özgü mesaj kurtarılır).
+    test('map_403UnknownTypeWithFeature_preservesFeatureKey', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 403,
+        data: {
+          'type': 'https://saydin.app/errors/some-future-403',
+          'feature': 'dca',
+        },
+      );
+      final error = mapper.map(e) as FeatureDisabledError;
+      expect(error.featureKey, 'dca');
+    });
   });
 }

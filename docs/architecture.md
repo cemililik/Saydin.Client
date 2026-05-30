@@ -330,6 +330,13 @@ class UnknownError          extends AppError { ... } // catch-all + DioException
   olur (repo'lar yalnızca `on DioException` yakalar; parse beklenmedikleri BLoC
   generic catch'ine düşer).
 
+Sonradan eklenen **`FeatureDisabledError`** — backend 403 `feature-disabled`
+(plan-kapısı / paywall). `feature` extension'ını (`extended_history` |
+`inflation` | `comparison` | `dca`) `featureKey` olarak taşır ve özelliğe özgü
+mesaj seçimini besler. Bir **sunucu hatası değildir** (beklenen iş kuralı), bu
+yüzden Sentry'ye **raporlanmaz** — BLoC raporlama gate'i yalnızca
+`UnknownError`/`ServerError`/`MalformedResponseError`'ı kapsar.
+
 ### Backend hata sözleşmesi (RFC-7807 ProblemDetails)
 
 Backend hataları **`application/problem+json`** döndürür; ayırt edici alan
@@ -376,7 +383,7 @@ BLoC                   ← `on AppError catch` — state'e koyar, mesaj üretmez
     │
     ▼
 Widget (BlocConsumer listener)
-    └─ switch(state.error) ──► context.l10n.errorXxx
+    └─ state.error.localizedMessage(context.l10n)  (tek switch: app_error_messages.dart)
 ```
 
 > **Repository sözleşmesi:** Her `*RepositoryImpl` Dio çağrılarını `try/catch
@@ -435,7 +442,10 @@ Text(l10n.calculate)
 Text(l10n.errorPriceNotFound)
 ```
 
-**Kural:** BLoC UI string üretmez. Hata metni widget katmanında `switch (state.error)` ile l10n'dan çözülür.
+**Kural:** BLoC UI string üretmez. Hata metni widget katmanında
+`state.error.localizedMessage(context.l10n)` ile çözülür — tek exhaustive switch
+`core/error/app_error_messages.dart` içindeki `AppErrorL10n` extension'ındadır
+(her sayfada kopyalanmaz).
 
 ### Dil Seçimi
 
