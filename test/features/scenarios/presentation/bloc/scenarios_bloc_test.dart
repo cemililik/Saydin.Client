@@ -367,7 +367,7 @@ void main() {
     // denylist'e çevrilir veya FeatureDisabledError allowlist'e eklenirse bu
     // test regresyonu yakalar.
     blocTest<ScenariosBloc, ScenariosState>(
-      'FeatureDisabledError Sentry\'ye raporlanMAZ (beklenen iş kuralı)',
+      'getScenarios_throwsFeatureDisabledError_doesNotReportToSentry',
       setUp: () {
         registerFallbackValue(StackTrace.empty);
         when(
