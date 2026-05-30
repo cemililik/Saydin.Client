@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -31,7 +33,7 @@ void main() {
   FavoritesCubit build() => FavoritesCubit(repo, reporter: reporter);
 
   blocTest<FavoritesCubit, Set<String>>(
-    'load: depodan favorileri emit eder',
+    'load_repositoryReturnsFavorites_emitsFavorites',
     setUp: () =>
         when(() => repo.load()).thenAnswer((_) async => {'USDTRY', 'BTC'}),
     build: build,
@@ -42,7 +44,7 @@ void main() {
   );
 
   blocTest<FavoritesCubit, Set<String>>(
-    'toggle: ekler ve kalıcı kaydeder',
+    'toggle_addsFavorite_emitsAndSaves',
     build: build,
     act: (c) => c.toggle('BTC'),
     expect: () => [
@@ -52,7 +54,7 @@ void main() {
   );
 
   blocTest<FavoritesCubit, Set<String>>(
-    'toggle: maksimumda yeni favori eklemez',
+    'toggle_atMaxCount_doesNotAddOrSave',
     seed: () => {'A', 'B', 'C', 'D', 'E'},
     build: build,
     act: (c) => c.toggle('F'),
@@ -63,7 +65,7 @@ void main() {
   // F-11-10: kalıcı yazma başarısızsa optimistic değişiklik geri alınır
   // (rollback) ve hata raporlanır — sessizce yutulmaz.
   blocTest<FavoritesCubit, Set<String>>(
-    'toggle: save fail → optimistic emit sonra rollback + rapor',
+    'toggle_saveFails_rollsBackAndReports',
     setUp: () => when(() => repo.save(any())).thenThrow(Exception('disk full')),
     build: build,
     act: (c) => c.toggle('BTC'),
@@ -77,4 +79,32 @@ void main() {
       ).called(1);
     },
   );
+
+  // Yarış koruması: ilk toggle'ın save'i beklerken araya ikinci (başarılı)
+  // toggle girer; ilkinin save'i SONRA başarısız olur. Stale `previous`'a
+  // rollback, ikinci toggle'ın sonucunu EZMEMELİ (identical guard).
+  test('toggle_saveFailsAfterInterveningToggle_doesNotClobber', () async {
+    final firstSave = Completer<void>();
+    var calls = 0;
+    when(() => repo.save(any())).thenAnswer((_) {
+      calls++;
+      return calls == 1 ? firstSave.future : Future<void>.value();
+    });
+    final cubit = build();
+
+    final toggleA = cubit.toggle('BTC'); // emit {BTC}, save gated (fail edecek)
+    await cubit.toggle('ETH'); // emit {BTC,ETH}, save başarılı
+    expect(cubit.state, {'BTC', 'ETH'});
+
+    firstSave.completeError(Exception('disk full')); // A'nın save'i başarısız
+    await toggleA;
+
+    // A'nın rollback'i {BTC,ETH}'i EZMEDİ (araya emit girdiği için atlandı).
+    expect(cubit.state, {'BTC', 'ETH'});
+    verify(
+      () => reporter.report(any(), any(), context: 'favorites_toggle'),
+    ).called(1);
+
+    await cubit.close();
+  });
 }

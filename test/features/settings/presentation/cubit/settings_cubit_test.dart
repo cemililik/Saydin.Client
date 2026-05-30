@@ -82,39 +82,33 @@ void main() {
   });
 
   // F-12-21: depo okuması çökerse crash etme, raporla, güvenli varsayılanda kal.
-  test(
-    'load: hata fırlatırsa crash etmez, raporlar, varsayılanda kalır',
-    () async {
-      when(() => repo.load()).thenThrow(Exception('storage broken'));
+  test('load_whenRepositoryThrows_reportsAndKeepsDefault', () async {
+    when(() => repo.load()).thenThrow(Exception('storage broken'));
 
-      final cubit = SettingsCubit(repo, localeProvider, reporter: reporter);
-      await cubit.load();
+    final cubit = SettingsCubit(repo, localeProvider, reporter: reporter);
+    await cubit.load();
 
-      expect(cubit.state, const AppSettings());
-      verify(
-        () => reporter.report(any(), any(), context: 'settings_load'),
-      ).called(1);
-    },
-  );
+    expect(cubit.state, const AppSettings());
+    verify(
+      () => reporter.report(any(), any(), context: 'settings_load'),
+    ).called(1);
+  });
 
   // F-12-13: yazma başarısızsa state DEĞİŞMEZ (atomiklik) ve hata raporlanır.
-  test(
-    'setThemeMode: save fail → emit yok, rapor var, state korunur',
-    () async {
-      when(() => repo.save(any())).thenThrow(Exception('disk full'));
+  test('setThemeMode_saveFails_keepsStateAndReports', () async {
+    when(() => repo.save(any())).thenThrow(Exception('disk full'));
 
-      final cubit = SettingsCubit(repo, localeProvider, reporter: reporter);
-      await cubit.setThemeMode(AppThemeMode.dark);
+    final cubit = SettingsCubit(repo, localeProvider, reporter: reporter);
+    await cubit.setThemeMode(AppThemeMode.dark);
 
-      expect(cubit.state.themeMode, const AppSettings().themeMode);
-      verify(
-        () => reporter.report(any(), any(), context: 'settings_set_theme'),
-      ).called(1);
-    },
-  );
+    expect(cubit.state.themeMode, const AppSettings().themeMode);
+    verify(
+      () => reporter.report(any(), any(), context: 'settings_set_theme'),
+    ).called(1);
+  });
 
   test(
-    'setLanguage: save fail → locale dokunulmaz, rapor var, state korunur',
+    'setLanguage_saveFails_keepsStateAndReportsWithoutLocaleChange',
     () async {
       when(() => repo.save(any())).thenThrow(Exception('disk full'));
 

@@ -44,7 +44,13 @@ class FavoritesCubit extends Cubit<Set<String>> {
       await _repository.save(updated);
     } catch (e, st) {
       if (isClosed) return;
-      emit(previous); // rollback — UI ile disk tutarlı kalır
+      // Yarış koruması: yalnızca bu toggle'ın iyimser değeri HÂLÂ güncel state
+      // ise geri al. Kullanıcı hızlı ardı ardına bastıysa, bu çağrının `save`'i
+      // beklerken araya başka bir (başarılı) toggle girmiş olabilir; o zaman
+      // stale `previous`'a rollback, sonraki toggle'ı EZERDİ (state bozulması).
+      // `identical` ile araya emit girip girmediğini kontrol et — girmişse
+      // rollback'i atla (en güncel niyet kazanır), hata yine raporlanır.
+      if (identical(state, updated)) emit(previous);
       await _reporter.report(e, st, context: 'favorites_toggle');
     }
   }

@@ -8,9 +8,11 @@ import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 
 class _MockDio extends Mock implements Dio {}
 
-/// Faz 5.2: `DioException → AppError` eşlemesi ve null-gövde → ServerError
-/// sözleşmesi DcaRepositoryImpl'e taşındı. Bu testler eşlemenin korunduğunu ve
-/// parse hatalarının yutulmayıp propagate edildiğini doğrular.
+/// Faz 5.2 + Faz 6 (F-07-08): `DioException → AppError` eşlemesi
+/// DcaRepositoryImpl'de yapılır; 2xx + null/eksik gövde → `MalformedResponseError`
+/// (eski "ServerError(200)" değil). Bu testler eşlemenin korunduğunu ve parse
+/// hatalarının yutulmayıp (UnknownError'a) propagate edildiğini doğrular
+/// (bkz. `calculate_nullBody_throwsMalformedResponse`).
 void main() {
   late _MockDio dio;
   late DcaRepositoryImpl repo;
