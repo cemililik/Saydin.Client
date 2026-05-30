@@ -309,6 +309,9 @@ class DailyLimitError       extends AppError {        // 429 daily-limit-exceede
 class ScenarioLimitError    extends AppError {        // 422 scenario-limit-exceeded
   final int limit;
 }
+class FeatureDisabledError  extends AppError {        // 403 feature-disabled (paywall)
+  final String? featureKey;                           // extended_history | inflation | comparison | dca
+}
 class NoInternetError       extends AppError { ... } // connectionError
 class ServerError           extends AppError {        // 5xx / 4xx (eşlenmemiş)
   final int? statusCode;
@@ -340,7 +343,7 @@ Backend hataları **`application/problem+json`** döndürür; ayırt edici alan
 | `scenario-limit-exceeded` | 422 | `ScenarioLimitError(limit)` |
 | `daily-limit-exceeded` | 429 | `DailyLimitError(resetAt)` |
 | `validation` | 400 | `ServerError(400)` |
-| `feature-disabled` | 403 | `ServerError(403)` (paywall → Faz 4) |
+| `feature-disabled` | 403 | `FeatureDisabledError(featureKey)` — çıplak 403 status fallback'i de buraya eşlenir |
 | `external-api` | 502 | `ServerError(502)` (retry'lenebilir) |
 | `internal-error` | 500 | `ServerError(500)` |
 

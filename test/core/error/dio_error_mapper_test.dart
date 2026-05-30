@@ -234,16 +234,63 @@ void main() {
       expect(mapper.map(e), isA<UnknownError>());
     });
 
-    // L-5: tip yok + status 400/403 → ServerError(status) (validation/feature-
-    // disabled için ayrı varyant yok; status fallback'ine düşer).
+    // tip yok + status 400 → ServerError(status) (validation için ayrı varyant
+    // yok; status fallback'ine düşer).
     test('map_400WithoutType_returnsServerError400', () {
       final e = make(DioExceptionType.badResponse, statusCode: 400);
       expect((mapper.map(e) as ServerError).statusCode, 400);
     });
 
-    test('map_403WithoutType_returnsServerError403', () {
+    // Plan-kapısı: type `feature-disabled` → FeatureDisabledError; `feature`
+    // extension'ı düz (top-level) gelir ve featureKey'e taşınır.
+    test('map_typeFeatureDisabled_flatFeature_returnsFeatureDisabledError', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 403,
+        data: {
+          'type': 'https://saydin.app/errors/feature-disabled',
+          'status': 403,
+          'feature': 'extended_history',
+        },
+      );
+      final error = mapper.map(e) as FeatureDisabledError;
+      expect(error.featureKey, 'extended_history');
+    });
+
+    // `feature` extension nested (`extensions`) gelirse de okunur (savunmacı).
+    test(
+      'map_typeFeatureDisabled_nestedFeature_returnsFeatureDisabledError',
+      () {
+        final e = make(
+          DioExceptionType.badResponse,
+          statusCode: 403,
+          data: {
+            'type': 'https://saydin.app/errors/feature-disabled',
+            'extensions': {'feature': 'inflation'},
+          },
+        );
+        final error = mapper.map(e) as FeatureDisabledError;
+        expect(error.featureKey, 'inflation');
+      },
+    );
+
+    // `feature` extension yoksa featureKey null kalır (genel mesaja düşülür).
+    test('map_typeFeatureDisabled_noFeature_returnsNullFeatureKey', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 403,
+        data: {'type': 'https://saydin.app/errors/feature-disabled'},
+      );
+      final error = mapper.map(e) as FeatureDisabledError;
+      expect(error.featureKey, isNull);
+    });
+
+    // 403 + tanınmayan/eksik type → status fallback ile FeatureDisabledError
+    // (ServerError DEĞİL — paywall ağ geçidi gövdeyi yutsa bile yakalanır).
+    test('map_403WithoutType_returnsFeatureDisabledError', () {
       final e = make(DioExceptionType.badResponse, statusCode: 403);
-      expect((mapper.map(e) as ServerError).statusCode, 403);
+      final error = mapper.map(e) as FeatureDisabledError;
+      expect(error.featureKey, isNull);
     });
   });
 }

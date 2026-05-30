@@ -114,6 +114,26 @@ class AppLocalizationsTr extends AppLocalizations {
       'Sunucudan beklenmeyen bir yanıt alındı. Lütfen tekrar deneyin.';
 
   @override
+  String get errorFeatureDisabled =>
+      'Bu özellik mevcut planınızda kullanılamıyor.';
+
+  @override
+  String get errorFeatureDisabledExtendedHistory =>
+      'Daha eski tarihler için Premium plan gerekir.';
+
+  @override
+  String get errorFeatureDisabledInflation =>
+      'Enflasyona göre düzeltme Premium plana özeldir.';
+
+  @override
+  String get errorFeatureDisabledComparison =>
+      'Varlık karşılaştırma Premium plana özeldir.';
+
+  @override
+  String get errorFeatureDisabledDca =>
+      'Düzenli alım (DCA) hesaplaması Premium plana özeldir.';
+
+  @override
   String get retry => 'Tekrar Dene';
 
   @override

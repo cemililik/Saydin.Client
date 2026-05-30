@@ -302,6 +302,36 @@ abstract class AppLocalizations {
   /// **'Sunucudan beklenmeyen bir yanıt alındı. Lütfen tekrar deneyin.'**
   String get errorMalformed;
 
+  /// No description provided for @errorFeatureDisabled.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu özellik mevcut planınızda kullanılamıyor.'**
+  String get errorFeatureDisabled;
+
+  /// No description provided for @errorFeatureDisabledExtendedHistory.
+  ///
+  /// In tr, this message translates to:
+  /// **'Daha eski tarihler için Premium plan gerekir.'**
+  String get errorFeatureDisabledExtendedHistory;
+
+  /// No description provided for @errorFeatureDisabledInflation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Enflasyona göre düzeltme Premium plana özeldir.'**
+  String get errorFeatureDisabledInflation;
+
+  /// No description provided for @errorFeatureDisabledComparison.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık karşılaştırma Premium plana özeldir.'**
+  String get errorFeatureDisabledComparison;
+
+  /// No description provided for @errorFeatureDisabledDca.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli alım (DCA) hesaplaması Premium plana özeldir.'**
+  String get errorFeatureDisabledDca;
+
   /// No description provided for @retry.
   ///
   /// In tr, this message translates to:

@@ -70,6 +70,13 @@ class DioErrorMapper {
           return ScenarioLimitError(limit: _intExtension(data, 'limit') ?? 5);
         case 'daily-limit-exceeded':
           return DailyLimitError(resetAt: _resetAt(data));
+        case 'feature-disabled':
+          // Plan-kapısı (paywall): backend 403 + `feature` extension'ı ile
+          // hangi özelliğin kapalı olduğunu bildirir. featureKey'i taşı ki
+          // gösterim katmanı özelliğe özgü upsell mesajını seçebilsin.
+          return FeatureDisabledError(
+            featureKey: _stringExtension(data, 'feature'),
+          );
         // L-3: `scenario-not-found` (404) kasıtlı olarak ele alınmıyor.
         // İstemcide tek 404-üreten senaryo yolu deleteScenario'dur ve orada 404
         // idempotent başarı olarak (mapper'dan ÖNCE) yutulur; tekil senaryo
@@ -78,14 +85,16 @@ class DioErrorMapper {
         // senaryo GET eklenirse burada bir ScenarioNotFoundError varyantı + case
         // gerekir (aksi halde yanlış "fiyat bulunamadı" mesajı çıkar).
       }
-      // Diğer tanınan tipler (validation/feature-disabled/external-api/
-      // internal-error) için ayrı bir AppError varyantı yok → status fallback
-      // ile ServerError'a düşerler. (feature-disabled paywall'ı Faz 4.)
+      // Diğer tanınan tipler (validation/external-api/internal-error) için ayrı
+      // bir AppError varyantı yok → status fallback ile ServerError'a düşerler.
     }
 
     // ── `type` yok/tanınmıyor → HTTP status (savunma + eski sözleşme) ──────
     if (status == 404) return const PriceNotFoundError();
     if (status == 429) return DailyLimitError(resetAt: _resetAt(data));
+    // 403 = plan-kapısı. Gövdede `type` olmasa/tanınmasa bile (ör. ağ geçidi
+    // gövdeyi yutarsa) paywall'ı yakala — aksi halde "Sunucu hatası"na düşerdi.
+    if (status == 403) return const FeatureDisabledError();
 
     return ServerError(statusCode: status);
   }
@@ -95,6 +104,13 @@ class DioErrorMapper {
   static int? _intExtension(Map<String, dynamic>? data, String key) {
     final raw = data?[key] ?? _asMap(data?['extensions'])?[key];
     return raw is num ? raw.toInt() : null;
+  }
+
+  /// String extension'ı önce düz (`data['feature']`), sonra nested
+  /// (`data['extensions']['feature']`) konumdan okur; String değilse `null`.
+  static String? _stringExtension(Map<String, dynamic>? data, String key) {
+    final raw = data?[key] ?? _asMap(data?['extensions'])?[key];
+    return raw is String ? raw : null;
   }
 
   /// `resetAt`'i düz/nested okuyup ISO-8601 (offset'li `O` formatı dahil)

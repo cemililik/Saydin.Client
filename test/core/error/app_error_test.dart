@@ -50,5 +50,20 @@ void main() {
       final error = MalformedResponseError(cause: cause);
       expect(error.cause, equals(cause));
     });
+
+    test('FeatureDisabledError_created_isAppError', () {
+      const error = FeatureDisabledError();
+      expect(error, isA<AppError>());
+    });
+
+    test('FeatureDisabledError_withFeatureKey_carriesFeatureKey', () {
+      const error = FeatureDisabledError(featureKey: 'extended_history');
+      expect(error.featureKey, equals('extended_history'));
+    });
+
+    test('FeatureDisabledError_withoutFeatureKey_hasNullFeatureKey', () {
+      const error = FeatureDisabledError();
+      expect(error.featureKey, isNull);
+    });
   });
 }

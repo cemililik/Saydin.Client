@@ -30,6 +30,21 @@ class ScenarioLimitError extends AppError {
   const ScenarioLimitError({required this.limit});
 }
 
+/// Talep edilen özellik kullanıcının mevcut planında kapalı — backend bunu
+/// HTTP 403 + `https://saydin.app/errors/feature-disabled` ProblemDetails ile
+/// bildirir (PaidUpgradeRequired semantiği). Bir sunucu hatası DEĞİLDİR:
+/// beklenen bir iş kuralıdır, bu yüzden Sentry'ye raporlanmaz (BLoC'lardaki
+/// raporlama gate'i yalnızca [UnknownError]/[ServerError]/[MalformedResponseError]'ı kapsar).
+///
+/// [featureKey] backend `feature` extension'ından gelir
+/// (`inflation` | `comparison` | `extended_history` | `dca`) ve özelliğe özgü
+/// paywall mesajını seçmek için kullanılır; `null`/bilinmeyen ise genel
+/// "planınızda kullanılamıyor" mesajına düşülür.
+class FeatureDisabledError extends AppError {
+  final String? featureKey;
+  const FeatureDisabledError({this.featureKey});
+}
+
 /// Cihazın internet bağlantısı yok.
 class NoInternetError extends AppError {
   const NoInternetError();

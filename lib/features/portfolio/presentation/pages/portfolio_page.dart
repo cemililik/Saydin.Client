@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
@@ -191,22 +191,6 @@ class _PortfolioPageState extends State<PortfolioPage> {
     context.read<PortfolioBloc>().add(const PortfolioCalculateRequested());
   }
 
-  String _errorMessage(AppError error, AppLocalizations l10n) =>
-      switch (error) {
-        // M-3: joker `_` yerine tüm varyantlar açıkça listelenir — sealed
-        // exhaustiveness derleme-zamanı garantisi portfolio'da da korunur
-        // (yeni AppError varyantı eklenince sessizce errorGeneric'e düşmez,
-        // derleme hatası verir; diğer 4 sayfayla tutarlı).
-        PriceNotFoundError() => l10n.errorPriceNotFound,
-        AssetNotFoundError() => l10n.errorAssetNotFound,
-        DailyLimitError() => l10n.errorDailyLimit,
-        ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
-        NoInternetError() => l10n.errorNoInternet,
-        ServerError() => l10n.errorServer,
-        MalformedResponseError() => l10n.errorMalformed,
-        UnknownError() => l10n.errorGeneric,
-      };
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -234,7 +218,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
           if (state is PortfolioFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(_errorMessage(state.error, context.l10n)),
+                content: Text(state.error.localizedMessage(context.l10n)),
                 backgroundColor: Colors.red.shade700,
               ),
             );

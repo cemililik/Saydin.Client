@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
@@ -9,7 +9,6 @@ import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_state.dart';
 import 'package:saydin/features/scenarios/presentation/widgets/scenario_card.dart';
-import 'package:saydin/l10n/app_localizations.dart';
 
 class _SwipeToDeleteCard extends StatefulWidget {
   final SavedScenario scenario;
@@ -88,18 +87,6 @@ class _ScenariosPageState extends State<ScenariosPage> {
     context.read<ScenariosBloc>().add(ScenariosRequested(plan: plan));
   }
 
-  String _errorMessage(AppError error, AppLocalizations l10n) =>
-      switch (error) {
-        PriceNotFoundError() => l10n.errorPriceNotFound,
-        AssetNotFoundError() => l10n.errorAssetNotFound,
-        DailyLimitError() => l10n.errorDailyLimit,
-        ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
-        NoInternetError() => l10n.errorNoInternet,
-        ServerError() => l10n.errorServer,
-        MalformedResponseError() => l10n.errorMalformed,
-        UnknownError() => l10n.errorGeneric,
-      };
-
   void _onDelete(BuildContext context, SavedScenario scenario) {
     final l10n = context.l10n;
     context.read<ScenariosBloc>().add(ScenarioDeleteRequested(scenario.id));
@@ -129,7 +116,7 @@ class _ScenariosPageState extends State<ScenariosPage> {
           if (state is ScenariosFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(_errorMessage(state.error, l10n)),
+                content: Text(state.error.localizedMessage(l10n)),
                 backgroundColor: Colors.red.shade700,
                 behavior: SnackBarBehavior.floating,
               ),

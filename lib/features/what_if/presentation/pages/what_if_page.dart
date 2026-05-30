@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
@@ -14,7 +14,6 @@ import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/domain/entities/reverse_what_if_result.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
-import 'package:saydin/l10n/app_localizations.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_event.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
@@ -110,18 +109,6 @@ class _WhatIfPageState extends State<WhatIfPage> {
     }
   }
 
-  String _errorMessage(AppError error, AppLocalizations l10n) =>
-      switch (error) {
-        PriceNotFoundError() => l10n.errorPriceNotFound,
-        AssetNotFoundError() => l10n.errorAssetNotFound,
-        DailyLimitError() => l10n.errorDailyLimit,
-        ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
-        NoInternetError() => l10n.errorNoInternet,
-        ServerError() => l10n.errorServer,
-        MalformedResponseError() => l10n.errorMalformed,
-        UnknownError() => l10n.errorGeneric,
-      };
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,7 +139,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
           if (state is WhatIfFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(_errorMessage(state.error, context.l10n)),
+                content: Text(state.error.localizedMessage(context.l10n)),
                 backgroundColor: Colors.red.shade700,
               ),
             );

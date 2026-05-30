@@ -114,6 +114,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Received an unexpected response from the server. Please try again.';
 
   @override
+  String get errorFeatureDisabled =>
+      'This feature isn\'t available on your current plan.';
+
+  @override
+  String get errorFeatureDisabledExtendedHistory =>
+      'Older dates require a Premium plan.';
+
+  @override
+  String get errorFeatureDisabledInflation =>
+      'Inflation adjustment is a Premium feature.';
+
+  @override
+  String get errorFeatureDisabledComparison =>
+      'Asset comparison is a Premium feature.';
+
+  @override
+  String get errorFeatureDisabledDca =>
+      'Recurring investment (DCA) is a Premium feature.';
+
+  @override
   String get retry => 'Retry';
 
   @override

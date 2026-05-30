@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
@@ -22,7 +22,6 @@ import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/widgets/asset_selector.dart';
 import 'package:saydin/features/what_if/presentation/widgets/date_input.dart';
-import 'package:saydin/l10n/app_localizations.dart';
 
 class DcaPage extends StatefulWidget {
   const DcaPage({super.key});
@@ -102,18 +101,6 @@ class _DcaPageState extends State<DcaPage> {
     );
   }
 
-  String _errorMessage(AppError error, AppLocalizations l10n) =>
-      switch (error) {
-        PriceNotFoundError() => l10n.errorPriceNotFound,
-        AssetNotFoundError() => l10n.errorAssetNotFound,
-        DailyLimitError() => l10n.errorDailyLimit,
-        ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
-        NoInternetError() => l10n.errorNoInternet,
-        ServerError() => l10n.errorServer,
-        MalformedResponseError() => l10n.errorMalformed,
-        UnknownError() => l10n.errorGeneric,
-      };
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,7 +130,7 @@ class _DcaPageState extends State<DcaPage> {
           if (state is DcaFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(_errorMessage(state.error, context.l10n)),
+                content: Text(state.error.localizedMessage(context.l10n)),
                 backgroundColor: Colors.red.shade700,
               ),
             );
