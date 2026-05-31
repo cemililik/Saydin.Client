@@ -70,10 +70,25 @@ class SaydinApp extends StatelessWidget {
       child: BlocBuilder<SettingsCubit, AppSettings>(
         builder: (context, settings) {
           return MaterialApp(
-            title: 'Saydın',
+            // Marka adı çevrilebilir UI metni: hardcoded 'Saydın' yerine
+            // l10n.appTitle (F-06-09). onGenerateTitle, Localizations hazır
+            // olduktan sonra çağrılır.
+            onGenerateTitle: (context) => context.l10n.appTitle,
             debugShowCheckedModeBanner: false,
             locale: _resolveLocale(settings.language),
             supportedLocales: const [Locale('tr', 'TR'), Locale('en', 'US')],
+            // Sistem dili desteklenmiyorsa Türkçe'ye düş (F-06-04). locale
+            // açıkça seçilmişse (tr/en) bu callback yine eşleşeni döndürür.
+            localeResolutionCallback: (deviceLocale, supportedLocales) {
+              if (deviceLocale != null) {
+                for (final supported in supportedLocales) {
+                  if (supported.languageCode == deviceLocale.languageCode) {
+                    return supported;
+                  }
+                }
+              }
+              return const Locale('tr', 'TR');
+            },
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,

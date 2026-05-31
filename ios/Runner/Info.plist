@@ -14,6 +14,13 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<!-- Desteklenen diller (F-03-17): App Store dil rozeti + iOS dil seçimi
+	     için tr ve en açıkça listelenir. Flutter AppLocalizations ile uyumlu. -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>tr</string>
+		<string>en</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>Saydın</string>
 	<key>CFBundlePackageType</key>

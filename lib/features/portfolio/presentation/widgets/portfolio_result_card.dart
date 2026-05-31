@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
 
@@ -24,22 +25,15 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
 
   PortfolioResult get result => widget.result;
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
+  // Locale'e duyarlı formatter'lar (F-06-01) — State.context ile çağrı anında.
+  NumberFormat get _tryFormatter => AppFormat.tryCurrency(context.localeName);
 
-  static String _pctSignedFormatter(double v) {
+  String _pctSignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
-    final fmt = NumberFormat.decimalPercentPattern(
-      locale: 'tr_TR',
-      decimalDigits: 2,
-    );
-    return '$sign${fmt.format(v / 100)}';
+    return '$sign${AppFormat.percent(context.localeName).format(v / 100)}';
   }
 
-  static String _trySignedFormatter(double v) {
+  String _trySignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
     return '$sign${_tryFormatter.format(v)}';
   }
@@ -191,7 +185,11 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                           // toplama Decimal'da yapıldı.
                           value: item.calculation.finalValueTry.toDouble(),
                           color: color,
-                          title: '${item.sharePercent.toStringAsFixed(1)}%',
+                          // F-11-16: locale-aware yüzde (manuel '%' yerine).
+                          title: AppFormat.percent(
+                            context.localeName,
+                            decimalDigits: 1,
+                          ).format(item.sharePercent / 100),
                           titleStyle: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -219,10 +217,7 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                   final itemSign = item.calculation.profitLossPercent >= 0
                       ? '+'
                       : '';
-                  final pctFmt = NumberFormat.decimalPercentPattern(
-                    locale: 'tr_TR',
-                    decimalDigits: 2,
-                  );
+                  final pctFmt = AppFormat.percent(context.localeName);
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),

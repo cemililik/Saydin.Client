@@ -1,7 +1,6 @@
 {
   "@@locale": "tr",
   "appTitle": "Saydın",
-  "whatIfTitle": "Ya Alsaydım?",
   "selectAsset": "Varlık Seçin",
   "buyDate": "Alış Tarihi",
   "sellDate": "Satış Tarihi (opsiyonel)",
@@ -12,7 +11,6 @@
   "amountTypeGrams": "Gram",
   "calculate": "Hesapla",
   "calculating": "Hesaplanıyor...",
-  "resultTitle": "Sonuç",
   "initialValue": "Başlangıç Değeri",
   "finalValue": "Bugünkü Değer",
   "profitLoss": "Kar / Zarar",
@@ -45,7 +43,6 @@
   "errorFeatureDisabledComparison": "Varlık karşılaştırma Premium plana özeldir.",
   "errorFeatureDisabledDca": "Düzenli alım (DCA) hesaplaması Premium plana özeldir.",
   "retry": "Tekrar Dene",
-  "tryAgain": "Tekrar Hesapla",
   "scenariosTitle": "Senaryolarım",
   "scenariosEmpty": "Henüz kaydedilen senaryo yok",
   "scenariosEmptyHint": "Hesaplama yaptıktan sonra senaryolarınızı kaydedebilirsiniz.",
@@ -57,9 +54,8 @@
     "placeholders": { "date": { "type": "String" } }
   },
   "deleteScenario": "Sil",
-  "undo": "Geri Al",
   "tabCalculate": "Hesapla",
-  "tabScenarios": "Kayıtlarım",
+  "tabScenarios": "Senaryolar",
 
   "searchAsset": "Varlık ara...",
   "categoryCurrency": "Döviz",
@@ -71,11 +67,11 @@
   "resultSellPrice": "Satış/Güncel Fiyatı",
   "resultUnitsAcquired": "Edinilen Miktar",
   "resultDuration": "Süre",
-  "durationDays": "{count} gün",
+  "durationDays": "{count, plural, =1{{count} gün} other{{count} gün}}",
   "@durationDays": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "durationMonths": "{count} ay",
+  "durationMonths": "{count, plural, =1{{count} ay} other{{count} ay}}",
   "@durationMonths": {
     "placeholders": { "count": { "type": "int" } }
   },
@@ -86,7 +82,7 @@
       "months": { "type": "int" }
     }
   },
-  "durationYears": "{count} yıl",
+  "durationYears": "{count, plural, =1{{count} yıl} other{{count} yıl}}",
   "@durationYears": {
     "placeholders": { "count": { "type": "int" } }
   },
@@ -95,15 +91,17 @@
   "priceDisclaimer": "Gösterilen fiyatlar yaklaşık değerlerdir. Kurum, komisyon ve kur farklılıkları nedeniyle gerçek işlem tutarları değişiklik gösterebilir.",
   "tabCompare": "Karşılaştır",
   "compareTitle": "Varlık Karşılaştırma",
-  "compareSelectAssets": "Varlık Seçin (2-5 adet)",
+  "compareSelectAssets": "Varlık Seçin ({min}-{max} adet)",
+  "@compareSelectAssets": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
   "compareMinAssets": "En az 2 varlık seçiniz.",
   "compareButton": "Karşılaştır",
   "comparing": "Karşılaştırılıyor...",
   "compareResultTitle": "Karşılaştırma Sonuçları",
-  "compareRankLabel": "{rank}. Sıra",
-  "@compareRankLabel": {
-    "placeholders": { "rank": { "type": "int" } }
-  },
   "compareAddAsset": "Varlık Ekle",
   "compareAllCategories": "Tümü",
   "compareNoAssetsFound": "Varlık bulunamadı",
@@ -133,7 +131,7 @@
       "actual":    { "type": "String" }
     }
   },
-  "reasonWeekend": "haftasonu",
+  "reasonWeekend": "hafta sonu",
   "reasonHoliday": "resmi tatil veya fiyat yok",
   "labelBuyDate":  "Alış",
   "labelSellDate": "Satış",
@@ -185,10 +183,10 @@
   "portfolioRealReturn": "Reel Toplam Getiri",
   "portfolioRealProfitLoss": "Reel Kar / Zarar",
 
-  "scenarioTypeWhatIf": "Hesaplama",
+  "scenarioTypeWhatIf": "Ya Alsaydım?",
   "scenarioTypeComparison": "Karşılaştırma",
   "scenarioTypePortfolio": "Portföy",
-  "scenarioTypeDca": "Birikim",
+  "scenarioTypeDca": "Düzenli Yatırım",
 
   "brandedTitlePrefix": "al/sat ",
   "brandedTitleSuffix": "saydın",
@@ -199,7 +197,6 @@
   "themeLight": "Açık",
   "themeDark": "Koyu",
   "themeSystem": "Sistem",
-  "settingsVersion": "Versiyon",
 
   "categoryFavorites": "Favoriler",
   "favoritesMaxReached": "En fazla {max} favori ekleyebilirsiniz.",
@@ -261,17 +258,17 @@
   "shareCardTotalInvestment": "Toplam Yatırım",
   "shareCardTotalReturn": "Toplam Getiri",
   "shareCardNominalTotalReturn": "Nominal Getiri",
-  "shareCardAssetCount": "{count} varlık",
+  "shareCardAssetCount": "{count, plural, =1{{count} varlık} other{{count} varlık}}",
   "@shareCardAssetCount": {
     "placeholders": { "count": { "type": "int" } }
   },
 
-  "shareTextWhatIf": "{asset}'e {initial} yatırsaydım {final_value} ederdi ({percent})! 📊 #saydın",
+  "shareTextWhatIf": "{asset} için {initial} yatırsaydım bugün {finalValue} ederdi ({percent})! 📊 #saydın",
   "@shareTextWhatIf": {
     "placeholders": {
       "asset": { "type": "String" },
       "initial": { "type": "String" },
-      "final_value": { "type": "String" },
+      "finalValue": { "type": "String" },
       "percent": { "type": "String" }
     }
   },
@@ -296,7 +293,7 @@
   "@scenarioNameComparison": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "scenarioNamePortfolio": "Portföy ({count} varlık)",
+  "scenarioNamePortfolio": "Portföy ({count, plural, =1{{count} varlık} other{{count} varlık}})",
   "@scenarioNamePortfolio": {
     "placeholders": { "count": { "type": "int" } }
   },
@@ -316,19 +313,19 @@
   "onboardingPrivacyPolicyLink": "Gizlilik Politikası",
   "onboardingKvkkLink": "KVKK Aydınlatma Metni",
   "onboardingPage1Title": "Ya Alsaydım?",
-  "onboardingPage1Body": "Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.",
+  "onboardingPage1Body": "Merak ettiğiniz yatırımı geçmişe dönük hesaplayın. Dolar, altın, Bitcoin ve daha fazlası.",
   "onboardingPage2Title": "Karşılaştır ve Keşfet",
-  "onboardingPage2Body": "Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?",
+  "onboardingPage2Body": "Varlıkları yan yana karşılaştırın, portföy oluşturun. Hangisi daha çok kazandırdı?",
   "onboardingPage3Title": "Portföy Oluştur",
-  "onboardingPage3Body": "Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.",
+  "onboardingPage3Body": "Birden fazla varlıkla portföy kurun, toplam getirinizi hesaplayın ve en iyi stratejiyi keşfedin.",
   "onboardingPage4Title": "Düzenli Yatırım",
-  "onboardingPage4Body": "Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.",
+  "onboardingPage4Body": "Aylık veya haftalık düzenli alım simüle edin, ortalama maliyetinizi ve toplam getirinizi görün.",
   "onboardingPage5Title": "Ters Senaryo",
-  "onboardingPage5Body": "Hedefine ulaşmak için ne kadar yatırmalıydın? Ters hesaplama ile gereken tutarı öğren.",
+  "onboardingPage5Body": "Hedefinize ulaşmak için ne kadar yatırmalıydınız? Ters hesaplama ile gereken tutarı öğrenin.",
   "onboardingPage6Title": "Paylaş ve Kaydet",
-  "onboardingPage6Body": "Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.",
+  "onboardingPage6Body": "Sonuçlarınızı arkadaşlarınızla paylaşın, senaryolarınızı kaydedin ve istediğiniz zaman geri dönün.",
 
-  "tabDca": "Birikim",
+  "tabDca": "Düzenli Yatırım",
   "dcaTitle": "Düzenli Yatırım Simülasyonu",
   "dcaNoAssets": "Şu anda gösterilecek varlık yok.",
   "dcaStartDate": "Başlangıç Tarihi",
@@ -338,7 +335,6 @@
   "dcaPeriodWeekly": "Haftalık",
   "dcaPeriodMonthly": "Aylık",
   "dcaPeriodLabel": "Periyot",
-  "dcaPeriodicAmountLabel": "Periyodik Tutar",
   "dcaPeriodicAmount": "Periyodik Tutar",
   "dcaCalculate": "Simüle Et",
   "dcaTotalInvested": "Toplam Yatırım",

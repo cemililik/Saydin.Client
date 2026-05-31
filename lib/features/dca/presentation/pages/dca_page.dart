@@ -139,7 +139,10 @@ class _DcaPageState extends State<DcaPage> {
           if (amount != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                _amountController.text = amount.toString().replaceAll('.', ',');
+                _amountController.text = LocaleNumberParser.formatForInput(
+                  amount,
+                  context.localeName,
+                );
               }
             });
           }
@@ -233,7 +236,7 @@ class _DcaPageState extends State<DcaPage> {
                         decimal: true,
                       ),
                       decoration: InputDecoration(
-                        labelText: l10n.dcaPeriodicAmountLabel,
+                        labelText: l10n.dcaPeriodicAmount,
                         hintText: l10n.amountHint,
                         prefixText: '₺ ',
                         border: const OutlineInputBorder(),
@@ -358,7 +361,10 @@ class _DcaPageState extends State<DcaPage> {
                                   final text = l10n.shareTextDca(
                                     result.assetDisplayName,
                                     result.totalPurchases,
-                                    PercentageFormatter.signed(pct),
+                                    PercentageFormatter.signed(
+                                      pct,
+                                      locale: context.localeName,
+                                    ),
                                   );
                                   showModalBottomSheet<void>(
                                     context: context,

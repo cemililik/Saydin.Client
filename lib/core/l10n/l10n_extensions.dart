@@ -22,4 +22,9 @@ extension L10nContext on BuildContext {
         WidgetsBinding.instance.platformDispatcher.locale.languageCode;
     return lang == 'en' ? AppLocalizationsEn() : AppLocalizationsTr();
   }
+
+  /// Aktif locale'in `intl` formatter'larına geçilecek string adı
+  /// (ör. "tr_TR" / "en_US"). `AppFormat.*` fabrikalarıyla birlikte kullanılır
+  /// — sabit `'tr_TR'` literal'i yerine (F-06-01).
+  String get localeName => Localizations.localeOf(this).toString();
 }

@@ -1,7 +1,6 @@
 {
   "@@locale": "en",
   "appTitle": "Saydın",
-  "whatIfTitle": "What If I Bought?",
   "selectAsset": "Select Asset",
   "buyDate": "Buy Date",
   "sellDate": "Sell Date (optional)",
@@ -12,7 +11,6 @@
   "amountTypeGrams": "Grams",
   "calculate": "Calculate",
   "calculating": "Calculating...",
-  "resultTitle": "Result",
   "initialValue": "Initial Value",
   "finalValue": "Current Value",
   "profitLoss": "Profit / Loss",
@@ -45,7 +43,6 @@
   "errorFeatureDisabledComparison": "Asset comparison is a Premium feature.",
   "errorFeatureDisabledDca": "Recurring investment (DCA) is a Premium feature.",
   "retry": "Retry",
-  "tryAgain": "Recalculate",
   "scenariosTitle": "My Scenarios",
   "scenariosEmpty": "No saved scenarios yet",
   "scenariosEmptyHint": "You can save your scenarios after making a calculation.",
@@ -57,7 +54,6 @@
     "placeholders": { "date": { "type": "String" } }
   },
   "deleteScenario": "Delete",
-  "undo": "Undo",
   "tabCalculate": "Calculate",
   "tabScenarios": "Scenarios",
 
@@ -71,11 +67,11 @@
   "resultSellPrice": "Sell/Current Price",
   "resultUnitsAcquired": "Units Acquired",
   "resultDuration": "Duration",
-  "durationDays": "{count} days",
+  "durationDays": "{count, plural, =1{1 day} other{{count} days}}",
   "@durationDays": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "durationMonths": "{count} months",
+  "durationMonths": "{count, plural, =1{1 month} other{{count} months}}",
   "@durationMonths": {
     "placeholders": { "count": { "type": "int" } }
   },
@@ -86,7 +82,7 @@
       "months": { "type": "int" }
     }
   },
-  "durationYears": "{count} years",
+  "durationYears": "{count, plural, =1{1 year} other{{count} years}}",
   "@durationYears": {
     "placeholders": { "count": { "type": "int" } }
   },
@@ -95,15 +91,17 @@
   "priceDisclaimer": "Prices shown are approximate. Actual transaction amounts may vary due to institution fees, commissions, and exchange rate differences.",
   "tabCompare": "Compare",
   "compareTitle": "Asset Comparison",
-  "compareSelectAssets": "Select Assets (2-5)",
+  "compareSelectAssets": "Select Assets ({min}-{max})",
+  "@compareSelectAssets": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
   "compareMinAssets": "Please select at least 2 assets.",
   "compareButton": "Compare",
   "comparing": "Comparing...",
   "compareResultTitle": "Comparison Results",
-  "compareRankLabel": "Rank {rank}",
-  "@compareRankLabel": {
-    "placeholders": { "rank": { "type": "int" } }
-  },
   "compareAddAsset": "Add Asset",
   "compareAllCategories": "All",
   "compareNoAssetsFound": "No assets found",
@@ -185,7 +183,7 @@
   "portfolioRealReturn": "Real Total Return",
   "portfolioRealProfitLoss": "Real Profit / Loss",
 
-  "scenarioTypeWhatIf": "Calculation",
+  "scenarioTypeWhatIf": "What If?",
   "scenarioTypeComparison": "Comparison",
   "scenarioTypePortfolio": "Portfolio",
   "scenarioTypeDca": "DCA",
@@ -199,7 +197,6 @@
   "themeLight": "Light",
   "themeDark": "Dark",
   "themeSystem": "System",
-  "settingsVersion": "Version",
 
   "categoryFavorites": "Favorites",
   "favoritesMaxReached": "You can add up to {max} favorites.",
@@ -261,17 +258,17 @@
   "shareCardTotalInvestment": "Total Investment",
   "shareCardTotalReturn": "Total Return",
   "shareCardNominalTotalReturn": "Nominal Return",
-  "shareCardAssetCount": "{count} assets",
+  "shareCardAssetCount": "{count, plural, =1{1 asset} other{{count} assets}}",
   "@shareCardAssetCount": {
     "placeholders": { "count": { "type": "int" } }
   },
 
-  "shareTextWhatIf": "If I had invested {initial} in {asset}, it would be worth {final_value} ({percent})! 📊 #saydın",
+  "shareTextWhatIf": "If I had invested {initial} in {asset}, it would be worth {finalValue} ({percent})! 📊 #saydın",
   "@shareTextWhatIf": {
     "placeholders": {
       "asset": { "type": "String" },
       "initial": { "type": "String" },
-      "final_value": { "type": "String" },
+      "finalValue": { "type": "String" },
       "percent": { "type": "String" }
     }
   },
@@ -296,7 +293,7 @@
   "@scenarioNameComparison": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "scenarioNamePortfolio": "Portfolio ({count} assets)",
+  "scenarioNamePortfolio": "Portfolio ({count, plural, =1{1 asset} other{{count} assets}})",
   "@scenarioNamePortfolio": {
     "placeholders": { "count": { "type": "int" } }
   },
@@ -338,7 +335,6 @@
   "dcaPeriodWeekly": "Weekly",
   "dcaPeriodMonthly": "Monthly",
   "dcaPeriodLabel": "Period",
-  "dcaPeriodicAmountLabel": "Periodic Amount",
   "dcaPeriodicAmount": "Periodic Amount",
   "dcaCalculate": "Simulate",
   "dcaTotalInvested": "Total Invested",

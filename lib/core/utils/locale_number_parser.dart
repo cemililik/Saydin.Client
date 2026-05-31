@@ -46,4 +46,15 @@ class LocaleNumberParser {
 
     return null;
   }
+
+  /// Düzenleme alanına ön-doldurma için [value]'yu aktif [locale]'in ondalık
+  /// ayracıyla, binlik gruplama OLMADAN biçimler — gruplama düzenlemeyi
+  /// zorlaştırır (F-07-24 / F-10-16). tr → "1234,5", en → "1234.5".
+  /// [tryParseTr] ile simetriktir (iki ayracı da geri okuyabilir).
+  static String formatForInput(num value, String locale) {
+    final fmt = NumberFormat.decimalPattern(locale)
+      ..turnOffGrouping()
+      ..maximumFractionDigits = 8;
+    return fmt.format(value);
+  }
 }

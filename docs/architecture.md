@@ -468,6 +468,31 @@ Dil değiştiğinde:
 - **İstemci:** ARB dosyalarından `context.l10n` ile çözülen UI string'leri
 - **Sunucu:** `Accept-Language` header'ına göre `.resx` dosyalarından çözülen hata mesajları ve asset isimleri
 
+### Locale-aware Biçimlendirme (Faz 7 — F-06-01)
+
+Para, yüzde ve tarih biçimleri **çağrı anında aktif locale'e göre** kurulur; hiçbir
+widget'ta sabit `'tr_TR'` literal'i kalmaz. Üç parça:
+
+- **`AppFormat`** (`lib/core/utils/app_formatters.dart`) — `tryCurrency(locale)`,
+  `percent(locale)`, `date(locale)`, `decimal(locale)`, `custom(pattern, locale)` fabrikaları.
+  `₺` simgesi sabittir (tutarlar TRY); yalnız ayraç/gruplama dile göre değişir
+  (tr `₺1.234,56` / en `₺1,234.56`).
+- **`context.localeName`** (`lib/core/l10n/l10n_extensions.dart`) —
+  `Localizations.localeOf(this).toString()` kısayolu (ör. `"tr_TR"` / `"en_US"`).
+- **`AppBranding`** (`lib/core/constants/app_branding.dart`) — paylaşım kartı sözcük markası
+  (`saydın`) ve alan adı (`saydın.app`); çevrilmez, sabittir.
+
+**Pattern:** StatefulWidget'ta `NumberFormat get _fmt => AppFormat.x(context.localeName)`
+instance getter; StatelessWidget'ta `build` içinde `final fmt = AppFormat.x(context.localeName)`
+build-local. **`static final` formatter YASAK** — locale değişiminde yeniden kurulamaz.
+
+**Sayı girişi:** `LocaleNumberParser.tryParseTr` (parse) ile `formatForInput(value, locale)`
+(ön-doldurma; binlik gruplama olmadan, locale ondalık ayracıyla) çifti simetriktir.
+
+**ICU çoğul:** sayım içeren İngilizce anahtarlar `{count, plural, =1{…} other{…}}` kullanır
+(`durationDays/Months/Years`, `shareCardAssetCount`, `scenarioNamePortfolio`). Türkçe'de
+sayıdan sonra çoğul eki olmadığından TR dalları özdeştir.
+
 ## Grafik (ResultChart)
 
 `ResultCard` içinde `ResultChart` widget'ı (`fl_chart ^0.70.2`) ile alış-satış aralığındaki fiyat geçmişi çizilir.

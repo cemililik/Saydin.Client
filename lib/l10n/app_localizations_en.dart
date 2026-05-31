@@ -12,9 +12,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Saydın';
 
   @override
-  String get whatIfTitle => 'What If I Bought?';
-
-  @override
   String get selectAsset => 'Select Asset';
 
   @override
@@ -43,9 +40,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calculating => 'Calculating...';
-
-  @override
-  String get resultTitle => 'Result';
 
   @override
   String get initialValue => 'Initial Value';
@@ -137,9 +131,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Retry';
 
   @override
-  String get tryAgain => 'Recalculate';
-
-  @override
   String get scenariosTitle => 'My Scenarios';
 
   @override
@@ -165,9 +156,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteScenario => 'Delete';
-
-  @override
-  String get undo => 'Undo';
 
   @override
   String get tabCalculate => 'Calculate';
@@ -204,12 +192,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String durationDays(int count) {
-    return '$count days';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
   }
 
   @override
   String durationMonths(int count) {
-    return '$count months';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months',
+      one: '1 month',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -219,7 +219,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String durationYears(int count) {
-    return '$count years';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count years',
+      one: '1 year',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -240,7 +246,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get compareTitle => 'Asset Comparison';
 
   @override
-  String get compareSelectAssets => 'Select Assets (2-5)';
+  String compareSelectAssets(int min, int max) {
+    return 'Select Assets ($min-$max)';
+  }
 
   @override
   String get compareMinAssets => 'Please select at least 2 assets.';
@@ -253,11 +261,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get compareResultTitle => 'Comparison Results';
-
-  @override
-  String compareRankLabel(int rank) {
-    return 'Rank $rank';
-  }
 
   @override
   String get compareAddAsset => 'Add Asset';
@@ -418,7 +421,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get portfolioRealProfitLoss => 'Real Profit / Loss';
 
   @override
-  String get scenarioTypeWhatIf => 'Calculation';
+  String get scenarioTypeWhatIf => 'What If?';
 
   @override
   String get scenarioTypeComparison => 'Comparison';
@@ -452,9 +455,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeSystem => 'System';
-
-  @override
-  String get settingsVersion => 'Version';
 
   @override
   String get categoryFavorites => 'Favorites';
@@ -588,17 +588,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String shareCardAssetCount(int count) {
-    return '$count assets';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count assets',
+      one: '1 asset',
+    );
+    return '$_temp0';
   }
 
   @override
   String shareTextWhatIf(
     String asset,
     String initial,
-    String final_value,
+    String finalValue,
     String percent,
   ) {
-    return 'If I had invested $initial in $asset, it would be worth $final_value ($percent)! 📊 #saydın';
+    return 'If I had invested $initial in $asset, it would be worth $finalValue ($percent)! 📊 #saydın';
   }
 
   @override
@@ -625,7 +631,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String scenarioNamePortfolio(int count) {
-    return 'Portfolio ($count assets)';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count assets',
+      one: '1 asset',
+    );
+    return 'Portfolio ($_temp0)';
   }
 
   @override
@@ -722,9 +734,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dcaPeriodLabel => 'Period';
-
-  @override
-  String get dcaPeriodicAmountLabel => 'Periodic Amount';
 
   @override
   String get dcaPeriodicAmount => 'Periodic Amount';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
 import 'package:saydin/features/what_if/domain/entities/reverse_what_if_result.dart';
@@ -49,32 +50,28 @@ class _ReverseResultCardState extends State<ReverseResultCard>
     super.dispose();
   }
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
+  // Locale'e duyarlı formatter'lar — `context.localeName` ile çağrı anında
+  // kurulur (static DEĞİL); dil değişiminde TR/EN ayraçları doğru gelir
+  // (F-06-01). State.context her zaman geçerli olduğundan instance getter güvenli.
+  NumberFormat get _tryFormatter => AppFormat.tryCurrency(context.localeName);
+  DateFormat get _dateFormatter => AppFormat.date(context.localeName);
 
-  static String _pctSignedFormatter(double v) {
+  String _pctSignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
-    final fmt = NumberFormat.decimalPercentPattern(
-      locale: 'tr_TR',
-      decimalDigits: 2,
-    );
-    return '$sign${fmt.format(v / 100)}';
+    return '$sign${AppFormat.percent(context.localeName).format(v / 100)}';
   }
 
-  static String _trySignedFormatter(double v) {
+  String _trySignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
     return '$sign${_tryFormatter.format(v)}';
   }
 
-  static String _formatUnits(double value) {
+  String _formatUnits(double value) {
     if (value == 0) return '0';
-    if (value >= 100) return NumberFormat('#,##0.##', 'tr_TR').format(value);
-    if (value >= 1) return NumberFormat('#,##0.####', 'tr_TR').format(value);
-    return NumberFormat('#,##0.########', 'tr_TR').format(value);
+    final locale = context.localeName;
+    if (value >= 100) return AppFormat.custom('#,##0.##', locale).format(value);
+    if (value >= 1) return AppFormat.custom('#,##0.####', locale).format(value);
+    return AppFormat.custom('#,##0.########', locale).format(value);
   }
 
   static bool _isWeekend(DateTime d) =>

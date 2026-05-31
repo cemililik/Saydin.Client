@@ -2,14 +2,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
+import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
-
-final _priceFmt = NumberFormat.currency(
-  locale: 'tr_TR',
-  symbol: '₺',
-  decimalDigits: 2,
-);
-final _dateFmt = DateFormat('dd.MM.yyyy', 'tr_TR');
 
 class ResultChart extends StatefulWidget {
   final List<ChartPoint> priceHistory;
@@ -37,6 +32,10 @@ class _ResultChartState extends State<ResultChart> {
   bool _isRangeMode = false;
   int? _fromIdx;
   int? _toIdx;
+
+  // Locale'e duyarlı formatter'lar (F-06-01) — State.context ile çağrı anında.
+  NumberFormat get _priceFmt => AppFormat.tryCurrency(context.localeName);
+  DateFormat get _dateFmt => AppFormat.date(context.localeName);
 
   int? _closestIndex(LineTouchResponse? response) =>
       response?.lineBarSpots?.firstOrNull?.spotIndex;
@@ -223,9 +222,11 @@ class _RangeInfoBar extends StatelessWidget {
     final isUp = delta >= 0;
     final color = isUp ? AppColors.profit : AppColors.loss;
     final theme = Theme.of(context);
+    final locale = context.localeName;
+    final dateFmt = AppFormat.date(locale);
 
     final pctStr =
-        '${isUp ? "+" : ""}${NumberFormat.decimalPercentPattern(locale: "tr_TR", decimalDigits: 2).format(pct / 100)}';
+        '${isUp ? "+" : ""}${AppFormat.percent(locale).format(pct / 100)}';
 
     return Padding(
       padding: const EdgeInsets.only(top: 6),
@@ -239,7 +240,7 @@ class _RangeInfoBar extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              '${_dateFmt.format(from.date)} → ${_dateFmt.format(to.date)}',
+              '${dateFmt.format(from.date)} → ${dateFmt.format(to.date)}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

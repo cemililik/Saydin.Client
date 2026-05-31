@@ -157,7 +157,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
             _lastSyncedAmount = amount;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                _amountController.text = amount.toString().replaceAll('.', ',');
+                _amountController.text = LocaleNumberParser.formatForInput(
+                  amount,
+                  context.localeName,
+                );
               }
             });
           }
@@ -229,7 +232,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
             onShare: hasResult
                 ? () {
                     final fmt = NumberFormat.currency(
-                      locale: 'tr_TR',
+                      locale: context.localeName,
                       symbol: '₺',
                       decimalDigits: 0,
                     );
@@ -243,7 +246,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
                         r.assetDisplayName,
                         fmt.format(r.targetValueTry.toDouble()),
                         fmt.format(r.requiredInvestmentTry.toDouble()),
-                        PercentageFormatter.signed(r.profitLossPercent),
+                        PercentageFormatter.signed(
+                          r.profitLossPercent,
+                          locale: context.localeName,
+                        ),
                       );
                       showModalBottomSheet<void>(
                         context: context,
@@ -260,7 +266,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
                         r.assetDisplayName,
                         fmt.format(r.initialValueTry.toDouble()),
                         fmt.format(r.finalValueTry.toDouble()),
-                        PercentageFormatter.signed(r.profitLossPercent),
+                        PercentageFormatter.signed(
+                          r.profitLossPercent,
+                          locale: context.localeName,
+                        ),
                       );
                       showModalBottomSheet<void>(
                         context: context,

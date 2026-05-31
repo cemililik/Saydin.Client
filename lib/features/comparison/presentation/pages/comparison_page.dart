@@ -113,7 +113,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     final winnerPct = winner?.calculation.profitLossPercent ?? 0;
     final shareText = ctx.l10n.shareTextComparison(
       winnerName,
-      PercentageFormatter.signed(winnerPct.toDouble()),
+      PercentageFormatter.signed(winnerPct.toDouble(), locale: ctx.localeName),
     );
     showModalBottomSheet<void>(
       context: ctx,
@@ -172,9 +172,9 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 _amountController.text,
               );
               if (controllerAmount != state.amount) {
-                _amountController.text = state.amount.toString().replaceAll(
-                  '.',
-                  ',',
+                _amountController.text = LocaleNumberParser.formatForInput(
+                  state.amount!,
+                  context.localeName,
                 );
               }
             }
@@ -222,7 +222,9 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 children: [
                   // ── Selected assets ──────────────────────────────
                   Text(
-                    l10n.compareSelectAssets,
+                    // 2–5: karşılaştırma alt/üst sınırı (üst sınır
+                    // comparison_bloc `current.length < 5` ile zorlanır).
+                    l10n.compareSelectAssets(2, 5),
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 8),
