@@ -75,7 +75,7 @@
   "@durationMonths": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "durationYearsMonths": "{years} years {months} months",
+  "durationYearsMonths": "{years, plural, =1{1 year} other{{years} years}} {months, plural, =1{1 month} other{{months} months}}",
   "@durationYearsMonths": {
     "placeholders": {
       "years": { "type": "int" },

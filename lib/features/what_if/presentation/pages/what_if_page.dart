@@ -75,7 +75,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
       return;
     }
 
-    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
+    final amount = LocaleNumberParser.tryParse(
+      _amountController.text,
+      context.localeName,
+    );
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(
         context,
@@ -302,8 +305,9 @@ class _WhatIfPageState extends State<WhatIfPage> {
                         sellDate: sellDate,
                         amount: _amountController.text.isEmpty
                             ? 0
-                            : LocaleNumberParser.tryParseTr(
+                            : LocaleNumberParser.tryParse(
                                     _amountController.text,
+                                    context.localeName,
                                   ) ??
                                   0,
                         amountType: formInput.amountType,

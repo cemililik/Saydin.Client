@@ -80,7 +80,10 @@ class _DcaPageState extends State<DcaPage> {
       return;
     }
 
-    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
+    final amount = LocaleNumberParser.tryParse(
+      _amountController.text,
+      context.localeName,
+    );
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(
         context,
@@ -245,7 +248,10 @@ class _DcaPageState extends State<DcaPage> {
                         if (v == null || v.trim().isEmpty) {
                           return l10n.enterAmount;
                         }
-                        final parsed = LocaleNumberParser.tryParseTr(v);
+                        final parsed = LocaleNumberParser.tryParse(
+                          v,
+                          context.localeName,
+                        );
                         if (parsed == null || parsed <= 0) {
                           return l10n.validAmountRequired;
                         }

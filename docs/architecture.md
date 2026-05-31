@@ -484,10 +484,14 @@ widget'ta sabit `'tr_TR'` literal'i kalmaz. Üç parça:
 
 **Pattern:** StatefulWidget'ta `NumberFormat get _fmt => AppFormat.x(context.localeName)`
 instance getter; StatelessWidget'ta `build` içinde `final fmt = AppFormat.x(context.localeName)`
-build-local. **`static final` formatter YASAK** — locale değişiminde yeniden kurulamaz.
+build-local. **Locale-VARIANT formatter'lar `static final` OLAMAZ** — locale değişiminde
+yeniden kurulamaz. (Locale'den bağımsız sabit sayısal pattern — ör. `dd.MM.yyyy` — `static
+final` kalabilir; çıktısı locale'e göre değişmez.)
 
-**Sayı girişi:** `LocaleNumberParser.tryParseTr` (parse) ile `formatForInput(value, locale)`
-(ön-doldurma; binlik gruplama olmadan, locale ondalık ayracıyla) çifti simetriktir.
+**Sayı girişi (locale-duyarlı çift):** `LocaleNumberParser.formatForInput(value, locale)`
+(ön-doldurma; binlik gruplama olmadan) ile `tryParse(text, locale)` (ayrıştırma) **AYNI
+locale** verilince round-trip eder. Farklı locale ayraçları ters yorumlatır (EN `"1234.5"`'i
+TR parser'ı `12345` okur → 10x hata); bu yüzden her iki taraf da `context.localeName` kullanır.
 
 **ICU çoğul:** sayım içeren İngilizce anahtarlar `{count, plural, =1{…} other{…}}` kullanır
 (`durationDays/Months/Years`, `shareCardAssetCount`, `scenarioNamePortfolio`). Türkçe'de

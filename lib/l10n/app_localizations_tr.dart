@@ -214,7 +214,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String durationYearsMonths(int years, int months) {
-    return '$years yıl $months ay';
+    String _temp0 = intl.Intl.pluralLogic(
+      years,
+      locale: localeName,
+      other: '$years yıl',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      months,
+      locale: localeName,
+      other: '$months ay',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override

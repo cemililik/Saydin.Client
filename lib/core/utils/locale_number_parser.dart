@@ -1,56 +1,40 @@
 import 'package:intl/intl.dart';
 
-/// Kullanıcı girdisinden sayı ayrıştırma yardımcısı.
+/// Kullanıcı girdisinden **locale-duyarlı** sayı ayrıştırma/biçimleme yardımcısı.
 ///
-/// Eski `num.tryParse(text.replaceAll(',', '.'))` deyimi Türkçe bağlamda
-/// yanlış çalışır:
-///   - `"1.000,50"` → `replaceAll` → `"1.000.50"` → `tryParse` `null` döner.
-///   - `"1500,75"` → `"1500.75"` → `1500.75` (yanlışlıkla çalışır).
-///
-/// Bu helper:
-///   - Türkçe locale'de binlik `.` ve ondalık `,` formatını doğru çözer.
-///   - Kullanıcı `"1500.75"` veya `"1500,75"` yazsa da kabul eder.
-///   - Geçersiz girdide `null` döner (caller snackbar gösterebilir).
+/// Tutar alanları locale-duyarlıdır: EN kullanıcı `1,234.56`, TR kullanıcı
+/// `1.234,56` görür ve yazar. Bu nedenle hem ön-doldurma ([formatForInput]) hem
+/// ayrıştırma ([tryParse]) AYNI locale ile yapılmalıdır; aksi halde ayraçlar
+/// ters yorumlanır ve tutar 10x/100x şişer veya küçülür (locale asimetrisi).
 class LocaleNumberParser {
   const LocaleNumberParser._();
 
-  /// Türkçe locale'de [text]'i sayıya çevirir. Başarısızsa `null` döner.
+  /// [text]'i [locale]'in ondalık/binlik ayraçlarına göre sayıya çevirir;
+  /// başarısızsa `null` döner (caller snackbar gösterebilir).
   ///
-  /// Sıralı denemeler:
-  ///   1) `tr_TR` parser — "1.000,50" desteklenir.
-  ///   2) Hem virgül hem nokta hem boşluk içermeyen ham sayı → `num.tryParse`.
-  ///   3) Tek bir ondalık ayraç olarak `,` veya `.` varsa nokta'ya normalize.
-  static num? tryParseTr(String text) {
+  /// [formatForInput] ile AYNI locale verildiğinde tam round-trip sağlar:
+  ///   - tr: `"1.000,50"` → `1000.5`, `"1234,5"` → `1234.5`
+  ///   - en: `"1,000.50"` → `1000.5`, `"1234.5"` → `1234.5`
+  ///
+  /// Locale-strict parse `FormatException` atarsa, ayraçsız ham makine sayısına
+  /// (`"1234.5"`) düşülür.
+  static num? tryParse(String? text, String locale) {
+    if (text == null) return null;
     final trimmed = text.trim();
     if (trimmed.isEmpty) return null;
 
-    // 1) Türkçe locale parser ile doğrudan dene.
     try {
-      return NumberFormat.decimalPattern('tr_TR').parse(trimmed);
+      return NumberFormat.decimalPattern(locale).parse(trimmed);
     } on FormatException {
-      // Sonraki katmanlara düş.
+      // Locale ayraçlarına uymayan ham sayı (ör. "1234.5") için son çare.
+      return num.tryParse(trimmed);
     }
-
-    // 2) Sadece rakam + opsiyonel `-` + tek bir ondalık ayraç (nokta) ise
-    //    doğrudan dart parse.
-    final naive = num.tryParse(trimmed);
-    if (naive != null) return naive;
-
-    // 3) Tek bir virgül ondalık olarak girilmiş olabilir (binlik yok).
-    //    `1500,75` → `1500.75`.
-    final commaCount = ','.allMatches(trimmed).length;
-    final dotCount = '.'.allMatches(trimmed).length;
-    if (commaCount == 1 && dotCount == 0) {
-      return num.tryParse(trimmed.replaceFirst(',', '.'));
-    }
-
-    return null;
   }
 
   /// Düzenleme alanına ön-doldurma için [value]'yu aktif [locale]'in ondalık
   /// ayracıyla, binlik gruplama OLMADAN biçimler — gruplama düzenlemeyi
   /// zorlaştırır (F-07-24 / F-10-16). tr → "1234,5", en → "1234.5".
-  /// [tryParseTr] ile simetriktir (iki ayracı da geri okuyabilir).
+  /// [tryParse] ile AYNI locale verilince round-trip eder.
   static String formatForInput(num value, String locale) {
     final fmt = NumberFormat.decimalPattern(locale)
       ..turnOffGrouping()

@@ -455,7 +455,7 @@ abstract class AppLocalizations {
   /// No description provided for @durationYearsMonths.
   ///
   /// In tr, this message translates to:
-  /// **'{years} yıl {months} ay'**
+  /// **'{years, plural, other{{years} yıl}} {months, plural, other{{months} ay}}'**
   String durationYearsMonths(int years, int months);
 
   /// No description provided for @durationYears.

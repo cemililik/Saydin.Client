@@ -75,7 +75,7 @@
   "@durationMonths": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "durationYearsMonths": "{years} yıl {months} ay",
+  "durationYearsMonths": "{years, plural, other{{years} yıl}} {months, plural, other{{months} ay}}",
   "@durationYearsMonths": {
     "placeholders": {
       "years": { "type": "int" },

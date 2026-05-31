@@ -55,9 +55,19 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
     final edit = widget.editItem;
     _selectedSymbol = edit?.assetSymbol;
     _amountType = edit?.amountType ?? 'try';
-    _amountController = TextEditingController(
-      text: edit != null ? edit.amount.toString().replaceAll('.', ',') : '',
-    );
+    _amountController = TextEditingController();
+    if (edit != null) {
+      // Düzenleme ön-doldurması locale-duyarlı olmalı; initState'te Localizations
+      // context'i hazır olmadığından ilk frame sonrası doldurulur (postFrame).
+      final amount = edit.amount.toDouble();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _amountController.text = LocaleNumberParser.formatForInput(
+          amount,
+          context.localeName,
+        );
+      });
+    }
   }
 
   @override
@@ -78,7 +88,10 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
       return;
     }
     final l10n = context.l10n;
-    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
+    final amount = LocaleNumberParser.tryParse(
+      _amountController.text,
+      context.localeName,
+    );
     // null / NaN / Infinity (isFinite hepsini eler) / <=0 reddet.
     if (amount == null || !amount.isFinite || amount <= 0) {
       ScaffoldMessenger.of(
