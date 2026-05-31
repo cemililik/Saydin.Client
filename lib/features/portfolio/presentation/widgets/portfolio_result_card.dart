@@ -25,12 +25,17 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
 
   PortfolioResult get result => widget.result;
 
-  // Locale'e duyarlı formatter'lar (F-06-01) — State.context ile çağrı anında.
-  NumberFormat get _tryFormatter => AppFormat.tryCurrency(context.localeName);
+  // Locale'e duyarlı formatter'lar (F-06-01). CountUpText [formatter]'ı count-up
+  // animasyonunda HER frame'de çağırdığından, formatter'lar getter'da yeniden
+  // üretilmek yerine didChangeDependencies'te bir kez kurulup önbelleğe alınır;
+  // yalnız locale değişince yenilenir (frame başına NumberFormat allocate yok).
+  late NumberFormat _tryFormatter;
+  late NumberFormat _pctFormatter;
+  String? _cachedLocale;
 
   String _pctSignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
-    return '$sign${AppFormat.percent(context.localeName).format(v / 100)}';
+    return '$sign${_pctFormatter.format(v / 100)}';
   }
 
   String _trySignedFormatter(double v) {
@@ -54,6 +59,17 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = context.localeName;
+    if (_cachedLocale != locale) {
+      _cachedLocale = locale;
+      _tryFormatter = AppFormat.tryCurrency(locale);
+      _pctFormatter = AppFormat.percent(locale);
+    }
   }
 
   @override

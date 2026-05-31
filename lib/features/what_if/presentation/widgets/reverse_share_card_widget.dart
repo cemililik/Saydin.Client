@@ -295,6 +295,13 @@ class _InflationSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final pctFmt = AppFormat.percent(context.localeName);
+    // _InflationSection yalnızca parent'taki hasInflation guard'ı true iken
+    // kurulur; bu nedenle iki enflasyon alanı da non-null'dır (aşağıdaki ! güvenli).
+    assert(
+      result.cumulativeInflationPercent != null &&
+          result.realProfitLossPercent != null,
+      '_InflationSection requires non-null inflation fields (hasInflation guard)',
+    );
     final inflSign = (result.cumulativeInflationPercent ?? 0) >= 0 ? '+' : '';
     final realPct = result.realProfitLossPercent!;
     final realSign = realPct >= 0 ? '+' : '';

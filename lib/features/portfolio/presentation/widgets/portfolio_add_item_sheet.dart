@@ -47,6 +47,10 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
   late String? _selectedSymbol;
   late String _amountType;
 
+  // Düzenleme ön-doldurması yalnızca bir kez yapılır — didChangeDependencies
+  // birden çok kez tetiklenebilir; kullanıcı girişini ezmemek için guard.
+  bool _didPrefill = false;
+
   bool get _isEditMode => widget.editItem != null;
 
   @override
@@ -56,17 +60,22 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
     _selectedSymbol = edit?.assetSymbol;
     _amountType = edit?.amountType ?? 'try';
     _amountController = TextEditingController();
-    if (edit != null) {
-      // Düzenleme ön-doldurması locale-duyarlı olmalı; initState'te Localizations
-      // context'i hazır olmadığından ilk frame sonrası doldurulur (postFrame).
-      final amount = edit.amount.toDouble();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _amountController.text = LocaleNumberParser.formatForInput(
-          amount,
-          context.localeName,
-        );
-      });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Düzenleme ön-doldurması locale-duyarlı olmalı: EN'de '1234.56', TR'de
+    // '1234,56'. didChangeDependencies ilk build'den ÖNCE ve Localizations
+    // hazırken çalışır; postFrame gibi ilk kareyi boş gösterip sonra doldurmaz
+    // (flicker yok). Guard ile yalnız bir kez çalışır, kullanıcı girişini ezmez.
+    final edit = widget.editItem;
+    if (edit != null && !_didPrefill) {
+      _didPrefill = true;
+      _amountController.text = LocaleNumberParser.formatForInput(
+        edit.amount.toDouble(),
+        context.localeName,
+      );
     }
   }
 

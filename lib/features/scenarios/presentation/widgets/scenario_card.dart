@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
@@ -120,8 +119,6 @@ class _WhatIfCard extends StatelessWidget {
 
   const _WhatIfCard({required this.scenario, this.onTap});
 
-  static final _dateFormatter = DateFormat('dd.MM.yyyy');
-
   String _formatAmount(BuildContext context) {
     final l10n = context.l10n;
     final localeName = context.localeName;
@@ -139,9 +136,10 @@ class _WhatIfCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final buyLabel = _dateFormatter.format(scenario.buyDate);
+    final dateFmt = AppFormat.date(context.localeName);
+    final buyLabel = dateFmt.format(scenario.buyDate);
     final sellLabel = scenario.sellDate != null
-        ? _dateFormatter.format(scenario.sellDate!)
+        ? dateFmt.format(scenario.sellDate!)
         : l10n.today;
     final rawSymbol = scenario.assetSymbol.replaceAll(RegExp(r'TRY$'), '');
     final avatarText = rawSymbol
@@ -249,16 +247,15 @@ class _DcaCard extends StatelessWidget {
 
   const _DcaCard({required this.scenario, this.onTap});
 
-  static final _dateFormatter = DateFormat('dd.MM.yyyy');
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final tryFormatter = AppFormat.tryCurrency(context.localeName);
-    final buyLabel = _dateFormatter.format(scenario.buyDate);
+    final dateFmt = AppFormat.date(context.localeName);
+    final buyLabel = dateFmt.format(scenario.buyDate);
     final sellLabel = scenario.sellDate != null
-        ? _dateFormatter.format(scenario.sellDate!)
+        ? dateFmt.format(scenario.sellDate!)
         : l10n.today;
     final period = scenario.extraData?['period'] as String? ?? 'monthly';
     final periodLabel = period == 'weekly'
@@ -354,15 +351,14 @@ class _ComparisonCard extends StatelessWidget {
 
   const _ComparisonCard({required this.scenario, this.onTap});
 
-  static final _dateFormatter = DateFormat('dd.MM.yyyy');
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final buyLabel = _dateFormatter.format(scenario.buyDate);
+    final dateFmt = AppFormat.date(context.localeName);
+    final buyLabel = dateFmt.format(scenario.buyDate);
     final sellLabel = scenario.sellDate != null
-        ? _dateFormatter.format(scenario.sellDate!)
+        ? dateFmt.format(scenario.sellDate!)
         : l10n.today;
 
     // Sembol sayısından lokalize başlık oluştur
@@ -480,8 +476,6 @@ class _PortfolioCard extends StatelessWidget {
 
   const _PortfolioCard({required this.scenario, this.onTap});
 
-  static final _dateFormatter = DateFormat('dd.MM.yyyy');
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -490,9 +484,10 @@ class _PortfolioCard extends StatelessWidget {
       context.localeName,
       decimalDigits: 0,
     );
-    final buyLabel = _dateFormatter.format(scenario.buyDate);
+    final dateFmt = AppFormat.date(context.localeName);
+    final buyLabel = dateFmt.format(scenario.buyDate);
     final sellLabel = scenario.sellDate != null
-        ? _dateFormatter.format(scenario.sellDate!)
+        ? dateFmt.format(scenario.sellDate!)
         : l10n.today;
 
     // Varlık sayısından lokalize başlık oluştur
