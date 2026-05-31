@@ -290,6 +290,48 @@ abstract class AppLocalizations {
   /// **'İnternet bağlantısı yok.'**
   String get errorNoInternet;
 
+  /// No description provided for @errorAssetNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu varlık artık mevcut değil.'**
+  String get errorAssetNotFound;
+
+  /// No description provided for @errorMalformed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sunucudan beklenmeyen bir yanıt alındı. Lütfen tekrar deneyin.'**
+  String get errorMalformed;
+
+  /// No description provided for @errorFeatureDisabled.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu özellik mevcut planınızda kullanılamıyor.'**
+  String get errorFeatureDisabled;
+
+  /// No description provided for @errorFeatureDisabledExtendedHistory.
+  ///
+  /// In tr, this message translates to:
+  /// **'Daha eski tarihler için Premium plan gerekir.'**
+  String get errorFeatureDisabledExtendedHistory;
+
+  /// No description provided for @errorFeatureDisabledInflation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Enflasyona göre düzeltme Premium plana özeldir.'**
+  String get errorFeatureDisabledInflation;
+
+  /// No description provided for @errorFeatureDisabledComparison.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varlık karşılaştırma Premium plana özeldir.'**
+  String get errorFeatureDisabledComparison;
+
+  /// No description provided for @errorFeatureDisabledDca.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli alım (DCA) hesaplaması Premium plana özeldir.'**
+  String get errorFeatureDisabledDca;
+
   /// No description provided for @retry.
   ///
   /// In tr, this message translates to:
@@ -631,6 +673,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Hazırlanıyor...'**
   String get sharingInProgress;
+
+  /// No description provided for @shareError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaşım kartı oluşturulamadı. Lütfen tekrar deneyin.'**
+  String get shareError;
 
   /// No description provided for @tabPortfolio.
   ///
@@ -1290,6 +1338,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Düzenli Yatırım Simülasyonu'**
   String get dcaTitle;
+
+  /// No description provided for @dcaNoAssets.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şu anda gösterilecek varlık yok.'**
+  String get dcaNoAssets;
 
   /// No description provided for @dcaStartDate.
   ///

@@ -46,9 +46,17 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
     emit(const DcaAssetsLoading());
     try {
       final assets = await _getAssets();
-      emit(DcaAssetsLoaded(assets, formInput: _formInput));
+      // F-08-10: boş liste → DcaEmpty (sonsuz/çıkmaz boş form yerine açık
+      // boş-durum + tekrar dene). Boş olmayan liste normal akışa devam eder.
+      if (assets.isEmpty) {
+        emit(DcaEmpty(formInput: _formInput));
+      } else {
+        emit(DcaAssetsLoaded(assets, formInput: _formInput));
+      }
     } on AppError catch (error, st) {
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'dca_get_assets');
       }
       emit(DcaFailure(assets: const [], error: error, formInput: _formInput));
@@ -141,7 +149,9 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
         ),
       );
     } on AppError catch (error, st) {
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'dca_calculate');
       }
       emit(

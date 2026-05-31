@@ -3,6 +3,7 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/domain/usecases/delete_scenario.dart';
 import 'package:saydin/features/scenarios/domain/usecases/get_scenarios.dart';
@@ -17,10 +18,13 @@ class MockSaveScenario extends Mock implements SaveScenario {}
 
 class MockDeleteScenario extends Mock implements DeleteScenario {}
 
+class MockErrorReporter extends Mock implements ErrorReporter {}
+
 void main() {
   late MockGetScenarios mockGetScenarios;
   late MockSaveScenario mockSaveScenario;
   late MockDeleteScenario mockDeleteScenario;
+  late MockErrorReporter reporter;
 
   setUp(() {
     registerFallbackValue(DateTime(2020));
@@ -28,6 +32,7 @@ void main() {
     mockGetScenarios = MockGetScenarios();
     mockSaveScenario = MockSaveScenario();
     mockDeleteScenario = MockDeleteScenario();
+    reporter = MockErrorReporter();
   });
 
   ScenariosBloc buildBloc() =>
@@ -354,6 +359,44 @@ void main() {
           isA<NoInternetError>(),
         ),
       ],
+    );
+
+    // L-1: FeatureDisabledError beklenen bir iş kuralıdır (paywall), sunucu
+    // hatası değil. BLoC raporlama gate'i (yalnız Unknown/Server/Malformed) onu
+    // DIŞARIDA bırakır → Sentry'ye gitmemeli. Gate ileride yanlışlıkla
+    // denylist'e çevrilir veya FeatureDisabledError allowlist'e eklenirse bu
+    // test regresyonu yakalar.
+    blocTest<ScenariosBloc, ScenariosState>(
+      'getScenarios_throwsFeatureDisabledError_doesNotReportToSentry',
+      setUp: () {
+        registerFallbackValue(StackTrace.empty);
+        when(
+          () => reporter.report(any(), any(), context: any(named: 'context')),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockGetScenarios(plan: any(named: 'plan')),
+        ).thenThrow(const FeatureDisabledError(featureKey: 'extended_history'));
+      },
+      build: () => ScenariosBloc(
+        mockGetScenarios,
+        mockSaveScenario,
+        mockDeleteScenario,
+        reporter: reporter,
+      ),
+      act: (bloc) => bloc.add(const ScenariosRequested()),
+      expect: () => [
+        isA<ScenariosLoading>(),
+        isA<ScenariosFailure>().having(
+          (s) => s.error,
+          'error',
+          isA<FeatureDisabledError>(),
+        ),
+      ],
+      verify: (_) {
+        verifyNever(
+          () => reporter.report(any(), any(), context: any(named: 'context')),
+        );
+      },
     );
   });
 

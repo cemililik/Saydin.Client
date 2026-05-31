@@ -34,5 +34,36 @@ void main() {
       final error = UnknownError(cause: cause);
       expect(error.cause, equals(cause));
     });
+
+    test('AssetNotFoundError_created_isAppError', () {
+      const error = AssetNotFoundError();
+      expect(error, isA<AppError>());
+    });
+
+    test('MalformedResponseError_created_isAppError', () {
+      const error = MalformedResponseError();
+      expect(error, isA<AppError>());
+    });
+
+    test('MalformedResponseError_withCause_carriesCause', () {
+      final cause = Exception('bad body');
+      final error = MalformedResponseError(cause: cause);
+      expect(error.cause, equals(cause));
+    });
+
+    test('FeatureDisabledError_created_isAppError', () {
+      const error = FeatureDisabledError();
+      expect(error, isA<AppError>());
+    });
+
+    test('FeatureDisabledError_withFeatureKey_carriesFeatureKey', () {
+      const error = FeatureDisabledError(featureKey: 'extended_history');
+      expect(error.featureKey, equals('extended_history'));
+    });
+
+    test('FeatureDisabledError_withoutFeatureKey_hasNullFeatureKey', () {
+      const error = FeatureDisabledError();
+      expect(error.featureKey, isNull);
+    });
   });
 }

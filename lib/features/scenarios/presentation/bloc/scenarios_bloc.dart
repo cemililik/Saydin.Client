@@ -36,7 +36,9 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
       final scenarios = await _getScenarios(plan: event.plan);
       emit(ScenariosLoaded(scenarios));
     } on AppError catch (error, st) {
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'get_scenarios');
       }
       emit(ScenariosFailure(scenarios: state.scenarios, error: error));
@@ -107,7 +109,9 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
       );
       emit(ScenariosSaved([saved, ...current]));
     } on AppError catch (error, st) {
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'save_scenario');
       }
       emit(ScenariosFailure(scenarios: current, error: error));
@@ -142,7 +146,9 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     } on AppError catch (error, st) {
       // F-11-03 idempotency (404 = zaten yok → sessiz başarı) repository
       // katmanına taşındı; burada yalnızca gerçek hatalar (5xx/network) görülür.
-      if (error is UnknownError || error is ServerError) {
+      if (error is UnknownError ||
+          error is ServerError ||
+          error is MalformedResponseError) {
         await _reporter.report(error, st, context: 'delete_scenario');
       }
       // 5xx / network: optimistic kaldırmayı geri al (original'i taşıyan Failure).

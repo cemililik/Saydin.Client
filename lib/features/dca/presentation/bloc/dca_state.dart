@@ -69,6 +69,17 @@ class DcaAssetsLoading extends DcaState {
   const DcaAssetsLoading();
 }
 
+/// Varlık listesi başarıyla yüklendi ama BOŞ döndü (F-08-10). Ayrı state
+/// olmadan sayfa boş bir form gösterir (seçilecek varlık yok → kullanıcı
+/// hesaplama yapamaz, "sonsuz" çıkmaz boş ekran). Bu state ile sayfa
+/// açık bir boş-durum mesajı + "tekrar dene" sunar.
+class DcaEmpty extends DcaState {
+  const DcaEmpty({super.formInput});
+
+  @override
+  List<Object?> get props => [formInput];
+}
+
 class DcaAssetsLoaded extends DcaState {
   final List<Asset> assets;
 

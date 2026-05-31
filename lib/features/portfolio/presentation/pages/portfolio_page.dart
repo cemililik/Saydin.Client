@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
@@ -191,15 +191,6 @@ class _PortfolioPageState extends State<PortfolioPage> {
     context.read<PortfolioBloc>().add(const PortfolioCalculateRequested());
   }
 
-  String _errorMessage(AppError error, AppLocalizations l10n) =>
-      switch (error) {
-        PriceNotFoundError() => l10n.errorPriceNotFound,
-        DailyLimitError() => l10n.errorDailyLimit,
-        NoInternetError() => l10n.errorNoInternet,
-        ServerError() => l10n.errorServer,
-        _ => l10n.errorGeneric,
-      };
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -227,7 +218,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
           if (state is PortfolioFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(_errorMessage(state.error, context.l10n)),
+                content: Text(state.error.localizedMessage(context.l10n)),
                 backgroundColor: Colors.red.shade700,
               ),
             );

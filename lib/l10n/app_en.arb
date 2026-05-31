@@ -37,6 +37,13 @@
     }
   },
   "errorNoInternet": "No internet connection.",
+  "errorAssetNotFound": "This asset is no longer available.",
+  "errorMalformed": "Received an unexpected response from the server. Please try again.",
+  "errorFeatureDisabled": "This feature isn't available on your current plan.",
+  "errorFeatureDisabledExtendedHistory": "Older dates require a Premium plan.",
+  "errorFeatureDisabledInflation": "Inflation adjustment is a Premium feature.",
+  "errorFeatureDisabledComparison": "Asset comparison is a Premium feature.",
+  "errorFeatureDisabledDca": "Recurring investment (DCA) is a Premium feature.",
   "retry": "Retry",
   "tryAgain": "Recalculate",
   "scenariosTitle": "My Scenarios",
@@ -134,6 +141,7 @@
   "shareResult": "Share",
   "sharePreviewTitle": "Share Preview",
   "sharingInProgress": "Preparing...",
+  "shareError": "Couldn't create the share card. Please try again.",
 
   "tabPortfolio": "Portfolio",
   "portfolioTitle": "Portfolio Builder",
@@ -322,6 +330,7 @@
 
   "tabDca": "DCA",
   "dcaTitle": "DCA Simulation",
+  "dcaNoAssets": "No assets available right now.",
   "dcaStartDate": "Start Date",
   "dcaEndDate": "End Date (optional)",
   "dcaStartDateRequired": "Please enter start date",

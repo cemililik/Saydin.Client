@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
@@ -22,7 +22,6 @@ import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/presentation/widgets/asset_selector.dart';
 import 'package:saydin/features/what_if/presentation/widgets/date_input.dart';
-import 'package:saydin/l10n/app_localizations.dart';
 
 class DcaPage extends StatefulWidget {
   const DcaPage({super.key});
@@ -102,16 +101,6 @@ class _DcaPageState extends State<DcaPage> {
     );
   }
 
-  String _errorMessage(AppError error, AppLocalizations l10n) =>
-      switch (error) {
-        PriceNotFoundError() => l10n.errorPriceNotFound,
-        DailyLimitError() => l10n.errorDailyLimit,
-        ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
-        NoInternetError() => l10n.errorNoInternet,
-        ServerError() => l10n.errorServer,
-        UnknownError() => l10n.errorGeneric,
-      };
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -141,7 +130,7 @@ class _DcaPageState extends State<DcaPage> {
           if (state is DcaFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(_errorMessage(state.error, context.l10n)),
+                content: Text(state.error.localizedMessage(context.l10n)),
                 backgroundColor: Colors.red.shade700,
               ),
             );
@@ -158,6 +147,14 @@ class _DcaPageState extends State<DcaPage> {
         builder: (context, state) {
           if (state is DcaAssetsLoading) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          // F-08-10: boş varlık listesi → açık boş-durum + tekrar dene.
+          if (state is DcaEmpty) {
+            return _DcaEmptyState(
+              onRetry: () =>
+                  context.read<DcaBloc>().add(const DcaAssetsRequested()),
+            );
           }
 
           final assets = switch (state) {
@@ -412,6 +409,49 @@ class _DcaPageState extends State<DcaPage> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// DCA varlık listesi boş döndüğünde gösterilen boş-durum (F-08-10):
+/// semantic ikon + açıklama + tekrar dene. Renkler tema-aware.
+class _DcaEmptyState extends StatelessWidget {
+  const _DcaEmptyState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 48,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.dcaNoAssets,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.retry),
+            ),
+          ],
+        ),
       ),
     );
   }

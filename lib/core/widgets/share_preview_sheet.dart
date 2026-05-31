@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:saydin/core/di/injection.dart';
+import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/share_card_renderer.dart';
 
@@ -30,9 +32,27 @@ class _SharePreviewSheetState extends State<SharePreviewSheet> {
         shareText: widget.shareText,
         context: context,
       );
+    } on ShareCardException catch (e, st) {
+      // F-05-22: render başarısız — kullanıcıya geri bildir + raporla.
+      await sl<ErrorReporter>().report(e, st, context: 'share_card_render');
+      _showShareError();
+    } catch (e, st) {
+      // Beklenmeyen paylaşım hatası (platform/share plugin) — sessizce yutma.
+      await sl<ErrorReporter>().report(e, st, context: 'share_card');
+      _showShareError();
     } finally {
       if (mounted) setState(() => _isSharing = false);
     }
+  }
+
+  void _showShareError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.shareError),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
   }
 
   @override

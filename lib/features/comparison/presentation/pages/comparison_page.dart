@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/l10n/app_localizations.dart';
@@ -129,16 +129,6 @@ class _ComparisonPageState extends State<ComparisonPage> {
     );
   }
 
-  String _errorMessage(AppError error, AppLocalizations l10n) =>
-      switch (error) {
-        PriceNotFoundError() => l10n.errorPriceNotFound,
-        DailyLimitError() => l10n.errorDailyLimit,
-        ScenarioLimitError(:final limit) => l10n.errorScenarioLimit(limit),
-        NoInternetError() => l10n.errorNoInternet,
-        ServerError() => l10n.errorServer,
-        UnknownError() => l10n.errorGeneric,
-      };
-
   void _showAssetPicker(BuildContext pageContext) {
     final bloc = pageContext.read<ComparisonBloc>();
     final favoritesCubit = pageContext.read<FavoritesCubit>();
@@ -209,7 +199,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(_errorMessage(state.error, l10n)),
+                    Text(state.error.localizedMessage(l10n)),
                     const SizedBox(height: 12),
                     ElevatedButton(
                       onPressed: () => context.read<ComparisonBloc>().add(
@@ -371,7 +361,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
                   if (state is ComparisonFailure) ...[
                     const SizedBox(height: 12),
                     Text(
-                      _errorMessage(state.error, l10n),
+                      state.error.localizedMessage(l10n),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),

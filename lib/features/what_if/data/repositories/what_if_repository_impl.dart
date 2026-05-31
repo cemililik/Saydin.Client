@@ -59,10 +59,11 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
         },
       );
       final data = response.data;
-      // 200 + boş gövde sunucu sözleşme ihlali → ServerError (hardcoded TR
-      // FormatException yerine tip-güvenli AppError).
+      // 2xx + boş gövde sunucu sözleşme ihlalidir → MalformedResponseError
+      // (F-07-08). `ServerError(statusCode: 200)` anlamsal olarak tuhaftı;
+      // "başarı statüsü ama eksik gövde" durumu artık ayrı varyantla taşınır.
       if (data == null) {
-        throw ServerError(statusCode: response.statusCode);
+        throw const MalformedResponseError();
       }
       return WhatIfResponseModel.fromJson(data);
     } on DioException catch (e) {
@@ -93,7 +94,7 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
       );
       final data = response.data;
       if (data == null) {
-        throw ServerError(statusCode: response.statusCode);
+        throw const MalformedResponseError();
       }
       return ReverseWhatIfResponseModel.fromJson(data);
     } on DioException catch (e) {

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:saydin/core/error/app_error.dart';
@@ -6,18 +8,23 @@ import 'package:saydin/core/error/dio_error_mapper.dart';
 void main() {
   const mapper = DioErrorMapper();
 
-  DioException make(DioExceptionType type, {int? statusCode, dynamic data}) =>
-      DioException(
-        requestOptions: RequestOptions(),
-        type: type,
-        response: statusCode != null
-            ? Response(
-                requestOptions: RequestOptions(),
-                statusCode: statusCode,
-                data: data,
-              )
-            : null,
-      );
+  DioException make(
+    DioExceptionType type, {
+    int? statusCode,
+    dynamic data,
+    Object? error,
+  }) => DioException(
+    requestOptions: RequestOptions(),
+    type: type,
+    error: error,
+    response: statusCode != null
+        ? Response(
+            requestOptions: RequestOptions(),
+            statusCode: statusCode,
+            data: data,
+          )
+        : null,
+  );
 
   group('DioErrorMapper', () {
     test('map_connectionError_returnsNoInternetError', () {
@@ -25,9 +32,11 @@ void main() {
       expect(mapper.map(e), isA<NoInternetError>());
     });
 
-    test('map_unknownType_returnsNoInternetError', () {
+    // F-05-10: `unknown` artık NoInternet'e DEĞİL UnknownError'a eşlenir —
+    // `unknown` bağlantı yokluğu değil, istek sırasında beklenmeyen bir hatadır.
+    test('map_unknownType_returnsUnknownError', () {
       final e = make(DioExceptionType.unknown);
-      expect(mapper.map(e), isA<NoInternetError>());
+      expect(mapper.map(e), isA<UnknownError>());
     });
 
     test('map_404_returnsPriceNotFoundError', () {
@@ -127,6 +136,176 @@ void main() {
       );
       final error = mapper.map(e) as ScenarioLimitError;
       expect(error.limit, 5);
+    });
+
+    // F-05-11: backend RFC-7807 ProblemDetails + ASP.NET `[JsonExtensionData]`
+    // → extensions DÜZ (top-level) serialize edilir. Mapper hem düz hem nested
+    // okur; aşağıdaki testler gerçek (düz) backend şeklini doğrular.
+    test('map_typeAssetNotFound_returnsAssetNotFoundError', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 404,
+        data: {'type': 'https://saydin.app/errors/asset-not-found'},
+      );
+      expect(mapper.map(e), isA<AssetNotFoundError>());
+    });
+
+    test('map_typePriceNotFound_returnsPriceNotFoundError', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 404,
+        data: {'type': 'https://saydin.app/errors/price-not-found'},
+      );
+      expect(mapper.map(e), isA<PriceNotFoundError>());
+    });
+
+    test('map_scenarioLimit_flatLimit_readsTopLevel', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 422,
+        data: {
+          'type': 'https://saydin.app/errors/scenario-limit-exceeded',
+          'status': 422,
+          'limit': 10, // ASP.NET düzleştirilmiş extension
+        },
+      );
+      final error = mapper.map(e) as ScenarioLimitError;
+      expect(error.limit, 10);
+    });
+
+    test('map_dailyLimit_flatResetAt_readsTopLevel', () {
+      final reset = DateTime.utc(2026, 5, 30);
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 429,
+        data: {
+          'type': 'https://saydin.app/errors/daily-limit-exceeded',
+          'status': 429,
+          'resetAt': reset.toIso8601String(), // düzleştirilmiş
+        },
+      );
+      final error = mapper.map(e) as DailyLimitError;
+      expect(error.resetAt, equals(reset));
+    });
+
+    test('map_404WithoutType_fallsBackToPriceNotFound', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 404,
+        data: <String, dynamic>{},
+      );
+      expect(mapper.map(e), isA<PriceNotFoundError>());
+    });
+
+    test('map_502_returnsServerError', () {
+      final e = make(DioExceptionType.badResponse, statusCode: 502);
+      final error = mapper.map(e) as ServerError;
+      expect(error.statusCode, 502);
+    });
+
+    // M-1: timeout sınıfı (connection/receive/send) → NoInternetError
+    // (ServerError(null) gürültüsü değil; Sentry'ye raporlanmaz).
+    for (final t in [
+      DioExceptionType.connectionTimeout,
+      DioExceptionType.receiveTimeout,
+      DioExceptionType.sendTimeout,
+    ]) {
+      test('map_${t.name}_returnsNoInternetError', () {
+        expect(mapper.map(make(t)), isA<NoInternetError>());
+      });
+    }
+
+    // M-2: `unknown` içinde SocketException → gerçek bağlantı kopması → NoInternet.
+    test('map_unknownWithSocketException_returnsNoInternetError', () {
+      final e = make(
+        DioExceptionType.unknown,
+        error: const SocketException('Connection failed'),
+      );
+      expect(mapper.map(e), isA<NoInternetError>());
+    });
+
+    // M-2: `unknown` içinde HandshakeException (SocketException ALT TÜRÜ DEĞİL) →
+    // güvenlik/sertifika sinyali → UnknownError'da kalır (raporlanır).
+    test('map_unknownWithHandshakeException_returnsUnknownError', () {
+      final e = make(
+        DioExceptionType.unknown,
+        error: const HandshakeException('cert rejected'),
+      );
+      expect(mapper.map(e), isA<UnknownError>());
+    });
+
+    // tip yok + status 400 → ServerError(status) (validation için ayrı varyant
+    // yok; status fallback'ine düşer).
+    test('map_400WithoutType_returnsServerError400', () {
+      final e = make(DioExceptionType.badResponse, statusCode: 400);
+      expect((mapper.map(e) as ServerError).statusCode, 400);
+    });
+
+    // Plan-kapısı: type `feature-disabled` → FeatureDisabledError; `feature`
+    // extension'ı düz (top-level) gelir ve featureKey'e taşınır.
+    test('map_typeFeatureDisabled_flatFeature_returnsFeatureDisabledError', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 403,
+        data: {
+          'type': 'https://saydin.app/errors/feature-disabled',
+          'status': 403,
+          'feature': 'extended_history',
+        },
+      );
+      final error = mapper.map(e) as FeatureDisabledError;
+      expect(error.featureKey, 'extended_history');
+    });
+
+    // `feature` extension nested (`extensions`) gelirse de okunur (savunmacı).
+    test(
+      'map_typeFeatureDisabled_nestedFeature_returnsFeatureDisabledError',
+      () {
+        final e = make(
+          DioExceptionType.badResponse,
+          statusCode: 403,
+          data: {
+            'type': 'https://saydin.app/errors/feature-disabled',
+            'extensions': {'feature': 'inflation'},
+          },
+        );
+        final error = mapper.map(e) as FeatureDisabledError;
+        expect(error.featureKey, 'inflation');
+      },
+    );
+
+    // `feature` extension yoksa featureKey null kalır (genel mesaja düşülür).
+    test('map_typeFeatureDisabled_noFeature_returnsNullFeatureKey', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 403,
+        data: {'type': 'https://saydin.app/errors/feature-disabled'},
+      );
+      final error = mapper.map(e) as FeatureDisabledError;
+      expect(error.featureKey, isNull);
+    });
+
+    // 403 + tanınmayan/eksik type → status fallback ile FeatureDisabledError
+    // (ServerError DEĞİL — paywall ağ geçidi gövdeyi yutsa bile yakalanır).
+    test('map_403WithoutType_returnsFeatureDisabledError', () {
+      final e = make(DioExceptionType.badResponse, statusCode: 403);
+      final error = mapper.map(e) as FeatureDisabledError;
+      expect(error.featureKey, isNull);
+    });
+
+    // 403 + tanınmayan type AMA gövdede `feature` varsa, status fallback'i
+    // featureKey'i korur (özelliğe özgü mesaj kurtarılır).
+    test('map_403UnknownTypeWithFeature_preservesFeatureKey', () {
+      final e = make(
+        DioExceptionType.badResponse,
+        statusCode: 403,
+        data: {
+          'type': 'https://saydin.app/errors/some-future-403',
+          'feature': 'dca',
+        },
+      );
+      final error = mapper.map(e) as FeatureDisabledError;
+      expect(error.featureKey, 'dca');
     });
   });
 }

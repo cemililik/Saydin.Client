@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
 import 'package:saydin/features/onboarding/domain/repositories/onboarding_repository.dart';
 
@@ -25,10 +26,15 @@ enum OnboardingStatus {
 /// gibi akışlar [restart] ile trivial olur.
 class OnboardingCubit extends Cubit<OnboardingStatus> {
   final OnboardingRepository _repository;
+  final ErrorReporter _reporter;
   StreamSubscription<void>? _resetSubscription;
 
-  OnboardingCubit(this._repository, AppLifecycleEvents lifecycleEvents)
-    : super(OnboardingStatus.unknown) {
+  OnboardingCubit(
+    this._repository,
+    AppLifecycleEvents lifecycleEvents, {
+    ErrorReporter? reporter,
+  }) : _reporter = reporter ?? const ErrorReporter(),
+       super(OnboardingStatus.unknown) {
     // Hesap silme sonrası `AccountDeletionCubit` reset event yayar; dinleyip
     // onboarding'i baştan başlatırız. Feature → app yönündeki bağı keser
     // (publish/subscribe), abonelik [close] içinde iptal edilir.
@@ -45,8 +51,24 @@ class OnboardingCubit extends Cubit<OnboardingStatus> {
   }
 
   /// Onboarding tamamlandı — kalıcı kaydet ve ana uygulamaya geç.
+  ///
+  /// F-12-18 / F-05-28: kalıcı kayıt (SharedPreferences) başarısız olsa bile
+  /// kullanıcıyı onboarding'te **sıkıştırma**. Eski sürümde storage hatası
+  /// `completeOnboarding()`'den fırlar, cubit `completed` emit edemez ve
+  /// onboarding sayfası `_isCompleting` re-entrancy guard'ıyla kilitlenirdi
+  /// (kullanıcı ne ilerleyebilir ne tekrar deneyebilirdi — sonsuz onboarding).
+  /// Artık: best-effort persist → her durumda `completed` emit; hata raporlanır.
+  /// (Yan etki: yazma kalıcı başarısızsa onboarding bir sonraki açılışta tekrar
+  /// görünebilir — kullanıcıyı içeride kilitlemekten kabul edilebilir derecede
+  /// iyidir.)
   Future<void> complete() async {
-    await _repository.completeOnboarding();
+    try {
+      await _repository.completeOnboarding();
+    } catch (e, st) {
+      // L-4: raporu fire-and-forget yap — yavaş Sentry gönderimi kullanıcının
+      // uygulamaya girişini geciktirmesin (scenarios_repository_impl deseni).
+      unawaited(_reporter.report(e, st, context: 'onboarding_complete'));
+    }
     if (isClosed) return;
     emit(OnboardingStatus.completed);
   }
