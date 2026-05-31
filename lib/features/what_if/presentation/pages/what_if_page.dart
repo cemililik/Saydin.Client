@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error_messages.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
@@ -234,9 +234,8 @@ class _WhatIfPageState extends State<WhatIfPage> {
             onCalculate: _onCalculate,
             onShare: hasResult
                 ? () {
-                    final fmt = NumberFormat.currency(
-                      locale: context.localeName,
-                      symbol: '₺',
+                    final fmt = AppFormat.tryCurrency(
+                      context.localeName,
                       decimalDigits: 0,
                     );
                     if (reverseResult != null) {
