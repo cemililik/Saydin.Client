@@ -1,5 +1,10 @@
 # Geliştirme Kılavuzu — Saydin.Client
 
+> Android Kotlin/AGP toolchain modernizasyonu şimdilik ertelenmiştir. Karar,
+> risk, maliyet, yeniden değerlendirme koşulları ve uygulanacak migration planı
+> için [Android Toolchain Modernizasyonu — Ertelenmiş Migration Planı](android-toolchain-migration-plan.md)
+> belgesine bakın.
+
 ## Ön Koşullar
 
 | Araç | Versiyon | Kontrol |
