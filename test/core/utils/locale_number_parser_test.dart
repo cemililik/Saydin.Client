@@ -19,6 +19,22 @@ void main() {
       expect(LocaleNumberParser.tryParse('1.000,50', 'tr_TR'), 1000.5);
     });
 
+    test('tryParse_crossLocaleSeparator_rejectsInsteadOfChangingMagnitude', () {
+      expect(LocaleNumberParser.tryParse('1234.5', 'tr_TR'), isNull);
+      expect(LocaleNumberParser.tryParse('1234,5', 'en_US'), isNull);
+    });
+
+    test('tryParse_malformedGrouping_returnsNull', () {
+      expect(LocaleNumberParser.tryParse('12.34,56', 'tr_TR'), isNull);
+      expect(LocaleNumberParser.tryParse('12,34.56', 'en_US'), isNull);
+      expect(LocaleNumberParser.tryParse('1,,234', 'en_US'), isNull);
+    });
+
+    test('tryParse_leadingDecimalSeparator_parsesFraction', () {
+      expect(LocaleNumberParser.tryParse(',5', 'tr_TR'), 0.5);
+      expect(LocaleNumberParser.tryParse('.5', 'en_US'), 0.5);
+    });
+
     test('null / boş / geçersiz → null', () {
       expect(LocaleNumberParser.tryParse(null, 'tr_TR'), isNull);
       expect(LocaleNumberParser.tryParse('', 'tr_TR'), isNull);
@@ -50,5 +66,35 @@ void main() {
         expect(LocaleNumberParser.tryParse('500.50', 'en_US'), 500.5);
       },
     );
+
+    test('reformatInput_localeChanges_preservesNumericValue', () {
+      expect(
+        LocaleNumberParser.reformatInput(
+          '1234,5',
+          fromLocale: 'tr_TR',
+          toLocale: 'en_US',
+        ),
+        '1234.5',
+      );
+      expect(
+        LocaleNumberParser.reformatInput(
+          '1234.5',
+          fromLocale: 'en_US',
+          toLocale: 'tr_TR',
+        ),
+        '1234,5',
+      );
+    });
+
+    test('reformatInput_invalidOldLocaleText_preservesUserInput', () {
+      expect(
+        LocaleNumberParser.reformatInput(
+          '1234,',
+          fromLocale: 'tr_TR',
+          toLocale: 'en_US',
+        ),
+        '1234,',
+      );
+    });
   });
 }

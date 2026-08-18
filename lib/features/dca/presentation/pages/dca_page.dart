@@ -34,11 +34,33 @@ class _DcaPageState extends State<DcaPage> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _scrollController = ScrollController();
+  String? _amountLocale;
 
   @override
   void initState() {
     super.initState();
     context.read<DcaBloc>().add(const DcaAssetsRequested());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = context.localeName;
+    final previousLocale = _amountLocale;
+    if (previousLocale != null && previousLocale != locale) {
+      final reformatted = LocaleNumberParser.reformatInput(
+        _amountController.text,
+        fromLocale: previousLocale,
+        toLocale: locale,
+      );
+      if (reformatted != _amountController.text) {
+        _amountController.value = TextEditingValue(
+          text: reformatted,
+          selection: TextSelection.collapsed(offset: reformatted.length),
+        );
+      }
+    }
+    _amountLocale = locale;
   }
 
   @override

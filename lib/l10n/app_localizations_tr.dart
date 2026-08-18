@@ -376,7 +376,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String portfolioQuotaInfo(int count) {
-    return 'Bu hesaplama $count hesaplama hakkı kullanacak.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hesaplama hakkı',
+      one: '$count hesaplama hakkı',
+    );
+    return 'Bu hesaplama $_temp0 kullanacak.';
   }
 
   @override
@@ -624,7 +630,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String shareTextPortfolio(int count, String percent) {
-    return 'Portföyüm $count varlıkla $percent getiri sağladı! 📊 #saydın';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count varlıkla',
+      one: '$count varlıkla',
+    );
+    return 'Portföyüm $_temp0 $percent getiri sağladı! 📊 #saydın';
   }
 
   @override
@@ -781,7 +793,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String shareTextDca(String asset, int count, String percent) {
-    return '$asset için $count alım yaptım, getiri: $percent! 📊 #saydın';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count alım',
+      one: '$count alım',
+    );
+    return '$asset için $_temp0 yaptım, getiri: $percent! 📊 #saydın';
   }
 
   @override

@@ -152,7 +152,7 @@
   "portfolioReset": "Reset",
   "portfolioEmpty": "No assets added yet.",
   "portfolioEmptyHint": "Add assets to calculate your portfolio's historical return.",
-  "portfolioQuotaInfo": "This calculation will use {count} calculation credits.",
+  "portfolioQuotaInfo": "This calculation will use {count, plural, =1{1 calculation credit} other{{count} calculation credits}}.",
   "@portfolioQuotaInfo": {
     "placeholders": { "count": { "type": "int" } }
   },
@@ -279,7 +279,7 @@
       "percent": { "type": "String" }
     }
   },
-  "shareTextPortfolio": "My portfolio with {count} assets returned {percent}! 📊 #saydın",
+  "shareTextPortfolio": "My portfolio with {count, plural, =1{1 asset} other{{count} assets}} returned {percent}! 📊 #saydın",
   "@shareTextPortfolio": {
     "placeholders": {
       "count": { "type": "int" },
@@ -347,7 +347,7 @@
   "dcaChartValue": "Value",
 
   "shareCardDcaFooter": "DCA — regular investing",
-  "shareTextDca": "DCA into {asset}: {count} purchases, return: {percent}! 📊 #saydın",
+  "shareTextDca": "DCA into {asset}: {count, plural, =1{1 purchase} other{{count} purchases}}, return: {percent}! 📊 #saydın",
   "@shareTextDca": {
     "placeholders": {
       "asset": { "type": "String" },

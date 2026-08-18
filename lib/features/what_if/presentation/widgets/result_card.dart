@@ -24,6 +24,14 @@ class _ResultCardState extends State<ResultCard>
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
 
+  // CountUpText formatter callback'ini her frame çağırır. Locale-duyarlı
+  // formatter'lar yalnız locale değiştiğinde yenilenerek animasyon sırasında
+  // NumberFormat allocation/GC baskısı önlenir.
+  late NumberFormat _tryFormatter;
+  late DateFormat _dateFormatter;
+  late NumberFormat _pctFormatter;
+  String? _cachedLocale;
+
   WhatIfResult get result => widget.result;
 
   @override
@@ -45,21 +53,27 @@ class _ResultCardState extends State<ResultCard>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = context.localeName;
+    if (_cachedLocale != locale) {
+      _cachedLocale = locale;
+      _tryFormatter = AppFormat.tryCurrency(locale);
+      _dateFormatter = AppFormat.date(locale);
+      _pctFormatter = AppFormat.percent(locale);
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  // Locale'e duyarlı formatter'lar — `context.localeName` ile çağrı anında
-  // kurulur (static DEĞİL); dil değişiminde TR/EN ayraçları doğru gelir
-  // (F-06-01). State.context her zaman geçerli olduğundan instance getter güvenli.
-  NumberFormat get _tryFormatter => AppFormat.tryCurrency(context.localeName);
-  DateFormat get _dateFormatter => AppFormat.date(context.localeName);
-
   /// İşaretli yüzde formatter: +%12,34 / -%5,67 (tr) · +12.34% / -5.67% (en)
   String _pctSignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
-    return '$sign${AppFormat.percent(context.localeName).format(v / 100)}';
+    return '$sign${_pctFormatter.format(v / 100)}';
   }
 
   /// İşaretli TL formatter: +₺1.234,56 / -₺789,00

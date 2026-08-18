@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/locale_number_parser.dart';
 
-class AmountInput extends StatelessWidget {
+class AmountInput extends StatefulWidget {
   final TextEditingController controller;
   final String amountType;
   final List<String> allowedTypes;
@@ -20,6 +21,34 @@ class AmountInput extends StatelessWidget {
     this.validatorOverride,
   });
 
+  @override
+  State<AmountInput> createState() => _AmountInputState();
+}
+
+class _AmountInputState extends State<AmountInput> {
+  String? _previousLocale;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = context.localeName;
+    final previousLocale = _previousLocale;
+    if (previousLocale != null && previousLocale != locale) {
+      final reformatted = LocaleNumberParser.reformatInput(
+        widget.controller.text,
+        fromLocale: previousLocale,
+        toLocale: locale,
+      );
+      if (reformatted != widget.controller.text) {
+        widget.controller.value = TextEditingValue(
+          text: reformatted,
+          selection: TextSelection.collapsed(offset: reformatted.length),
+        );
+      }
+    }
+    _previousLocale = locale;
+  }
+
   Widget _prefixIcon(String type) => switch (type) {
     'grams' => const Icon(Icons.scale_outlined),
     'units' => const Icon(Icons.tag),
@@ -36,14 +65,14 @@ class AmountInput extends StatelessWidget {
       'grams': l10n.amountTypeGrams,
     };
 
-    final items = allowedTypes
+    final items = widget.allowedTypes
         .where(allItems.containsKey)
         .map((t) => DropdownMenuItem(value: t, child: Text(allItems[t]!)))
         .toList();
 
-    final effectiveType = allowedTypes.contains(amountType)
-        ? amountType
-        : allowedTypes.first;
+    final effectiveType = widget.allowedTypes.contains(widget.amountType)
+        ? widget.amountType
+        : widget.allowedTypes.first;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,18 +80,18 @@ class AmountInput extends StatelessWidget {
         Expanded(
           flex: 3,
           child: TextFormField(
-            controller: controller,
+            controller: widget.controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
             ],
             decoration: InputDecoration(
-              labelText: labelOverride ?? l10n.amount,
+              labelText: widget.labelOverride ?? l10n.amount,
               border: const OutlineInputBorder(),
               prefixIcon: _prefixIcon(effectiveType),
             ),
             validator: (v) => (v == null || v.isEmpty)
-                ? (validatorOverride ?? l10n.enterAmount)
+                ? (widget.validatorOverride ?? l10n.enterAmount)
                 : null,
           ),
         ),
@@ -70,11 +99,12 @@ class AmountInput extends StatelessWidget {
         Expanded(
           flex: 2,
           child: DropdownButtonFormField<String>(
-            key: ValueKey('$effectiveType-${allowedTypes.join()}'),
+            key: ValueKey('$effectiveType-${widget.allowedTypes.join()}'),
             initialValue: effectiveType,
             decoration: const InputDecoration(border: OutlineInputBorder()),
             items: items,
-            onChanged: (v) => v != null ? onAmountTypeChanged(v) : null,
+            onChanged: (v) =>
+                v != null ? widget.onAmountTypeChanged(v) : null,
           ),
         ),
       ],

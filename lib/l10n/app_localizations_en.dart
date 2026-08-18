@@ -377,7 +377,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String portfolioQuotaInfo(int count) {
-    return 'This calculation will use $count calculation credits.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count calculation credits',
+      one: '1 calculation credit',
+    );
+    return 'This calculation will use $_temp0.';
   }
 
   @override
@@ -626,7 +632,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String shareTextPortfolio(int count, String percent) {
-    return 'My portfolio with $count assets returned $percent! 📊 #saydın';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count assets',
+      one: '1 asset',
+    );
+    return 'My portfolio with $_temp0 returned $percent! 📊 #saydın';
   }
 
   @override
@@ -782,7 +794,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String shareTextDca(String asset, int count, String percent) {
-    return 'DCA into $asset: $count purchases, return: $percent! 📊 #saydın';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count purchases',
+      one: '1 purchase',
+    );
+    return 'DCA into $asset: $_temp0, return: $percent! 📊 #saydın';
   }
 
   @override

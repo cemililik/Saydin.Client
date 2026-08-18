@@ -16,19 +16,26 @@ class LocaleNumberParser {
   ///   - tr: `"1.000,50"` → `1000.5`, `"1234,5"` → `1234.5`
   ///   - en: `"1,000.50"` → `1000.5`, `"1234.5"` → `1234.5`
   ///
-  /// Locale-strict parse `FormatException` atarsa, ayraçsız ham makine sayısına
-  /// (`"1234.5"`) düşülür.
+  /// Gruplama konumları katı doğrulanır. Böylece karşı-locale bir metin
+  /// (`tr` için `"1234.5"`, `en` için `"1234,5"`) sessizce 10x/100x farklı
+  /// bir değere dönüşmek yerine reddedilir.
   static num? tryParse(String? text, String locale) {
     if (text == null) return null;
     final trimmed = text.trim();
     if (trimmed.isEmpty) return null;
 
-    try {
-      return NumberFormat.decimalPattern(locale).parse(trimmed);
-    } on FormatException {
-      // Locale ayraçlarına uymayan ham sayı (ör. "1234.5") için son çare.
-      return num.tryParse(trimmed);
-    }
+    final format = NumberFormat.decimalPattern(locale);
+    final decimalSeparator = RegExp.escape(format.symbols.DECIMAL_SEP);
+    final groupingSeparator = RegExp.escape(format.symbols.GROUP_SEP);
+    final strictPattern = RegExp(
+      '^[+-]?(?:(?:[0-9]{1,3}(?:$groupingSeparator[0-9]{3})+|[0-9]+)'
+      '(?:$decimalSeparator[0-9]+)?|$decimalSeparator[0-9]+)'
+      r'$',
+    );
+    if (!strictPattern.hasMatch(trimmed)) return null;
+
+    final parsed = format.tryParse(trimmed);
+    return parsed != null && parsed.isFinite ? parsed : null;
   }
 
   /// Düzenleme alanına ön-doldurma için [value]'yu aktif [locale]'in ondalık
@@ -40,5 +47,20 @@ class LocaleNumberParser {
       ..turnOffGrouping()
       ..maximumFractionDigits = 8;
     return fmt.format(value);
+  }
+
+  /// Form metnini [fromLocale]'den [toLocale]'e güvenli biçimde taşır.
+  ///
+  /// Metin eski locale'de geçerli değilse kullanıcı girişini ezmez; geçerliyse
+  /// önce eski locale ile ayrıştırır, sonra yeni locale ile gruplamasız yazar.
+  /// Bu dönüşüm dil değişiminde controller'daki eski ayırıcının yeni parser
+  /// tarafından farklı bir büyüklük olarak yorumlanmasını önler.
+  static String reformatInput(
+    String text, {
+    required String fromLocale,
+    required String toLocale,
+  }) {
+    final parsed = tryParse(text, fromLocale);
+    return parsed == null ? text : formatForInput(parsed, toLocale);
   }
 }

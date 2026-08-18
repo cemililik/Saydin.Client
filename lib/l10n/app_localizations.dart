@@ -719,7 +719,7 @@ abstract class AppLocalizations {
   /// No description provided for @portfolioQuotaInfo.
   ///
   /// In tr, this message translates to:
-  /// **'Bu hesaplama {count} hesaplama hakkı kullanacak.'**
+  /// **'Bu hesaplama {count, plural, =1{{count} hesaplama hakkı} other{{count} hesaplama hakkı}} kullanacak.'**
   String portfolioQuotaInfo(int count);
 
   /// No description provided for @portfolioTotalInitial.
@@ -1150,7 +1150,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareTextPortfolio.
   ///
   /// In tr, this message translates to:
-  /// **'Portföyüm {count} varlıkla {percent} getiri sağladı! 📊 #saydın'**
+  /// **'Portföyüm {count, plural, =1{{count} varlıkla} other{{count} varlıkla}} {percent} getiri sağladı! 📊 #saydın'**
   String shareTextPortfolio(int count, String percent);
 
   /// No description provided for @shareDefaultText.
@@ -1420,7 +1420,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareTextDca.
   ///
   /// In tr, this message translates to:
-  /// **'{asset} için {count} alım yaptım, getiri: {percent}! 📊 #saydın'**
+  /// **'{asset} için {count, plural, =1{{count} alım} other{{count} alım}} yaptım, getiri: {percent}! 📊 #saydın'**
   String shareTextDca(String asset, int count, String percent);
 
   /// No description provided for @modeNormal.

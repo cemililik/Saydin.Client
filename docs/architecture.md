@@ -491,7 +491,12 @@ final` kalabilir; çıktısı locale'e göre değişmez.)
 **Sayı girişi (locale-duyarlı çift):** `LocaleNumberParser.formatForInput(value, locale)`
 (ön-doldurma; binlik gruplama olmadan) ile `tryParse(text, locale)` (ayrıştırma) **AYNI
 locale** verilince round-trip eder. Farklı locale ayraçları ters yorumlatır (EN `"1234.5"`'i
-TR parser'ı `12345` okur → 10x hata); bu yüzden her iki taraf da `context.localeName` kullanır.
+ham TR `NumberFormat` parser'ı `12345` okuyabilir → 10x hata); bu yüzden her iki taraf da
+`context.localeName` kullanır.
+Parser gruplama konumlarını katı doğrular ve karşı-locale metni sessizce farklı bir tutara
+çevirmek yerine reddeder. Dil değişiminde yaşayan `TextEditingController` değerleri önce eski
+locale ile parse edilip `reformatInput` ile yeni locale'e taşınır; böylece form state'i korunurken
+tutarın büyüklüğü değişmez.
 
 **ICU çoğul:** sayım içeren İngilizce anahtarlar `{count, plural, =1{…} other{…}}` kullanır
 (`durationDays/Months/Years`, `shareCardAssetCount`, `scenarioNamePortfolio`). Türkçe'de

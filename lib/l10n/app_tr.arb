@@ -152,7 +152,7 @@
   "portfolioReset": "Sıfırla",
   "portfolioEmpty": "Henüz varlık eklenmedi.",
   "portfolioEmptyHint": "Varlık ekleyerek portföyünüzün tarihsel getirisini hesaplayın.",
-  "portfolioQuotaInfo": "Bu hesaplama {count} hesaplama hakkı kullanacak.",
+  "portfolioQuotaInfo": "Bu hesaplama {count, plural, =1{{count} hesaplama hakkı} other{{count} hesaplama hakkı}} kullanacak.",
   "@portfolioQuotaInfo": {
     "placeholders": { "count": { "type": "int" } }
   },
@@ -279,7 +279,7 @@
       "percent": { "type": "String" }
     }
   },
-  "shareTextPortfolio": "Portföyüm {count} varlıkla {percent} getiri sağladı! 📊 #saydın",
+  "shareTextPortfolio": "Portföyüm {count, plural, =1{{count} varlıkla} other{{count} varlıkla}} {percent} getiri sağladı! 📊 #saydın",
   "@shareTextPortfolio": {
     "placeholders": {
       "count": { "type": "int" },
@@ -347,7 +347,7 @@
   "dcaChartValue": "Değer",
 
   "shareCardDcaFooter": "Düzenli yatırım ile birikim",
-  "shareTextDca": "{asset} için {count} alım yaptım, getiri: {percent}! 📊 #saydın",
+  "shareTextDca": "{asset} için {count, plural, =1{{count} alım} other{{count} alım}} yaptım, getiri: {percent}! 📊 #saydın",
   "@shareTextDca": {
     "placeholders": {
       "asset": { "type": "String" },
