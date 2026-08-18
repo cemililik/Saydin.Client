@@ -151,7 +151,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scenarioSaved => 'Senaryo kaydedildi.';
 
   @override
-  String get scenarioDeleted => 'Senaryo silindi.';
+  String get scenarioDeleted => 'Senaryo silindi. Geri almak için dokunun.';
+
+  @override
+  String get scenarioSwipeDeleteHint => 'Silmek için bırak';
+
+  @override
+  String scenarioUndoCountdown(int seconds) {
+    return 'Geri Al ($seconds)';
+  }
 
   @override
   String get scenarioReplayInvalid =>
@@ -164,14 +172,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get deleteScenario => 'Sil';
-
-  @override
-  String get scenarioDeleteConfirmTitle => 'Senaryo silinsin mi?';
-
-  @override
-  String scenarioDeleteConfirmMessage(String name) {
-    return '$name senaryosu kalıcı olarak silinecek.';
-  }
 
   @override
   String get cancel => 'Vazgeç';
@@ -580,6 +580,27 @@ class AppLocalizationsTr extends AppLocalizations {
       'Silme sonucu doğrulanamadı veya cihaz temizliği tamamlanamadı. Lütfen tekrar deneyin ya da destekle iletişime geçin.';
 
   @override
+  String get resetPreferencesTitle => 'Fabrika ayarlarına dön';
+
+  @override
+  String get resetPreferencesSubtitle =>
+      'Dil, tema, favoriler ve başlangıç deneyimini sıfırla.';
+
+  @override
+  String get resetPreferencesConfirmTitle => 'Yerel ayarlar sıfırlansın mı?';
+
+  @override
+  String get resetPreferencesConfirmBody =>
+      'Dil ve tema sistem ayarlarına döner; favoriler, açık formlar ve hesaplama sonuçları temizlenir. Uygulama tanıtımı yeniden gösterilir. Hesabınız ve kaydedilmiş senaryolarınız silinmez.';
+
+  @override
+  String get resetPreferencesAction => 'Ayarları Sıfırla';
+
+  @override
+  String get resetPreferencesFailed =>
+      'Yerel ayarlar sıfırlanamadı. Lütfen tekrar deneyin.';
+
+  @override
   String get shareCardInitialValue => 'Başlangıç';
 
   @override
@@ -703,8 +724,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get onboardingGetStarted => 'Hemen Dene';
 
   @override
-  String onboardingLegalConsent(String privacy, String kvkk) {
-    return '$privacy ve $kvkk metinlerini inceledim. (İsteğe bağlı)';
+  String get onboardingLegalUpdateTitle => 'Yasal metinler güncellendi';
+
+  @override
+  String get onboardingLegalUpdateBody =>
+      'Gizlilik Politikası ve KVKK Aydınlatma Metni güncellendi. Metinleri inceleyebilir ve bir kabul beyanı vermeden devam edebilirsiniz.';
+
+  @override
+  String get onboardingContinue => 'Devam Et';
+
+  @override
+  String onboardingLegalNotice(String privacy, String kvkk) {
+    return '$privacy ve $kvkk size sunulmuştur. Devam ederek bu metinlere erişiminizin sağlandığını onaylarsınız.';
   }
 
   @override

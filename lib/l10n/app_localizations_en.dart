@@ -151,7 +151,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scenarioSaved => 'Scenario saved.';
 
   @override
-  String get scenarioDeleted => 'Scenario deleted.';
+  String get scenarioDeleted => 'Scenario deleted. Tap undo to restore it.';
+
+  @override
+  String get scenarioSwipeDeleteHint => 'Release to delete';
+
+  @override
+  String scenarioUndoCountdown(int seconds) {
+    return 'Undo ($seconds)';
+  }
 
   @override
   String get scenarioReplayInvalid =>
@@ -164,14 +172,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteScenario => 'Delete';
-
-  @override
-  String get scenarioDeleteConfirmTitle => 'Delete scenario?';
-
-  @override
-  String scenarioDeleteConfirmMessage(String name) {
-    return 'The $name scenario will be permanently deleted.';
-  }
 
   @override
   String get cancel => 'Cancel';
@@ -581,6 +581,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'The deletion result could not be verified or device cleanup did not finish. Please retry or contact support.';
 
   @override
+  String get resetPreferencesTitle => 'Restore default settings';
+
+  @override
+  String get resetPreferencesSubtitle =>
+      'Reset language, theme, favorites, and the getting-started experience.';
+
+  @override
+  String get resetPreferencesConfirmTitle => 'Reset local settings?';
+
+  @override
+  String get resetPreferencesConfirmBody =>
+      'Language and theme will return to system defaults; favorites, open forms, and calculation results will be cleared. The introduction will be shown again. Your account and saved scenarios will not be deleted.';
+
+  @override
+  String get resetPreferencesAction => 'Reset Settings';
+
+  @override
+  String get resetPreferencesFailed =>
+      'Local settings could not be reset. Please try again.';
+
+  @override
   String get shareCardInitialValue => 'Initial';
 
   @override
@@ -704,8 +725,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingGetStarted => 'Get Started';
 
   @override
-  String onboardingLegalConsent(String privacy, String kvkk) {
-    return 'I reviewed the $privacy and $kvkk. (Optional)';
+  String get onboardingLegalUpdateTitle => 'Legal notices were updated';
+
+  @override
+  String get onboardingLegalUpdateBody =>
+      'The Privacy Policy and KVKK Disclosure were updated. You can review them and continue without making an acceptance statement.';
+
+  @override
+  String get onboardingContinue => 'Continue';
+
+  @override
+  String onboardingLegalNotice(String privacy, String kvkk) {
+    return 'The $privacy and $kvkk have been made available to you. By continuing, you acknowledge that you have been given access to these notices.';
   }
 
   @override

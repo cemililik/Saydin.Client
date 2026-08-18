@@ -34,7 +34,6 @@ class _OnboardingPageState extends State<OnboardingPage>
   /// butonu hızlı çift-tıklanırsa veya CTA `pop` öncesi tekrar tetiklenirse,
   /// legal kayıt ve `widget.onComplete()` ikinci kez çalışmasın.
   bool _isCompleting = false;
-  bool _legalAcknowledged = false;
   bool _legalSaveFailed = false;
   static const _pageCount = 6;
 
@@ -90,16 +89,24 @@ class _OnboardingPageState extends State<OnboardingPage>
     await _completeWithLegalNotice();
   }
 
+  Future<void> _previousPage() async {
+    if (_currentPage == 0) return;
+    await _controller.previousPage(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
   Future<void> _skipOnboarding() async {
-    await _completeWithLegalNotice(forceSeen: true);
+    await _completeWithLegalNotice();
   }
 
   /// Legal bağlantılar her onboarding sayfasında görünür. Akış tamamlandığında
-  /// `seen`; kullanıcı son sayfadaki checkbox ile açıkça seçerse
-  /// `acknowledged` kaydı yazar. `seen` bir kabul/rıza değildir.
+  /// yalnız `seen` kaydı yazılır. Aydınlatma metninin sunulması bir sözleşme
+  /// kabulü veya açık rıza değildir; UI bu kavramları birbirine karıştırmaz.
   /// Yazma başarısızlığı sessizce kabul edilmiş gibi davranmaz: hata görünür,
   /// re-entrancy kilidi açılır ve kullanıcı retry edebilir.
-  Future<void> _completeWithLegalNotice({bool forceSeen = false}) async {
+  Future<void> _completeWithLegalNotice() async {
     if (_isCompleting) return;
     setState(() {
       _isCompleting = true;
@@ -110,9 +117,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         LegalNoticeRecord.current(
           locale: Localizations.localeOf(context).toLanguageTag(),
           recordedAtUtc: DateTime.now().toUtc(),
-          decision: !forceSeen && _legalAcknowledged
-              ? LegalNoticeDecision.acknowledged
-              : LegalNoticeDecision.seen,
+          decision: LegalNoticeDecision.seen,
         ),
       );
     } catch (e, st) {
@@ -224,6 +229,12 @@ class _OnboardingPageState extends State<OnboardingPage>
       l10n.onboardingPage5Body,
       l10n.onboardingPage6Body,
     ];
+    final currentTitle = widget.legalUpdateOnly && isLastPage
+        ? l10n.onboardingLegalUpdateTitle
+        : titles[_currentPage];
+    final currentBody = widget.legalUpdateOnly && isLastPage
+        ? l10n.onboardingLegalUpdateBody
+        : bodies[_currentPage];
 
     return Scaffold(
       body: Stack(
@@ -272,15 +283,28 @@ class _OnboardingPageState extends State<OnboardingPage>
                             padding: const EdgeInsets.fromLTRB(24, 12, 12, 0),
                             child: Row(
                               children: [
-                                Text(
-                                  context.l10n.appTitle,
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.5,
-                                      ),
+                                if (_currentPage > 0)
+                                  IconButton(
+                                    key: const Key('onboarding-back'),
+                                    tooltip: MaterialLocalizations.of(
+                                      context,
+                                    ).backButtonTooltip,
+                                    onPressed: _previousPage,
+                                    icon: const Icon(Icons.arrow_back_rounded),
+                                  ),
+                                Expanded(
+                                  child: Text(
+                                    context.l10n.appTitle,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.5,
+                                        ),
+                                  ),
                                 ),
-                                const Spacer(),
                                 TextButton(
                                   onPressed: _skipOnboarding,
                                   child: Text(
@@ -336,9 +360,6 @@ class _OnboardingPageState extends State<OnboardingPage>
                             height: iconHeight,
                             child: PageView.builder(
                               controller: _controller,
-                              physics: widget.legalUpdateOnly
-                                  ? const NeverScrollableScrollPhysics()
-                                  : null,
                               onPageChanged: _onPageChanged,
                               itemCount: _pageCount,
                               itemBuilder: (context, index) {
@@ -374,7 +395,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 child: Column(
                                   children: [
                                     Text(
-                                      titles[_currentPage],
+                                      currentTitle,
                                       style: Theme.of(context)
                                           .textTheme
                                           .headlineMedium
@@ -387,7 +408,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      bodies[_currentPage],
+                                      currentBody,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyLarge
@@ -443,17 +464,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 ),
                                 const SizedBox(height: 28),
 
-                                // Legal metinler son sayfada görünür; checkbox isteğe
-                                // bağlı açık acknowledgement'tır, CTA implicit kabul
-                                // yazmaz.
+                                // Son sayfa yalnız metinlerin kullanıcıya
+                                // sunulduğunu açıklar. Checkbox veya örtülü
+                                // kabul/açık-rıza üretimi yoktur.
                                 if (isLastPage) ...[
-                                  _LegalConsentNote(
-                                    value: _legalAcknowledged,
-                                    onChanged: (value) {
-                                      setState(
-                                        () => _legalAcknowledged = value,
-                                      );
-                                    },
+                                  _LegalNoticeStatement(
                                     onOpenPrivacy: () => _openLegalDocument(
                                       LegalDocumentType.privacyPolicy,
                                     ),
@@ -465,9 +480,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 ],
 
                                 // Ana buton
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 56,
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minHeight: 56,
+                                    minWidth: double.infinity,
+                                  ),
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 400),
                                     curve: Curves.easeInOut,
@@ -492,7 +509,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                                       child: InkWell(
                                         onTap: _isCompleting ? null : _nextPage,
                                         borderRadius: BorderRadius.circular(16),
-                                        child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 14,
+                                          ),
                                           child: AnimatedSwitcher(
                                             duration: const Duration(
                                               milliseconds: 250,
@@ -501,15 +522,22 @@ class _OnboardingPageState extends State<OnboardingPage>
                                               key: ValueKey(isLastPage),
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Text(
-                                                  isLastPage
-                                                      ? l10n.onboardingGetStarted
-                                                      : l10n.onboardingNext,
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 17,
-                                                    fontWeight: FontWeight.w700,
-                                                    letterSpacing: 0.3,
+                                                Flexible(
+                                                  child: Text(
+                                                    widget.legalUpdateOnly &&
+                                                            isLastPage
+                                                        ? l10n.onboardingContinue
+                                                        : isLastPage
+                                                        ? l10n.onboardingGetStarted
+                                                        : l10n.onboardingNext,
+                                                    textAlign: TextAlign.center,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 17,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      letterSpacing: 0.3,
+                                                    ),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
@@ -590,18 +618,14 @@ class _LegalNoticeLinks extends StatelessWidget {
   }
 }
 
-// ── Yasal onay metni (son sayfa) ─────────────────────────────────────────────
+// ── Yasal bilgilendirme metni (son sayfa) ────────────────────────────────────
 
-class _LegalConsentNote extends StatelessWidget {
-  const _LegalConsentNote({
-    required this.value,
-    required this.onChanged,
+class _LegalNoticeStatement extends StatelessWidget {
+  const _LegalNoticeStatement({
     required this.onOpenPrivacy,
     required this.onOpenKvkk,
   });
 
-  final bool value;
-  final ValueChanged<bool> onChanged;
   final VoidCallback onOpenPrivacy;
   final VoidCallback onOpenKvkk;
 
@@ -614,7 +638,7 @@ class _LegalConsentNote extends StatelessWidget {
     // gösterir hem her dilde linklerin doğru yerde olmasını sağlar.
     final placeholderPrivacy = '__P__';
     final placeholderKvkk = '__K__';
-    final template = l10n.onboardingLegalConsent(
+    final template = l10n.onboardingLegalNotice(
       placeholderPrivacy,
       placeholderKvkk,
     );
@@ -659,35 +683,18 @@ class _LegalConsentNote extends StatelessWidget {
       spans.add(TextSpan(text: template.substring(cursor)));
     }
 
-    return Semantics(
-      checked: value,
-      child: InkWell(
-        onTap: () => onChanged(!value),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Checkbox(
-                value: value,
-                onChanged: (next) => onChanged(next ?? false),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    children: spans,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+    return Padding(
+      key: const Key('onboarding-legal-notice-statement'),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: Text.rich(
+        TextSpan(
+          children: spans,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            height: 1.4,
           ),
         ),
+        textAlign: TextAlign.center,
       ),
     );
   }

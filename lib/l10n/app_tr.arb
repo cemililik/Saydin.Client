@@ -49,18 +49,18 @@
   "scenariosEmptyHint": "Hesaplama yaptıktan sonra senaryolarınızı kaydedebilirsiniz.",
   "saveScenario": "Kaydet",
   "scenarioSaved": "Senaryo kaydedildi.",
-  "scenarioDeleted": "Senaryo silindi.",
+  "scenarioDeleted": "Senaryo silindi. Geri almak için dokunun.",
+  "scenarioSwipeDeleteHint": "Silmek için bırak",
+  "scenarioUndoCountdown": "Geri Al ({seconds})",
+  "@scenarioUndoCountdown": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "scenarioReplayInvalid": "Bu kaydedilmiş senaryo artık oynatılamıyor.",
   "scenarioSavedAtSnapshot": "{date} tarihinde kaydedildi — o günkü sonuç",
   "@scenarioSavedAtSnapshot": {
     "placeholders": { "date": { "type": "String" } }
   },
   "deleteScenario": "Sil",
-  "scenarioDeleteConfirmTitle": "Senaryo silinsin mi?",
-  "scenarioDeleteConfirmMessage": "{name} senaryosu kalıcı olarak silinecek.",
-  "@scenarioDeleteConfirmMessage": {
-    "placeholders": { "name": { "type": "String" } }
-  },
   "cancel": "Vazgeç",
   "tabCalculate": "Hesapla",
   "tabScenarios": "Senaryolar",
@@ -250,6 +250,12 @@
   "deleteAccountSuccess": "Silme sonucu hizmet tarafından doğrulandı ve bu cihazdaki yerel veriler temizlendi.",
   "deleteAccountPartialSuccess": "Hizmet silme sonucunu doğruladı ancak bu cihazdaki yerel verilerin tamamı temizlenemedi. Lütfen tekrar deneyin veya destekle iletişime geçin.",
   "deleteAccountFailed": "Silme sonucu doğrulanamadı veya cihaz temizliği tamamlanamadı. Lütfen tekrar deneyin ya da destekle iletişime geçin.",
+  "resetPreferencesTitle": "Fabrika ayarlarına dön",
+  "resetPreferencesSubtitle": "Dil, tema, favoriler ve başlangıç deneyimini sıfırla.",
+  "resetPreferencesConfirmTitle": "Yerel ayarlar sıfırlansın mı?",
+  "resetPreferencesConfirmBody": "Dil ve tema sistem ayarlarına döner; favoriler, açık formlar ve hesaplama sonuçları temizlenir. Uygulama tanıtımı yeniden gösterilir. Hesabınız ve kaydedilmiş senaryolarınız silinmez.",
+  "resetPreferencesAction": "Ayarları Sıfırla",
+  "resetPreferencesFailed": "Yerel ayarlar sıfırlanamadı. Lütfen tekrar deneyin.",
 
   "shareCardInitialValue": "Başlangıç",
   "shareCardFinalValue": "Son Değer",
@@ -313,8 +319,11 @@
   "onboardingSkip": "Atla",
   "onboardingNext": "İleri",
   "onboardingGetStarted": "Hemen Dene",
-  "onboardingLegalConsent": "{privacy} ve {kvkk} metinlerini inceledim. (İsteğe bağlı)",
-  "@onboardingLegalConsent": {
+  "onboardingLegalUpdateTitle": "Yasal metinler güncellendi",
+  "onboardingLegalUpdateBody": "Gizlilik Politikası ve KVKK Aydınlatma Metni güncellendi. Metinleri inceleyebilir ve bir kabul beyanı vermeden devam edebilirsiniz.",
+  "onboardingContinue": "Devam Et",
+  "onboardingLegalNotice": "{privacy} ve {kvkk} size sunulmuştur. Devam ederek bu metinlere erişiminizin sağlandığını onaylarsınız.",
+  "@onboardingLegalNotice": {
     "placeholders": {
       "privacy": { "type": "String" },
       "kvkk": { "type": "String" }

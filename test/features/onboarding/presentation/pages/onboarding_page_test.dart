@@ -116,7 +116,26 @@ void main() {
     expect(completedCount, 1);
   });
 
-  testWidgets('checkbox creates an explicit acknowledged record', (
+  testWidgets(
+    'legal update starts with clear notice and allows previous pages',
+    (tester) async {
+      await pumpPage(tester, onComplete: () {}, legalUpdateOnly: true);
+
+      expect(find.text('Yasal metinler güncellendi'), findsOneWidget);
+      expect(find.text('Devam Et'), findsOneWidget);
+      expect(find.byKey(const Key('onboarding-back')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('onboarding-back')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Ters Senaryo'), findsOneWidget);
+      expect(find.text('Yasal metinler güncellendi'), findsNothing);
+      verifyNever(() => onboardingRepository.recordLegalNotice(any()));
+    },
+  );
+
+  testWidgets('continues without a checkbox and records only seen', (
     tester,
   ) async {
     var completedCount = 0;
@@ -126,9 +145,12 @@ void main() {
       legalUpdateOnly: true,
     );
 
-    await tester.tap(find.byType(Checkbox));
-    await tester.pump();
-    final cta = find.text('Hemen Dene');
+    expect(find.byType(Checkbox), findsNothing);
+    expect(
+      find.byKey(const Key('onboarding-legal-notice-statement')),
+      findsOneWidget,
+    );
+    final cta = find.text('Devam Et');
     final ctaButton = find.ancestor(of: cta, matching: find.byType(InkWell));
     expect(ctaButton, findsOneWidget);
     await tester.ensureVisible(ctaButton);
@@ -143,7 +165,7 @@ void main() {
               () => onboardingRepository.recordLegalNotice(captureAny()),
             ).captured.single
             as LegalNoticeRecord;
-    expect(record.decision, LegalNoticeDecision.acknowledged);
+    expect(record.decision, LegalNoticeDecision.seen);
     expect(completedCount, 1);
   });
 
@@ -203,7 +225,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byType(SingleChildScrollView), findsOneWidget);
-    await tester.ensureVisible(find.text('Hemen Dene'));
+    await tester.ensureVisible(find.text('Devam Et'));
     await tester.pump();
     expect(tester.takeException(), isNull);
   });

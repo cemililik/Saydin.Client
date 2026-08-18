@@ -4,6 +4,10 @@ abstract class OnboardingRepository {
   Future<bool> isOnboardingCompleted();
   Future<void> completeOnboarding();
 
+  /// Tanıtım akışının tamamlanma işaretini kaldırır. Yasal bildirim kaydı ayrı
+  /// tutulur; onboarding yeniden tamamlandığında güncel kayıt yeniden yazılır.
+  Future<void> resetOnboarding();
+
   /// Gösterilen legal bundle ve kullanıcının açık kararını denetlenebilir,
   /// yerel bir kayıt olarak saklar. `seen` bir kabul/rıza değildir.
   Future<void> recordLegalNotice(LegalNoticeRecord record);

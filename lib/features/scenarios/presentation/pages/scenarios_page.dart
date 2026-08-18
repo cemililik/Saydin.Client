@@ -1,6 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
@@ -30,93 +33,188 @@ class _SwipeToDeleteCard extends StatefulWidget {
 }
 
 class _SwipeToDeleteCardState extends State<_SwipeToDeleteCard> {
-  double _progress = 0.0;
+  late final ValueNotifier<_SwipeDeleteVisual> _visual;
+  bool _didTriggerThresholdHaptic = false;
 
-  Future<bool> _confirmDelete() async {
-    final l10n = context.l10n;
-    return await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: Text(l10n.scenarioDeleteConfirmTitle),
-            content: Text(
-              l10n.scenarioDeleteConfirmMessage(
-                widget.scenario.assetDisplayName,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Theme.of(context).colorScheme.onError,
-                ),
-                child: Text(l10n.deleteScenario),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+  @override
+  void initState() {
+    super.initState();
+    _visual = ValueNotifier(const _SwipeDeleteVisual());
   }
 
-  Future<void> _deleteFromButton() async {
-    if (await _confirmDelete() && mounted) {
-      widget.onDelete();
+  @override
+  void dispose() {
+    _visual.dispose();
+    super.dispose();
+  }
+
+  void _onSwipeUpdate(DismissUpdateDetails details) {
+    final progress = details.progress.clamp(0.0, 1.0);
+    _visual.value = _SwipeDeleteVisual(
+      progress: progress,
+      reached: details.reached,
+    );
+
+    if (details.reached && !_didTriggerThresholdHaptic) {
+      _didTriggerThresholdHaptic = true;
+      unawaited(HapticFeedback.selectionClick());
+    } else if (progress < 0.01) {
+      _didTriggerThresholdHaptic = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final bgColor = theme.colorScheme.errorContainer.withValues(
-      alpha: _progress,
+    final deleteAction = CustomSemanticsAction(
+      label: context.l10n.deleteScenario,
     );
-    final iconOpacity = (_progress * 1.5).clamp(0.0, 1.0);
-    final iconScale = 0.6 + _progress * 0.4;
-
-    return Row(
-      children: [
-        Expanded(
-          child: Dismissible(
-            key: ValueKey(widget.scenario.id),
-            direction: DismissDirection.endToStart,
-            confirmDismiss: (_) => _confirmDelete(),
-            onDismissed: (_) => widget.onDelete(),
-            onUpdate: (details) {
-              setState(() {
-                _progress = details.reached ? 1.0 : details.progress;
-              });
-            },
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Transform.scale(
-                scale: iconScale,
-                child: Opacity(
-                  opacity: iconOpacity,
-                  child: Icon(
-                    Icons.delete_outline_rounded,
-                    color: theme.colorScheme.onErrorContainer,
-                  ),
-                ),
-              ),
-            ),
-            child: ScenarioCard(scenario: widget.scenario, onTap: widget.onTap),
+    return Semantics(
+      key: ValueKey('scenario-delete-semantics-${widget.scenario.id}'),
+      customSemanticsActions: {deleteAction: widget.onDelete},
+      child: Dismissible(
+        key: ValueKey(widget.scenario.id),
+        direction: DismissDirection.endToStart,
+        dismissThresholds: const {DismissDirection.endToStart: 0.32},
+        movementDuration: const Duration(milliseconds: 180),
+        resizeDuration: const Duration(milliseconds: 220),
+        onDismissed: (_) => widget.onDelete(),
+        onUpdate: _onSwipeUpdate,
+        background: RepaintBoundary(
+          child: ExcludeSemantics(
+            child: _SwipeDeleteBackground(visual: _visual),
           ),
         ),
-        const SizedBox(width: 4),
-        IconButton(
-          onPressed: _deleteFromButton,
-          tooltip: context.l10n.deleteScenario,
-          color: theme.colorScheme.error,
-          icon: const Icon(Icons.delete_outline_rounded),
+        child: RepaintBoundary(
+          child: ScenarioCard(scenario: widget.scenario, onTap: widget.onTap),
+        ),
+      ),
+    );
+  }
+}
+
+class _SwipeDeleteVisual {
+  const _SwipeDeleteVisual({this.progress = 0, this.reached = false});
+
+  final double progress;
+  final bool reached;
+}
+
+class _SwipeDeleteBackground extends StatelessWidget {
+  const _SwipeDeleteBackground({required this.visual});
+
+  final ValueListenable<_SwipeDeleteVisual> visual;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ValueListenableBuilder<_SwipeDeleteVisual>(
+      valueListenable: visual,
+      builder: (context, value, _) {
+        final reveal = Curves.easeOutCubic.transform(value.progress);
+        final foreground = value.reached
+            ? colors.onError
+            : colors.onErrorContainer;
+        return Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: Color.lerp(
+              colors.errorContainer,
+              colors.error,
+              value.reached ? 0.85 : reveal * 0.25,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Transform.translate(
+            offset: Offset(14 * (1 - reveal), 0),
+            child: Opacity(
+              opacity: reveal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.l10n.scenarioSwipeDeleteHint,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 120),
+                    child: Icon(
+                      value.reached
+                          ? Icons.delete_forever_rounded
+                          : Icons.delete_sweep_rounded,
+                      key: ValueKey(value.reached),
+                      color: foreground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+const _scenarioUndoWindow = Duration(seconds: 5);
+
+class _PendingScenarioDeletion {
+  _PendingScenarioDeletion(this.scenario);
+
+  final SavedScenario scenario;
+  Timer? timer;
+  bool committed = false;
+}
+
+class _ScenarioDeleteUndoContent extends StatefulWidget {
+  const _ScenarioDeleteUndoContent({required this.onUndo});
+
+  final VoidCallback onUndo;
+
+  @override
+  State<_ScenarioDeleteUndoContent> createState() =>
+      _ScenarioDeleteUndoContentState();
+}
+
+class _ScenarioDeleteUndoContentState
+    extends State<_ScenarioDeleteUndoContent> {
+  var _secondsRemaining = _scenarioUndoWindow.inSeconds;
+  Timer? _countdown;
+
+  @override
+  void initState() {
+    super.initState();
+    _countdown = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining <= 1) {
+        timer.cancel();
+        return;
+      }
+      if (mounted) setState(() => _secondsRemaining--);
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdown?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Text(context.l10n.scenarioDeleted)),
+        const SizedBox(width: 8),
+        TextButton(
+          onPressed: widget.onUndo,
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).colorScheme.inversePrimary,
+          ),
+          child: Text(context.l10n.scenarioUndoCountdown(_secondsRemaining)),
         ),
       ],
     );
@@ -134,6 +232,28 @@ class ScenariosPage extends StatefulWidget {
 
 class _ScenariosPageState extends State<ScenariosPage> {
   String? _requestedPlan;
+  final Set<String> _pendingDeleteIds = {};
+  _PendingScenarioDeletion? _undoableDeletion;
+  late ScenariosBloc _scenariosBloc;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scenariosBloc = context.read<ScenariosBloc>();
+  }
+
+  @override
+  void dispose() {
+    // Sayfa 5 saniyelik pencere açıkken kapanırsa kullanıcının ekranda gördüğü
+    // silme işlemini yarım bırakma. Root BLoC bu sayfadan daha uzun yaşar.
+    final pending = _undoableDeletion;
+    pending?.timer?.cancel();
+    if (pending != null && !pending.committed && !_scenariosBloc.isClosed) {
+      pending.committed = true;
+      _scenariosBloc.add(ScenarioDeleteRequested(pending.scenario.id));
+    }
+    super.dispose();
+  }
 
   void _scheduleRequestForConfig(AppConfig config) {
     if (!config.isReady) return;
@@ -156,22 +276,60 @@ class _ScenariosPageState extends State<ScenariosPage> {
     await completion.future;
   }
 
-  Future<void> _onDelete(SavedScenario scenario) async {
-    final completion = Completer<bool>();
-    context.read<ScenariosBloc>().add(
-      ScenarioDeleteRequested(scenario.id, completion: completion),
-    );
-    final deleted = await completion.future;
-    if (!mounted || !deleted) return;
+  void _stageDelete(SavedScenario scenario) {
+    // Tek bir görünür undo yüzeyi tutuyoruz. Kullanıcı art arda ikinci kartı
+    // silerse önceki işlem kesinleşir ve yeni kart kendi 5 saniyesini alır.
+    final previous = _undoableDeletion;
+    if (previous != null) {
+      unawaited(_commitDeletion(previous));
+    }
 
-    ScaffoldMessenger.of(context)
+    final pending = _PendingScenarioDeletion(scenario);
+    _undoableDeletion = pending;
+    setState(() => _pendingDeleteIds.add(scenario.id));
+    pending.timer = Timer(
+      _scenarioUndoWindow,
+      () => unawaited(_commitDeletion(pending)),
+    );
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(context.l10n.scenarioDeleted),
+          duration: _scenarioUndoWindow,
           behavior: SnackBarBehavior.floating,
+          content: _ScenarioDeleteUndoContent(
+            onUndo: () => _undoDeletion(pending),
+          ),
         ),
       );
+  }
+
+  void _undoDeletion(_PendingScenarioDeletion pending) {
+    if (pending.committed || !identical(_undoableDeletion, pending)) return;
+    pending.timer?.cancel();
+    _undoableDeletion = null;
+    setState(() => _pendingDeleteIds.remove(pending.scenario.id));
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  }
+
+  Future<void> _commitDeletion(_PendingScenarioDeletion pending) async {
+    if (pending.committed) return;
+    pending.committed = true;
+    pending.timer?.cancel();
+    if (identical(_undoableDeletion, pending)) {
+      _undoableDeletion = null;
+    }
+
+    final completion = Completer<bool>();
+    _scenariosBloc.add(
+      ScenarioDeleteRequested(pending.scenario.id, completion: completion),
+    );
+    await completion.future;
+    if (mounted) {
+      setState(() => _pendingDeleteIds.remove(pending.scenario.id));
+    }
   }
 
   @override
@@ -206,7 +364,11 @@ class _ScenariosPageState extends State<ScenariosPage> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state.scenarios.isEmpty) {
+          final visibleScenarios = state.scenarios
+              .where((scenario) => !_pendingDeleteIds.contains(scenario.id))
+              .toList(growable: false);
+
+          if (visibleScenarios.isEmpty) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -238,14 +400,14 @@ class _ScenariosPageState extends State<ScenariosPage> {
             onRefresh: _refresh,
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
-              itemCount: state.scenarios.length,
+              itemCount: visibleScenarios.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, i) {
-                final scenario = state.scenarios[i];
+                final scenario = visibleScenarios[i];
                 return _SwipeToDeleteCard(
                   key: ValueKey(scenario.id),
                   scenario: scenario,
-                  onDelete: () => _onDelete(scenario),
+                  onDelete: () => _stageDelete(scenario),
                   onTap: widget.onScenarioTap != null
                       ? () => widget.onScenarioTap!(scenario)
                       : null,

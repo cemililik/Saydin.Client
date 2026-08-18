@@ -17,6 +17,15 @@ void main() {
     repo = OnboardingRepositoryImpl(prefs);
   });
 
+  test('reset removes completion marker but preserves legal notice', () async {
+    when(() => prefs.remove('onboarding_completed')).thenAnswer((_) async {});
+
+    await repo.resetOnboarding();
+
+    verify(() => prefs.remove('onboarding_completed')).called(1);
+    verifyNever(() => prefs.remove('legal_notice_record_v2'));
+  });
+
   group('legal notice record', () {
     final record = LegalNoticeRecord.current(
       locale: 'tr-TR',

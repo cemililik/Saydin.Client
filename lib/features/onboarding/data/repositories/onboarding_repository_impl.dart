@@ -22,6 +22,11 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
   }
 
   @override
+  Future<void> resetOnboarding() async {
+    await _prefs.remove(_keyOnboardingCompleted);
+  }
+
+  @override
   Future<void> recordLegalNotice(LegalNoticeRecord record) async {
     if (record.version < 1 ||
         !RegExp(r'^[a-f0-9]{64}$').hasMatch(record.bundleSha256) ||

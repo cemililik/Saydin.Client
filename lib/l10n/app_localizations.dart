@@ -365,8 +365,20 @@ abstract class AppLocalizations {
   /// No description provided for @scenarioDeleted.
   ///
   /// In tr, this message translates to:
-  /// **'Senaryo silindi.'**
+  /// **'Senaryo silindi. Geri almak için dokunun.'**
   String get scenarioDeleted;
+
+  /// No description provided for @scenarioSwipeDeleteHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Silmek için bırak'**
+  String get scenarioSwipeDeleteHint;
+
+  /// No description provided for @scenarioUndoCountdown.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geri Al ({seconds})'**
+  String scenarioUndoCountdown(int seconds);
 
   /// No description provided for @scenarioReplayInvalid.
   ///
@@ -385,18 +397,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Sil'**
   String get deleteScenario;
-
-  /// No description provided for @scenarioDeleteConfirmTitle.
-  ///
-  /// In tr, this message translates to:
-  /// **'Senaryo silinsin mi?'**
-  String get scenarioDeleteConfirmTitle;
-
-  /// No description provided for @scenarioDeleteConfirmMessage.
-  ///
-  /// In tr, this message translates to:
-  /// **'{name} senaryosu kalıcı olarak silinecek.'**
-  String scenarioDeleteConfirmMessage(String name);
 
   /// No description provided for @cancel.
   ///
@@ -1064,6 +1064,42 @@ abstract class AppLocalizations {
   /// **'Silme sonucu doğrulanamadı veya cihaz temizliği tamamlanamadı. Lütfen tekrar deneyin ya da destekle iletişime geçin.'**
   String get deleteAccountFailed;
 
+  /// No description provided for @resetPreferencesTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fabrika ayarlarına dön'**
+  String get resetPreferencesTitle;
+
+  /// No description provided for @resetPreferencesSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dil, tema, favoriler ve başlangıç deneyimini sıfırla.'**
+  String get resetPreferencesSubtitle;
+
+  /// No description provided for @resetPreferencesConfirmTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yerel ayarlar sıfırlansın mı?'**
+  String get resetPreferencesConfirmTitle;
+
+  /// No description provided for @resetPreferencesConfirmBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dil ve tema sistem ayarlarına döner; favoriler, açık formlar ve hesaplama sonuçları temizlenir. Uygulama tanıtımı yeniden gösterilir. Hesabınız ve kaydedilmiş senaryolarınız silinmez.'**
+  String get resetPreferencesConfirmBody;
+
+  /// No description provided for @resetPreferencesAction.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ayarları Sıfırla'**
+  String get resetPreferencesAction;
+
+  /// No description provided for @resetPreferencesFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yerel ayarlar sıfırlanamadı. Lütfen tekrar deneyin.'**
+  String get resetPreferencesFailed;
+
   /// No description provided for @shareCardInitialValue.
   ///
   /// In tr, this message translates to:
@@ -1243,11 +1279,29 @@ abstract class AppLocalizations {
   /// **'Hemen Dene'**
   String get onboardingGetStarted;
 
-  /// No description provided for @onboardingLegalConsent.
+  /// No description provided for @onboardingLegalUpdateTitle.
   ///
   /// In tr, this message translates to:
-  /// **'{privacy} ve {kvkk} metinlerini inceledim. (İsteğe bağlı)'**
-  String onboardingLegalConsent(String privacy, String kvkk);
+  /// **'Yasal metinler güncellendi'**
+  String get onboardingLegalUpdateTitle;
+
+  /// No description provided for @onboardingLegalUpdateBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gizlilik Politikası ve KVKK Aydınlatma Metni güncellendi. Metinleri inceleyebilir ve bir kabul beyanı vermeden devam edebilirsiniz.'**
+  String get onboardingLegalUpdateBody;
+
+  /// No description provided for @onboardingContinue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Devam Et'**
+  String get onboardingContinue;
+
+  /// No description provided for @onboardingLegalNotice.
+  ///
+  /// In tr, this message translates to:
+  /// **'{privacy} ve {kvkk} size sunulmuştur. Devam ederek bu metinlere erişiminizin sağlandığını onaylarsınız.'**
+  String onboardingLegalNotice(String privacy, String kvkk);
 
   /// No description provided for @onboardingPrivacyPolicyLink.
   ///

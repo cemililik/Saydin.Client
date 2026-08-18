@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
@@ -79,7 +78,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('visible delete action requires confirmation', (tester) async {
+  testWidgets('swipe hides immediately and undo restores without DELETE', (
+    tester,
+  ) async {
     when(
       () => getScenarios(plan: any(named: 'plan')),
     ).thenAnswer((_) async => [scenario(1)]);
@@ -87,33 +88,67 @@ void main() {
     final semantics = tester.ensureSemantics();
     await pumpPage(tester);
 
-    final deleteAction = find.byTooltip('Delete');
-    expect(deleteAction, findsOneWidget);
+    expect(find.byTooltip('Delete'), findsNothing);
+    final deleteSemantics = find.byKey(
+      const ValueKey('scenario-delete-semantics-scenario-1'),
+    );
     expect(
       tester
-          .getSemantics(deleteAction)
+          .getSemantics(deleteSemantics)
           .getSemanticsData()
-          .hasAction(ui.SemanticsAction.tap),
-      isTrue,
+          .customSemanticsActionIds,
+      isNotEmpty,
     );
 
-    await tester.tap(deleteAction);
-    await tester.pumpAndSettle();
-    expect(find.text('Delete scenario?'), findsOneWidget);
+    await tester.drag(find.byType(Dismissible), const Offset(-600, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+
+    expect(find.text('US Dollar 1'), findsNothing);
+    expect(
+      find.text('Scenario deleted. Tap undo to restore it.'),
+      findsOneWidget,
+    );
+    expect(find.text('Undo (5)'), findsOneWidget);
     verifyNever(() => deleteScenario(any()));
 
-    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Undo (4)'), findsOneWidget);
+    await tester.tap(find.text('Undo (4)'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('US Dollar 1'), findsOneWidget);
+    verifyNever(() => deleteScenario(any()));
+    semantics.dispose();
+  });
+
+  testWidgets('swipe commits DELETE only after the five-second undo window', (
+    tester,
+  ) async {
+    when(
+      () => getScenarios(plan: any(named: 'plan')),
+    ).thenAnswer((_) async => [scenario(1)]);
+    when(() => deleteScenario(any())).thenAnswer((_) async {});
+    await pumpPage(tester);
+
+    await tester.drag(find.byType(Dismissible), const Offset(-600, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
     verifyNever(() => deleteScenario(any()));
 
-    await tester.tap(deleteAction);
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 4));
+    verifyNever(() => deleteScenario(any()));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     verify(() => deleteScenario('scenario-1')).called(1);
-    expect(find.text('Scenario deleted.'), findsOneWidget);
-    semantics.dispose();
+    expect(find.text('US Dollar 1'), findsNothing);
   });
 
   testWidgets('pull-to-refresh remains active until its request completes', (

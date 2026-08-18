@@ -37,6 +37,7 @@ import 'package:saydin/features/onboarding/presentation/cubit/onboarding_cubit.d
 import 'package:saydin/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:saydin/features/settings/domain/repositories/settings_repository.dart';
 import 'package:saydin/features/settings/presentation/cubit/settings_cubit.dart';
+import 'package:saydin/features/settings/domain/usecases/reset_local_preferences.dart';
 import 'package:saydin/features/what_if/data/repositories/what_if_repository_impl.dart';
 import 'package:saydin/features/what_if/domain/repositories/what_if_repository.dart';
 import 'package:saydin/features/portfolio/data/repositories/portfolio_repository_impl.dart';
@@ -126,6 +127,13 @@ Future<void> configureDependencies({
   // Favorites
   sl.registerLazySingleton<FavoritesRepository>(
     () => FavoritesRepositoryImpl(SharedPreferencesAsync()),
+  );
+  sl.registerLazySingleton(
+    () => ResetLocalPreferences(
+      sl<SettingsRepository>(),
+      sl<FavoritesRepository>(),
+      sl<OnboardingRepository>(),
+    ),
   );
 
   // App Config

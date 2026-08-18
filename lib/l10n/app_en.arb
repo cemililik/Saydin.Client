@@ -49,18 +49,18 @@
   "scenariosEmptyHint": "You can save your scenarios after making a calculation.",
   "saveScenario": "Save",
   "scenarioSaved": "Scenario saved.",
-  "scenarioDeleted": "Scenario deleted.",
+  "scenarioDeleted": "Scenario deleted. Tap undo to restore it.",
+  "scenarioSwipeDeleteHint": "Release to delete",
+  "scenarioUndoCountdown": "Undo ({seconds})",
+  "@scenarioUndoCountdown": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "scenarioReplayInvalid": "This saved scenario can no longer be replayed.",
   "scenarioSavedAtSnapshot": "Saved on {date} — result as of that date",
   "@scenarioSavedAtSnapshot": {
     "placeholders": { "date": { "type": "String" } }
   },
   "deleteScenario": "Delete",
-  "scenarioDeleteConfirmTitle": "Delete scenario?",
-  "scenarioDeleteConfirmMessage": "The {name} scenario will be permanently deleted.",
-  "@scenarioDeleteConfirmMessage": {
-    "placeholders": { "name": { "type": "String" } }
-  },
   "cancel": "Cancel",
   "tabCalculate": "Calculate",
   "tabScenarios": "Scenarios",
@@ -250,6 +250,12 @@
   "deleteAccountSuccess": "The service confirmed the deletion result, and local data on this device was cleared.",
   "deleteAccountPartialSuccess": "The service confirmed the deletion result, but not all local data on this device could be cleared. Please retry or contact support.",
   "deleteAccountFailed": "The deletion result could not be verified or device cleanup did not finish. Please retry or contact support.",
+  "resetPreferencesTitle": "Restore default settings",
+  "resetPreferencesSubtitle": "Reset language, theme, favorites, and the getting-started experience.",
+  "resetPreferencesConfirmTitle": "Reset local settings?",
+  "resetPreferencesConfirmBody": "Language and theme will return to system defaults; favorites, open forms, and calculation results will be cleared. The introduction will be shown again. Your account and saved scenarios will not be deleted.",
+  "resetPreferencesAction": "Reset Settings",
+  "resetPreferencesFailed": "Local settings could not be reset. Please try again.",
 
   "shareCardInitialValue": "Initial",
   "shareCardFinalValue": "Final Value",
@@ -313,8 +319,11 @@
   "onboardingSkip": "Skip",
   "onboardingNext": "Next",
   "onboardingGetStarted": "Get Started",
-  "onboardingLegalConsent": "I reviewed the {privacy} and {kvkk}. (Optional)",
-  "@onboardingLegalConsent": {
+  "onboardingLegalUpdateTitle": "Legal notices were updated",
+  "onboardingLegalUpdateBody": "The Privacy Policy and KVKK Disclosure were updated. You can review them and continue without making an acceptance statement.",
+  "onboardingContinue": "Continue",
+  "onboardingLegalNotice": "The {privacy} and {kvkk} have been made available to you. By continuing, you acknowledge that you have been given access to these notices.",
+  "@onboardingLegalNotice": {
     "placeholders": {
       "privacy": { "type": "String" },
       "kvkk": { "type": "String" }

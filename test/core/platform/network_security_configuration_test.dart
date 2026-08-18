@@ -18,10 +18,17 @@ void main() {
     expect(debugPlist, contains('<key>localhost</key>'));
     expect(debugPlist, contains('NSExceptionAllowsInsecureHTTPLoads'));
 
-    bool configUsesPlist(String configurationId, String plist) => RegExp(
-      '$configurationId /\\* .*? \\*/ = \\{.*?INFOPLIST_FILE = $plist;',
-      dotAll: true,
-    ).hasMatch(project);
+    bool configUsesPlist(String configurationId, String plist) {
+      // Xcode aynı path'i geçerli biçimde tırnaklı veya tırnaksız serialize
+      // edebilir. Güvenlik testi yazım stilini değil, configuration-plist
+      // eşleşmesini doğrular.
+      final escapedPlist = RegExp.escape(plist);
+      return RegExp(
+        '$configurationId /\\* .*? \\*/ = \\{.*?'
+        'INFOPLIST_FILE = "?$escapedPlist"?;',
+        dotAll: true,
+      ).hasMatch(project);
+    }
 
     // Runner Debug yalnız debug exception plist'ini, Profile ve Release ise
     // release-safe plist'i kullanmalıdır. Sadece iki string'in project'te
