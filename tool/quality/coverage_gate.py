@@ -7,7 +7,8 @@ import argparse
 import fnmatch
 import json
 import re
-import subprocess
+import shutil
+import subprocess  # nosec B404 -- Git is invoked with a validated argv, never a shell.
 import sys
 from pathlib import Path
 from typing import NamedTuple
@@ -126,11 +127,19 @@ def production_sources(repo_root: Path, excluded: list[str]) -> set[str]:
 
 
 HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+SAFE_GIT_REVISION = re.compile(r"^(?:[0-9a-fA-F]{40}|[A-Za-z0-9][A-Za-z0-9._/-]{0,199})$")
 
 
 def changed_lines(repo_root: Path, base_ref: str) -> dict[str, set[int]]:
+    if SAFE_GIT_REVISION.fullmatch(base_ref) is None or ".." in base_ref:
+        raise CoverageError(
+            "Coverage base ref must be a commit SHA or a simple Git ref name"
+        )
+    git_executable = shutil.which("git")
+    if git_executable is None:
+        raise CoverageError("Git executable was not found")
     command = [
-        "git",
+        git_executable,
         "diff",
         "--unified=0",
         "--no-ext-diff",
@@ -138,7 +147,7 @@ def changed_lines(repo_root: Path, base_ref: str) -> dict[str, set[int]]:
         "--",
         "lib",
     ]
-    result = subprocess.run(
+    result = subprocess.run(  # nosec B603 -- fixed argv plus validated revision.
         command,
         cwd=repo_root,
         text=True,

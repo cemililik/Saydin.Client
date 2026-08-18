@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -131,9 +133,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // Flutter'ın metin rasterizasyonu host işletim sistemine göre farklılaşır.
+    // CI Linux referansını ayrı tutmak gerçek UI regresyonlarını toleransla
+    // gizlemeden macOS ve Linux'ta deterministik piksel karşılaştırması sağlar.
+    final goldenPath = Platform.isLinux
+        ? 'goldens/portfolio_share_card_20_items.linux.png'
+        : 'goldens/portfolio_share_card_20_items.png';
     await expectLater(
       find.byKey(const ValueKey('portfolio-share-golden')),
-      matchesGoldenFile('goldens/portfolio_share_card_20_items.png'),
+      matchesGoldenFile(goldenPath),
     );
   });
 }

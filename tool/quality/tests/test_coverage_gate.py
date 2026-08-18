@@ -80,6 +80,14 @@ class CoverageGateTest(unittest.TestCase):
                     self.root, self.lcov, self.policy, base_ref="base"
                 )
 
+    def test_changed_lines_rejects_option_like_base_ref(self) -> None:
+        with self.assertRaisesRegex(coverage_gate.CoverageError, "base ref"):
+            coverage_gate.changed_lines(self.root, "--output=/tmp/coverage")
+
+    def test_changed_lines_rejects_revision_expression(self) -> None:
+        with self.assertRaisesRegex(coverage_gate.CoverageError, "base ref"):
+            coverage_gate.changed_lines(self.root, "main..attacker")
+
 
 if __name__ == "__main__":
     unittest.main()

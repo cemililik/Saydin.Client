@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
+import shutil
+import subprocess  # nosec B404 -- Git is invoked with a fixed argv, never a shell.
 import sys
 from pathlib import Path
 
@@ -34,8 +35,11 @@ class SecretScanError(ValueError):
 
 
 def tracked_paths(repo_root: Path) -> list[Path]:
-    result = subprocess.run(
-        ["git", "ls-files", "-z"],
+    git_executable = shutil.which("git")
+    if git_executable is None:
+        raise SecretScanError("Git executable was not found")
+    result = subprocess.run(  # nosec B603 -- executable resolved; argv is constant.
+        [git_executable, "ls-files", "-z"],
         cwd=repo_root,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

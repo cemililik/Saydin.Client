@@ -111,6 +111,22 @@ jobs:
       - name: Flutter analyze
         run: flutter analyze --fatal-infos
 
+      # Temporary one-run bootstrap: the resulting x64 Linux reference is
+      # committed in the follow-up change, then these two steps are removed.
+      - name: Generate Linux portfolio golden candidate
+        run: >-
+          flutter test
+          test/features/portfolio/presentation/widgets/portfolio_share_card_widget_test.dart
+          --update-goldens
+          --plain-name 'maksimum portföy paylaşım kartı golden smoke'
+
+      - name: Upload Linux portfolio golden candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: portfolio-share-linux-golden
+          path: test/features/portfolio/presentation/widgets/goldens/portfolio_share_card_20_items.linux.png
+          if-no-files-found: error
+
       - name: Flutter test
         run: flutter test --coverage
 
@@ -165,10 +181,10 @@ jobs:
             xargs -0 ruby -e 'require "yaml"; ARGV.each { |path| abort("Empty YAML: #{path}") unless YAML.parse_file(path) }'
 
       - name: Validate GitHub Actions workflows
-        uses: raven-actions/actionlint@v2
+        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2
 
       - name: ShellCheck repository scripts
-        uses: ludeeus/action-shellcheck@2.0.0
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
 
   # Tracked files deterministik kuralla, Git history gitleaks ile taranır.
   secret-scan:
@@ -184,7 +200,7 @@ jobs:
         run: python3 tool/quality/scan_tracked_secrets.py
 
       - name: Gitleaks history scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
