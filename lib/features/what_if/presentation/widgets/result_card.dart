@@ -59,7 +59,9 @@ class _ResultCardState extends State<ResultCard>
     if (_cachedLocale != locale) {
       _cachedLocale = locale;
       _tryFormatter = AppFormat.tryCurrency(locale);
-      _dateFormatter = AppFormat.date(locale);
+      _dateFormatter = locale.startsWith('tr')
+          ? DateFormat('dd.MM.yyyy', locale)
+          : DateFormat.yMd(locale);
       _pctFormatter = AppFormat.percent(locale);
     }
   }

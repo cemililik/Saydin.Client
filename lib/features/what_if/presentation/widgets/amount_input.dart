@@ -65,10 +65,13 @@ class _AmountInputState extends State<AmountInput> {
       'grams': l10n.amountTypeGrams,
     };
 
-    final items = widget.allowedTypes
-        .where(allItems.containsKey)
-        .map((t) => DropdownMenuItem(value: t, child: Text(allItems[t]!)))
-        .toList();
+    final items = <DropdownMenuItem<String>>[];
+    for (final type in widget.allowedTypes) {
+      final label = allItems[type];
+      if (label != null) {
+        items.add(DropdownMenuItem(value: type, child: Text(label)));
+      }
+    }
 
     final effectiveType = widget.allowedTypes.contains(widget.amountType)
         ? widget.amountType
