@@ -47,6 +47,10 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
   late String? _selectedSymbol;
   late String _amountType;
 
+  // Düzenleme ön-doldurması yalnızca bir kez yapılır — didChangeDependencies
+  // birden çok kez tetiklenebilir; kullanıcı girişini ezmemek için guard.
+  bool _didPrefill = false;
+
   bool get _isEditMode => widget.editItem != null;
 
   @override
@@ -55,9 +59,24 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
     final edit = widget.editItem;
     _selectedSymbol = edit?.assetSymbol;
     _amountType = edit?.amountType ?? 'try';
-    _amountController = TextEditingController(
-      text: edit != null ? edit.amount.toString().replaceAll('.', ',') : '',
-    );
+    _amountController = TextEditingController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Düzenleme ön-doldurması locale-duyarlı olmalı: EN'de '1234.56', TR'de
+    // '1234,56'. didChangeDependencies ilk build'den ÖNCE ve Localizations
+    // hazırken çalışır; postFrame gibi ilk kareyi boş gösterip sonra doldurmaz
+    // (flicker yok). Guard ile yalnız bir kez çalışır, kullanıcı girişini ezmez.
+    final edit = widget.editItem;
+    if (edit != null && !_didPrefill) {
+      _didPrefill = true;
+      _amountController.text = LocaleNumberParser.formatForInput(
+        edit.amount.toDouble(),
+        context.localeName,
+      );
+    }
   }
 
   @override
@@ -78,7 +97,10 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
       return;
     }
     final l10n = context.l10n;
-    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
+    final amount = LocaleNumberParser.tryParse(
+      _amountController.text,
+      context.localeName,
+    );
     // null / NaN / Infinity (isFinite hepsini eler) / <=0 reddet.
     if (amount == null || !amount.isFinite || amount <= 0) {
       ScaffoldMessenger.of(

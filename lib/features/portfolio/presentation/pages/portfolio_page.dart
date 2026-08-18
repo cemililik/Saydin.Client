@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error_messages.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
@@ -158,7 +158,10 @@ class _PortfolioPageState extends State<PortfolioPage> {
   void _showPortfolioShare(PortfolioSuccess state) {
     final shareText = context.l10n.shareTextPortfolio(
       state.result.items.length,
-      PercentageFormatter.signed(state.result.totalProfitLossPercent),
+      PercentageFormatter.signed(
+        state.result.totalProfitLossPercent,
+        locale: context.localeName,
+      ),
     );
     showModalBottomSheet<void>(
       context: context,
@@ -526,20 +529,16 @@ class _PortfolioItemTile extends StatelessWidget {
     this.onRemove,
   });
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
-
   String _formatAmount(BuildContext context) {
     final l10n = context.l10n;
+    // Locale'e duyarlı (F-06-01/F-09-20) — static formatter yerine çağrı anında.
+    final locale = context.localeName;
     return switch (amountType) {
-      'try' => _tryFormatter.format(amount),
+      'try' => AppFormat.tryCurrency(locale, decimalDigits: 2).format(amount),
       'units' =>
-        '${NumberFormat('#,##0.####', 'tr_TR').format(amount)} ${l10n.amountTypeUnits}',
+        '${AppFormat.custom('#,##0.####', locale).format(amount)} ${l10n.amountTypeUnits}',
       'grams' =>
-        '${NumberFormat('#,##0.####', 'tr_TR').format(amount)} ${l10n.amountTypeGrams}',
+        '${AppFormat.custom('#,##0.####', locale).format(amount)} ${l10n.amountTypeGrams}',
       _ => amount.toString(),
     };
   }

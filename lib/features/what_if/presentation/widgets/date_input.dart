@@ -20,7 +20,10 @@ class DateInput extends StatefulWidget {
     required this.onChanged,
   });
 
-  static final _formatter = DateFormat('dd.MM.yyyy', 'tr_TR');
+  // Sabit sayısal desen — çıktı locale'den bağımsız (gün.ay.yıl, CLAUDE.md).
+  // Locale literal'i yok (F-06-01); initState/didUpdateWidget'ta context
+  // güvenli olmadığından statik bırakıldı.
+  static final _formatter = DateFormat('dd.MM.yyyy');
 
   @override
   State<DateInput> createState() => _DateInputState();
@@ -94,7 +97,8 @@ class _DateInputState extends State<DateInput> {
           initialDate: initialDate,
           firstDate: effectiveFirst,
           lastDate: effectiveLast,
-          locale: const Locale('tr', 'TR'),
+          // Takvim UI'ı (ay adları, hafta günleri) aktif dile uysun (F-15-21).
+          locale: Localizations.localeOf(context),
         );
         widget.onChanged(picked);
       },

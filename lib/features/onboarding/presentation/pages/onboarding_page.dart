@@ -226,7 +226,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                   child: Row(
                     children: [
                       Text(
-                        'Saydın',
+                        context.l10n.appTitle,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w800,

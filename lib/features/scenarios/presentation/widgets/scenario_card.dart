@@ -1,9 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 
@@ -83,13 +83,12 @@ Widget _dateRow(BuildContext context, String label) {
   );
 }
 
-final _savedAtFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-
 /// F-11-04: Kartta gösterilen getiri/yüzde değerleri kayıt anına ait SABİT
 /// bir snapshot'tır (güncel piyasa değeri değil). Kayıt tarihi + "o günkü
 /// sonuç" uyarısı bunu kullanıcıya açıkça belirtir.
 Widget _savedAtRow(BuildContext context, DateTime createdAt) {
   final theme = Theme.of(context);
+  final savedAtFormatter = AppFormat.date(context.localeName);
   return Row(
     children: [
       Icon(
@@ -101,7 +100,7 @@ Widget _savedAtRow(BuildContext context, DateTime createdAt) {
       Expanded(
         child: Text(
           context.l10n.scenarioSavedAtSnapshot(
-            _savedAtFormatter.format(createdAt),
+            savedAtFormatter.format(createdAt),
           ),
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
@@ -120,32 +119,27 @@ class _WhatIfCard extends StatelessWidget {
 
   const _WhatIfCard({required this.scenario, this.onTap});
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-
   String _formatAmount(BuildContext context) {
     final l10n = context.l10n;
+    final localeName = context.localeName;
     final amount = scenario.amount.toDouble();
     if (scenario.amountType == 'try') {
-      return _tryFormatter.format(amount);
+      return AppFormat.tryCurrency(localeName).format(amount);
     }
     final suffix = scenario.amountType == 'grams'
         ? l10n.amountTypeGrams
         : l10n.amountTypeUnits;
-    return '${NumberFormat.decimalPattern('tr_TR').format(amount)} $suffix';
+    return '${AppFormat.decimal(localeName).format(amount)} $suffix';
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final buyLabel = _dateFormatter.format(scenario.buyDate);
+    final dateFmt = AppFormat.date(context.localeName);
+    final buyLabel = dateFmt.format(scenario.buyDate);
     final sellLabel = scenario.sellDate != null
-        ? _dateFormatter.format(scenario.sellDate!)
+        ? dateFmt.format(scenario.sellDate!)
         : l10n.today;
     final rawSymbol = scenario.assetSymbol.replaceAll(RegExp(r'TRY$'), '');
     final avatarText = rawSymbol
@@ -253,20 +247,15 @@ class _DcaCard extends StatelessWidget {
 
   const _DcaCard({required this.scenario, this.onTap});
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final buyLabel = _dateFormatter.format(scenario.buyDate);
+    final tryFormatter = AppFormat.tryCurrency(context.localeName);
+    final dateFmt = AppFormat.date(context.localeName);
+    final buyLabel = dateFmt.format(scenario.buyDate);
     final sellLabel = scenario.sellDate != null
-        ? _dateFormatter.format(scenario.sellDate!)
+        ? dateFmt.format(scenario.sellDate!)
         : l10n.today;
     final period = scenario.extraData?['period'] as String? ?? 'monthly';
     final periodLabel = period == 'weekly'
@@ -329,7 +318,7 @@ class _DcaCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${_tryFormatter.format(scenario.amount.toDouble())} / $periodLabel',
+                          '${tryFormatter.format(scenario.amount.toDouble())} / $periodLabel',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -362,15 +351,14 @@ class _ComparisonCard extends StatelessWidget {
 
   const _ComparisonCard({required this.scenario, this.onTap});
 
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final buyLabel = _dateFormatter.format(scenario.buyDate);
+    final dateFmt = AppFormat.date(context.localeName);
+    final buyLabel = dateFmt.format(scenario.buyDate);
     final sellLabel = scenario.sellDate != null
-        ? _dateFormatter.format(scenario.sellDate!)
+        ? dateFmt.format(scenario.sellDate!)
         : l10n.today;
 
     // Sembol sayısından lokalize başlık oluştur
@@ -451,7 +439,7 @@ class _ComparisonCard extends StatelessWidget {
                           const SizedBox(width: 2),
                           Expanded(
                             child: Text(
-                              '$winnerName  ${PercentageFormatter.signed(winnerReturn)}',
+                              '$winnerName  ${PercentageFormatter.signed(winnerReturn, locale: context.localeName)}',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: winnerColor,
                                 fontWeight: FontWeight.w600,
@@ -488,20 +476,18 @@ class _PortfolioCard extends StatelessWidget {
 
   const _PortfolioCard({required this.scenario, this.onTap});
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 0,
-  );
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final buyLabel = _dateFormatter.format(scenario.buyDate);
+    final tryFormatter = AppFormat.tryCurrency(
+      context.localeName,
+      decimalDigits: 0,
+    );
+    final dateFmt = AppFormat.date(context.localeName);
+    final buyLabel = dateFmt.format(scenario.buyDate);
     final sellLabel = scenario.sellDate != null
-        ? _dateFormatter.format(scenario.sellDate!)
+        ? dateFmt.format(scenario.sellDate!)
         : l10n.today;
 
     // Varlık sayısından lokalize başlık oluştur
@@ -567,7 +553,7 @@ class _PortfolioCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _tryFormatter.format(scenario.amount.toDouble()),
+                          tryFormatter.format(scenario.amount.toDouble()),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -589,7 +575,10 @@ class _PortfolioCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 2),
                           Text(
-                            PercentageFormatter.signed(totalReturn),
+                            PercentageFormatter.signed(
+                              totalReturn,
+                              locale: context.localeName,
+                            ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: returnColor,
                               fontWeight: FontWeight.w600,

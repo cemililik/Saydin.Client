@@ -1,49 +1,66 @@
 import 'package:intl/intl.dart';
 
-/// Kullanıcı girdisinden sayı ayrıştırma yardımcısı.
+/// Kullanıcı girdisinden **locale-duyarlı** sayı ayrıştırma/biçimleme yardımcısı.
 ///
-/// Eski `num.tryParse(text.replaceAll(',', '.'))` deyimi Türkçe bağlamda
-/// yanlış çalışır:
-///   - `"1.000,50"` → `replaceAll` → `"1.000.50"` → `tryParse` `null` döner.
-///   - `"1500,75"` → `"1500.75"` → `1500.75` (yanlışlıkla çalışır).
-///
-/// Bu helper:
-///   - Türkçe locale'de binlik `.` ve ondalık `,` formatını doğru çözer.
-///   - Kullanıcı `"1500.75"` veya `"1500,75"` yazsa da kabul eder.
-///   - Geçersiz girdide `null` döner (caller snackbar gösterebilir).
+/// Tutar alanları locale-duyarlıdır: EN kullanıcı `1,234.56`, TR kullanıcı
+/// `1.234,56` görür ve yazar. Bu nedenle hem ön-doldurma ([formatForInput]) hem
+/// ayrıştırma ([tryParse]) AYNI locale ile yapılmalıdır; aksi halde ayraçlar
+/// ters yorumlanır ve tutar 10x/100x şişer veya küçülür (locale asimetrisi).
 class LocaleNumberParser {
   const LocaleNumberParser._();
 
-  /// Türkçe locale'de [text]'i sayıya çevirir. Başarısızsa `null` döner.
+  /// [text]'i [locale]'in ondalık/binlik ayraçlarına göre sayıya çevirir;
+  /// başarısızsa `null` döner (caller snackbar gösterebilir).
   ///
-  /// Sıralı denemeler:
-  ///   1) `tr_TR` parser — "1.000,50" desteklenir.
-  ///   2) Hem virgül hem nokta hem boşluk içermeyen ham sayı → `num.tryParse`.
-  ///   3) Tek bir ondalık ayraç olarak `,` veya `.` varsa nokta'ya normalize.
-  static num? tryParseTr(String text) {
+  /// [formatForInput] ile AYNI locale verildiğinde tam round-trip sağlar:
+  ///   - tr: `"1.000,50"` → `1000.5`, `"1234,5"` → `1234.5`
+  ///   - en: `"1,000.50"` → `1000.5`, `"1234.5"` → `1234.5`
+  ///
+  /// Gruplama konumları katı doğrulanır. Böylece karşı-locale bir metin
+  /// (`tr` için `"1234.5"`, `en` için `"1234,5"`) sessizce 10x/100x farklı
+  /// bir değere dönüşmek yerine reddedilir.
+  static num? tryParse(String? text, String locale) {
+    if (text == null) return null;
     final trimmed = text.trim();
     if (trimmed.isEmpty) return null;
 
-    // 1) Türkçe locale parser ile doğrudan dene.
-    try {
-      return NumberFormat.decimalPattern('tr_TR').parse(trimmed);
-    } on FormatException {
-      // Sonraki katmanlara düş.
-    }
+    final format = NumberFormat.decimalPattern(locale);
+    final decimalSeparator = RegExp.escape(format.symbols.DECIMAL_SEP);
+    final groupingSeparator = RegExp.escape(format.symbols.GROUP_SEP);
+    final strictPattern = RegExp(
+      '^[+-]?(?:(?:[0-9]{1,3}(?:$groupingSeparator[0-9]{3})+|[0-9]+)'
+      '(?:$decimalSeparator[0-9]+)?|$decimalSeparator[0-9]+)'
+      r'$',
+    );
+    if (!strictPattern.hasMatch(trimmed)) return null;
 
-    // 2) Sadece rakam + opsiyonel `-` + tek bir ondalık ayraç (nokta) ise
-    //    doğrudan dart parse.
-    final naive = num.tryParse(trimmed);
-    if (naive != null) return naive;
+    final parsed = format.tryParse(trimmed);
+    return parsed != null && parsed.isFinite ? parsed : null;
+  }
 
-    // 3) Tek bir virgül ondalık olarak girilmiş olabilir (binlik yok).
-    //    `1500,75` → `1500.75`.
-    final commaCount = ','.allMatches(trimmed).length;
-    final dotCount = '.'.allMatches(trimmed).length;
-    if (commaCount == 1 && dotCount == 0) {
-      return num.tryParse(trimmed.replaceFirst(',', '.'));
-    }
+  /// Düzenleme alanına ön-doldurma için [value]'yu aktif [locale]'in ondalık
+  /// ayracıyla, binlik gruplama OLMADAN biçimler — gruplama düzenlemeyi
+  /// zorlaştırır (F-07-24 / F-10-16). tr → "1234,5", en → "1234.5".
+  /// [tryParse] ile AYNI locale verilince round-trip eder.
+  static String formatForInput(num value, String locale) {
+    final fmt = NumberFormat.decimalPattern(locale)
+      ..turnOffGrouping()
+      ..maximumFractionDigits = 8;
+    return fmt.format(value);
+  }
 
-    return null;
+  /// Form metnini [fromLocale]'den [toLocale]'e güvenli biçimde taşır.
+  ///
+  /// Metin eski locale'de geçerli değilse kullanıcı girişini ezmez; geçerliyse
+  /// önce eski locale ile ayrıştırır, sonra yeni locale ile gruplamasız yazar.
+  /// Bu dönüşüm dil değişiminde controller'daki eski ayırıcının yeni parser
+  /// tarafından farklı bir büyüklük olarak yorumlanmasını önler.
+  static String reformatInput(
+    String text, {
+    required String fromLocale,
+    required String toLocale,
+  }) {
+    final parsed = tryParse(text, fromLocale);
+    return parsed == null ? text : formatForInput(parsed, toLocale);
   }
 }

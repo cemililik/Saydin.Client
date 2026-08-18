@@ -468,6 +468,40 @@ Dil değiştiğinde:
 - **İstemci:** ARB dosyalarından `context.l10n` ile çözülen UI string'leri
 - **Sunucu:** `Accept-Language` header'ına göre `.resx` dosyalarından çözülen hata mesajları ve asset isimleri
 
+### Locale-aware Biçimlendirme (Faz 7 — F-06-01)
+
+Para, yüzde ve tarih biçimleri **çağrı anında aktif locale'e göre** kurulur; hiçbir
+widget'ta sabit `'tr_TR'` literal'i kalmaz. Üç parça:
+
+- **`AppFormat`** (`lib/core/utils/app_formatters.dart`) — `tryCurrency(locale)`,
+  `percent(locale)`, `date(locale)`, `decimal(locale)`, `custom(pattern, locale)` fabrikaları.
+  `₺` simgesi sabittir (tutarlar TRY); yalnız ayraç/gruplama dile göre değişir
+  (tr `₺1.234,56` / en `₺1,234.56`).
+- **`context.localeName`** (`lib/core/l10n/l10n_extensions.dart`) —
+  `Localizations.localeOf(this).toString()` kısayolu (ör. `"tr_TR"` / `"en_US"`).
+- **`AppBranding`** (`lib/core/constants/app_branding.dart`) — paylaşım kartı sözcük markası
+  (`saydın`) ve alan adı (`saydın.app`); çevrilmez, sabittir.
+
+**Pattern:** StatefulWidget'ta `NumberFormat get _fmt => AppFormat.x(context.localeName)`
+instance getter; StatelessWidget'ta `build` içinde `final fmt = AppFormat.x(context.localeName)`
+build-local. **Locale-VARIANT formatter'lar `static final` OLAMAZ** — locale değişiminde
+yeniden kurulamaz. (Locale'den bağımsız sabit sayısal pattern — ör. `dd.MM.yyyy` — `static
+final` kalabilir; çıktısı locale'e göre değişmez.)
+
+**Sayı girişi (locale-duyarlı çift):** `LocaleNumberParser.formatForInput(value, locale)`
+(ön-doldurma; binlik gruplama olmadan) ile `tryParse(text, locale)` (ayrıştırma) **AYNI
+locale** verilince round-trip eder. Farklı locale ayraçları ters yorumlatır (EN `"1234.5"`'i
+ham TR `NumberFormat` parser'ı `12345` okuyabilir → 10x hata); bu yüzden her iki taraf da
+`context.localeName` kullanır.
+Parser gruplama konumlarını katı doğrular ve karşı-locale metni sessizce farklı bir tutara
+çevirmek yerine reddeder. Dil değişiminde yaşayan `TextEditingController` değerleri önce eski
+locale ile parse edilip `reformatInput` ile yeni locale'e taşınır; böylece form state'i korunurken
+tutarın büyüklüğü değişmez.
+
+**ICU çoğul:** sayım içeren İngilizce anahtarlar `{count, plural, =1{…} other{…}}` kullanır
+(`durationDays/Months/Years`, `shareCardAssetCount`, `scenarioNamePortfolio`). Türkçe'de
+sayıdan sonra çoğul eki olmadığından TR dalları özdeştir.
+
 ## Grafik (ResultChart)
 
 `ResultCard` içinde `ResultChart` widget'ı (`fl_chart ^0.70.2`) ile alış-satış aralığındaki fiyat geçmişi çizilir.

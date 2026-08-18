@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:saydin/core/constants/app_branding.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 import 'package:saydin/l10n/app_localizations.dart';
@@ -13,17 +14,6 @@ class DcaShareCardWidget extends StatelessWidget {
 
   const DcaShareCardWidget({super.key, required this.result});
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
-  static final _pctFormatter = NumberFormat.decimalPercentPattern(
-    locale: 'tr_TR',
-    decimalDigits: 2,
-  );
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-
   // Ortak [DurationLabel]'a delege (F-07-20).
   static String _durationLabel(
     AppLocalizations l10n,
@@ -34,6 +24,11 @@ class DcaShareCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // Locale'e duyarlı formatter'lar (F-06-01).
+    final locale = context.localeName;
+    final tryFmt = AppFormat.tryCurrency(locale);
+    final pctFmt = AppFormat.percent(locale);
+    final dateFmt = AppFormat.date(locale);
     final nominalColor = result.isProfit ? AppColors.profit : AppColors.loss;
     final nominalIcon = result.isProfit
         ? Icons.trending_up
@@ -64,7 +59,7 @@ class DcaShareCardWidget extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               child: Center(
                 child: Text(
-                  'saydın',
+                  AppBranding.wordmark,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -125,8 +120,8 @@ class DcaShareCardWidget extends StatelessWidget {
                   const SizedBox(height: 6),
                   // Tarih aralığı + periyot
                   Text(
-                    '${_dateFormatter.format(result.startDate)}  →  '
-                    '${_dateFormatter.format(result.endDate)}  •  $periodLabel',
+                    '${dateFmt.format(result.startDate)}  →  '
+                    '${dateFmt.format(result.endDate)}  •  $periodLabel',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                   ),
 
@@ -158,7 +153,7 @@ class DcaShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(
+                                tryFmt.format(
                                   result.totalInvestedTry.toDouble(),
                                 ),
                                 style: const TextStyle(
@@ -188,7 +183,7 @@ class DcaShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(
+                                tryFmt.format(
                                   result.currentValueTry.toDouble(),
                                 ),
                                 style: const TextStyle(
@@ -237,7 +232,7 @@ class DcaShareCardWidget extends StatelessWidget {
                             Icon(nominalIcon, color: nominalColor, size: 32),
                             const SizedBox(width: 8),
                             Text(
-                              '$nominalSign${_pctFormatter.format(result.profitLossPercent / 100)}',
+                              '$nominalSign${pctFmt.format(result.profitLossPercent / 100)}',
                               style: TextStyle(
                                 fontSize: 44,
                                 fontWeight: FontWeight.bold,
@@ -249,7 +244,7 @@ class DcaShareCardWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '$nominalSign${_tryFormatter.format(result.profitLossTry.toDouble())} '
+                          '$nominalSign${tryFmt.format(result.profitLossTry.toDouble())} '
                           '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
                           style: TextStyle(
                             fontSize: 15,
@@ -275,7 +270,7 @@ class DcaShareCardWidget extends StatelessWidget {
                       children: [
                         _MiniStat(
                           label: l10n.dcaPeriodicAmount,
-                          value: _tryFormatter.format(
+                          value: tryFmt.format(
                             result.periodicAmount.toDouble(),
                           ),
                         ),
@@ -285,7 +280,7 @@ class DcaShareCardWidget extends StatelessWidget {
                         ),
                         _MiniStat(
                           label: l10n.dcaAvgCost,
-                          value: _tryFormatter.format(
+                          value: tryFmt.format(
                             result.averageCostPerUnit.toDouble(),
                           ),
                         ),
@@ -318,7 +313,7 @@ class DcaShareCardWidget extends StatelessWidget {
                     ),
                   ),
                   const Text(
-                    'saydın.app',
+                    AppBranding.domain,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.primary,
@@ -374,14 +369,10 @@ class _InflationSection extends StatelessWidget {
 
   const _InflationSection({required this.result});
 
-  static final _pctFormatter = NumberFormat.decimalPercentPattern(
-    locale: 'tr_TR',
-    decimalDigits: 2,
-  );
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final pctFmt = AppFormat.percent(context.localeName);
     final inflSign = (result.cumulativeInflationPercent ?? 0) >= 0 ? '+' : '';
     final realPct = result.realProfitLossPercent!;
     final realSign = realPct >= 0 ? '+' : '';
@@ -424,7 +415,7 @@ class _InflationSection extends StatelessWidget {
                 style: const TextStyle(fontSize: 13, color: Color(0xFF666666)),
               ),
               Text(
-                '$inflSign${_pctFormatter.format(result.cumulativeInflationPercent! / 100)}',
+                '$inflSign${pctFmt.format(result.cumulativeInflationPercent! / 100)}',
                 style: const TextStyle(
                   fontSize: 13,
                   color: Color(0xFF666666),
@@ -448,7 +439,7 @@ class _InflationSection extends StatelessWidget {
                 ),
               ),
               Text(
-                '$realSign${_pctFormatter.format(realPct / 100)}',
+                '$realSign${pctFmt.format(realPct / 100)}',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,

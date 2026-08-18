@@ -34,11 +34,33 @@ class _DcaPageState extends State<DcaPage> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _scrollController = ScrollController();
+  String? _amountLocale;
 
   @override
   void initState() {
     super.initState();
     context.read<DcaBloc>().add(const DcaAssetsRequested());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = context.localeName;
+    final previousLocale = _amountLocale;
+    if (previousLocale != null && previousLocale != locale) {
+      final reformatted = LocaleNumberParser.reformatInput(
+        _amountController.text,
+        fromLocale: previousLocale,
+        toLocale: locale,
+      );
+      if (reformatted != _amountController.text) {
+        _amountController.value = TextEditingValue(
+          text: reformatted,
+          selection: TextSelection.collapsed(offset: reformatted.length),
+        );
+      }
+    }
+    _amountLocale = locale;
   }
 
   @override
@@ -80,7 +102,10 @@ class _DcaPageState extends State<DcaPage> {
       return;
     }
 
-    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
+    final amount = LocaleNumberParser.tryParse(
+      _amountController.text,
+      context.localeName,
+    );
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(
         context,
@@ -139,7 +164,10 @@ class _DcaPageState extends State<DcaPage> {
           if (amount != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                _amountController.text = amount.toString().replaceAll('.', ',');
+                _amountController.text = LocaleNumberParser.formatForInput(
+                  amount,
+                  context.localeName,
+                );
               }
             });
           }
@@ -233,7 +261,7 @@ class _DcaPageState extends State<DcaPage> {
                         decimal: true,
                       ),
                       decoration: InputDecoration(
-                        labelText: l10n.dcaPeriodicAmountLabel,
+                        labelText: l10n.dcaPeriodicAmount,
                         hintText: l10n.amountHint,
                         prefixText: '₺ ',
                         border: const OutlineInputBorder(),
@@ -242,7 +270,10 @@ class _DcaPageState extends State<DcaPage> {
                         if (v == null || v.trim().isEmpty) {
                           return l10n.enterAmount;
                         }
-                        final parsed = LocaleNumberParser.tryParseTr(v);
+                        final parsed = LocaleNumberParser.tryParse(
+                          v,
+                          context.localeName,
+                        );
                         if (parsed == null || parsed <= 0) {
                           return l10n.validAmountRequired;
                         }
@@ -358,7 +389,10 @@ class _DcaPageState extends State<DcaPage> {
                                   final text = l10n.shareTextDca(
                                     result.assetDisplayName,
                                     result.totalPurchases,
-                                    PercentageFormatter.signed(pct),
+                                    PercentageFormatter.signed(
+                                      pct,
+                                      locale: context.localeName,
+                                    ),
                                   );
                                   showModalBottomSheet<void>(
                                     context: context,

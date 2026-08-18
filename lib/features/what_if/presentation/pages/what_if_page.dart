@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error_messages.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
@@ -75,7 +75,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
       return;
     }
 
-    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
+    final amount = LocaleNumberParser.tryParse(
+      _amountController.text,
+      context.localeName,
+    );
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(
         context,
@@ -157,7 +160,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
             _lastSyncedAmount = amount;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                _amountController.text = amount.toString().replaceAll('.', ',');
+                _amountController.text = LocaleNumberParser.formatForInput(
+                  amount,
+                  context.localeName,
+                );
               }
             });
           }
@@ -228,9 +234,8 @@ class _WhatIfPageState extends State<WhatIfPage> {
             onCalculate: _onCalculate,
             onShare: hasResult
                 ? () {
-                    final fmt = NumberFormat.currency(
-                      locale: 'tr_TR',
-                      symbol: '₺',
+                    final fmt = AppFormat.tryCurrency(
+                      context.localeName,
                       decimalDigits: 0,
                     );
                     if (reverseResult != null) {
@@ -243,7 +248,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
                         r.assetDisplayName,
                         fmt.format(r.targetValueTry.toDouble()),
                         fmt.format(r.requiredInvestmentTry.toDouble()),
-                        PercentageFormatter.signed(r.profitLossPercent),
+                        PercentageFormatter.signed(
+                          r.profitLossPercent,
+                          locale: context.localeName,
+                        ),
                       );
                       showModalBottomSheet<void>(
                         context: context,
@@ -260,7 +268,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
                         r.assetDisplayName,
                         fmt.format(r.initialValueTry.toDouble()),
                         fmt.format(r.finalValueTry.toDouble()),
-                        PercentageFormatter.signed(r.profitLossPercent),
+                        PercentageFormatter.signed(
+                          r.profitLossPercent,
+                          locale: context.localeName,
+                        ),
                       );
                       showModalBottomSheet<void>(
                         context: context,
@@ -293,8 +304,9 @@ class _WhatIfPageState extends State<WhatIfPage> {
                         sellDate: sellDate,
                         amount: _amountController.text.isEmpty
                             ? 0
-                            : LocaleNumberParser.tryParseTr(
+                            : LocaleNumberParser.tryParse(
                                     _amountController.text,
+                                    context.localeName,
                                   ) ??
                                   0,
                         amountType: formInput.amountType,

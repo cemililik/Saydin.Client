@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
@@ -22,6 +23,14 @@ class _ResultCardState extends State<ResultCard>
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
+
+  // CountUpText formatter callback'ini her frame çağırır. Locale-duyarlı
+  // formatter'lar yalnız locale değiştiğinde yenilenerek animasyon sırasında
+  // NumberFormat allocation/GC baskısı önlenir.
+  late NumberFormat _tryFormatter;
+  late DateFormat _dateFormatter;
+  late NumberFormat _pctFormatter;
+  String? _cachedLocale;
 
   WhatIfResult get result => widget.result;
 
@@ -44,40 +53,44 @@ class _ResultCardState extends State<ResultCard>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = context.localeName;
+    if (_cachedLocale != locale) {
+      _cachedLocale = locale;
+      _tryFormatter = AppFormat.tryCurrency(locale);
+      _dateFormatter = locale.startsWith('tr')
+          ? DateFormat('dd.MM.yyyy', locale)
+          : DateFormat.yMd(locale);
+      _pctFormatter = AppFormat.percent(locale);
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-
-  /// İşaretli yüzde formatter: +%12,34 / -%5,67
-  static String _pctSignedFormatter(double v) {
+  /// İşaretli yüzde formatter: +%12,34 / -%5,67 (tr) · +12.34% / -5.67% (en)
+  String _pctSignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
-    final fmt = NumberFormat.decimalPercentPattern(
-      locale: 'tr_TR',
-      decimalDigits: 2,
-    );
-    return '$sign${fmt.format(v / 100)}';
+    return '$sign${_pctFormatter.format(v / 100)}';
   }
 
   /// İşaretli TL formatter: +₺1.234,56 / -₺789,00
-  static String _trySignedFormatter(double v) {
+  String _trySignedFormatter(double v) {
     final sign = v >= 0 ? '+' : '';
     return '$sign${_tryFormatter.format(v)}';
   }
 
   /// Küçük sayılar için anlamlı ondalık basamak (kripto, gram vb.)
-  static String _formatUnits(double value) {
+  String _formatUnits(double value) {
     if (value == 0) return '0';
-    if (value >= 100) return NumberFormat('#,##0.##', 'tr_TR').format(value);
-    if (value >= 1) return NumberFormat('#,##0.####', 'tr_TR').format(value);
-    return NumberFormat('#,##0.########', 'tr_TR').format(value);
+    final locale = context.localeName;
+    if (value >= 100) return AppFormat.custom('#,##0.##', locale).format(value);
+    if (value >= 1) return AppFormat.custom('#,##0.####', locale).format(value);
+    return AppFormat.custom('#,##0.########', locale).format(value);
   }
 
   /// İstenen tarih haftasonuna mı denk geliyor?

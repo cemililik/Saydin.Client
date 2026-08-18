@@ -104,12 +104,6 @@ abstract class AppLocalizations {
   /// **'Saydın'**
   String get appTitle;
 
-  /// No description provided for @whatIfTitle.
-  ///
-  /// In tr, this message translates to:
-  /// **'Ya Alsaydım?'**
-  String get whatIfTitle;
-
   /// No description provided for @selectAsset.
   ///
   /// In tr, this message translates to:
@@ -169,12 +163,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Hesaplanıyor...'**
   String get calculating;
-
-  /// No description provided for @resultTitle.
-  ///
-  /// In tr, this message translates to:
-  /// **'Sonuç'**
-  String get resultTitle;
 
   /// No description provided for @initialValue.
   ///
@@ -338,12 +326,6 @@ abstract class AppLocalizations {
   /// **'Tekrar Dene'**
   String get retry;
 
-  /// No description provided for @tryAgain.
-  ///
-  /// In tr, this message translates to:
-  /// **'Tekrar Hesapla'**
-  String get tryAgain;
-
   /// No description provided for @scenariosTitle.
   ///
   /// In tr, this message translates to:
@@ -392,12 +374,6 @@ abstract class AppLocalizations {
   /// **'Sil'**
   String get deleteScenario;
 
-  /// No description provided for @undo.
-  ///
-  /// In tr, this message translates to:
-  /// **'Geri Al'**
-  String get undo;
-
   /// No description provided for @tabCalculate.
   ///
   /// In tr, this message translates to:
@@ -407,7 +383,7 @@ abstract class AppLocalizations {
   /// No description provided for @tabScenarios.
   ///
   /// In tr, this message translates to:
-  /// **'Kayıtlarım'**
+  /// **'Senaryolar'**
   String get tabScenarios;
 
   /// No description provided for @searchAsset.
@@ -467,25 +443,25 @@ abstract class AppLocalizations {
   /// No description provided for @durationDays.
   ///
   /// In tr, this message translates to:
-  /// **'{count} gün'**
+  /// **'{count, plural, =1{{count} gün} other{{count} gün}}'**
   String durationDays(int count);
 
   /// No description provided for @durationMonths.
   ///
   /// In tr, this message translates to:
-  /// **'{count} ay'**
+  /// **'{count, plural, =1{{count} ay} other{{count} ay}}'**
   String durationMonths(int count);
 
   /// No description provided for @durationYearsMonths.
   ///
   /// In tr, this message translates to:
-  /// **'{years} yıl {months} ay'**
+  /// **'{years, plural, other{{years} yıl}} {months, plural, other{{months} ay}}'**
   String durationYearsMonths(int years, int months);
 
   /// No description provided for @durationYears.
   ///
   /// In tr, this message translates to:
-  /// **'{count} yıl'**
+  /// **'{count, plural, =1{{count} yıl} other{{count} yıl}}'**
   String durationYears(int count);
 
   /// No description provided for @dateAdjustedWarning.
@@ -521,8 +497,8 @@ abstract class AppLocalizations {
   /// No description provided for @compareSelectAssets.
   ///
   /// In tr, this message translates to:
-  /// **'Varlık Seçin (2-5 adet)'**
-  String get compareSelectAssets;
+  /// **'Varlık Seçin ({min}-{max} adet)'**
+  String compareSelectAssets(int min, int max);
 
   /// No description provided for @compareMinAssets.
   ///
@@ -547,12 +523,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Karşılaştırma Sonuçları'**
   String get compareResultTitle;
-
-  /// No description provided for @compareRankLabel.
-  ///
-  /// In tr, this message translates to:
-  /// **'{rank}. Sıra'**
-  String compareRankLabel(int rank);
 
   /// No description provided for @compareAddAsset.
   ///
@@ -635,7 +605,7 @@ abstract class AppLocalizations {
   /// No description provided for @reasonWeekend.
   ///
   /// In tr, this message translates to:
-  /// **'haftasonu'**
+  /// **'hafta sonu'**
   String get reasonWeekend;
 
   /// No description provided for @reasonHoliday.
@@ -749,7 +719,7 @@ abstract class AppLocalizations {
   /// No description provided for @portfolioQuotaInfo.
   ///
   /// In tr, this message translates to:
-  /// **'Bu hesaplama {count} hesaplama hakkı kullanacak.'**
+  /// **'Bu hesaplama {count, plural, =1{{count} hesaplama hakkı} other{{count} hesaplama hakkı}} kullanacak.'**
   String portfolioQuotaInfo(int count);
 
   /// No description provided for @portfolioTotalInitial.
@@ -845,7 +815,7 @@ abstract class AppLocalizations {
   /// No description provided for @scenarioTypeWhatIf.
   ///
   /// In tr, this message translates to:
-  /// **'Hesaplama'**
+  /// **'Ya Alsaydım?'**
   String get scenarioTypeWhatIf;
 
   /// No description provided for @scenarioTypeComparison.
@@ -863,7 +833,7 @@ abstract class AppLocalizations {
   /// No description provided for @scenarioTypeDca.
   ///
   /// In tr, this message translates to:
-  /// **'Birikim'**
+  /// **'Düzenli Yatırım'**
   String get scenarioTypeDca;
 
   /// No description provided for @brandedTitlePrefix.
@@ -913,12 +883,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Sistem'**
   String get themeSystem;
-
-  /// No description provided for @settingsVersion.
-  ///
-  /// In tr, this message translates to:
-  /// **'Versiyon'**
-  String get settingsVersion;
 
   /// No description provided for @categoryFavorites.
   ///
@@ -1163,17 +1127,17 @@ abstract class AppLocalizations {
   /// No description provided for @shareCardAssetCount.
   ///
   /// In tr, this message translates to:
-  /// **'{count} varlık'**
+  /// **'{count, plural, =1{{count} varlık} other{{count} varlık}}'**
   String shareCardAssetCount(int count);
 
   /// No description provided for @shareTextWhatIf.
   ///
   /// In tr, this message translates to:
-  /// **'{asset}\'e {initial} yatırsaydım {final_value} ederdi ({percent})! 📊 #saydın'**
+  /// **'{asset} için {initial} yatırsaydım bugün {finalValue} ederdi ({percent})! 📊 #saydın'**
   String shareTextWhatIf(
     String asset,
     String initial,
-    String final_value,
+    String finalValue,
     String percent,
   );
 
@@ -1186,7 +1150,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareTextPortfolio.
   ///
   /// In tr, this message translates to:
-  /// **'Portföyüm {count} varlıkla {percent} getiri sağladı! 📊 #saydın'**
+  /// **'Portföyüm {count, plural, =1{{count} varlıkla} other{{count} varlıkla}} {percent} getiri sağladı! 📊 #saydın'**
   String shareTextPortfolio(int count, String percent);
 
   /// No description provided for @shareDefaultText.
@@ -1210,7 +1174,7 @@ abstract class AppLocalizations {
   /// No description provided for @scenarioNamePortfolio.
   ///
   /// In tr, this message translates to:
-  /// **'Portföy ({count} varlık)'**
+  /// **'Portföy ({count, plural, =1{{count} varlık} other{{count} varlık}})'**
   String scenarioNamePortfolio(int count);
 
   /// No description provided for @realReturnPrefix.
@@ -1264,7 +1228,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPage1Body.
   ///
   /// In tr, this message translates to:
-  /// **'Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.'**
+  /// **'Merak ettiğiniz yatırımı geçmişe dönük hesaplayın. Dolar, altın, Bitcoin ve daha fazlası.'**
   String get onboardingPage1Body;
 
   /// No description provided for @onboardingPage2Title.
@@ -1276,7 +1240,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPage2Body.
   ///
   /// In tr, this message translates to:
-  /// **'Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?'**
+  /// **'Varlıkları yan yana karşılaştırın, portföy oluşturun. Hangisi daha çok kazandırdı?'**
   String get onboardingPage2Body;
 
   /// No description provided for @onboardingPage3Title.
@@ -1288,7 +1252,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPage3Body.
   ///
   /// In tr, this message translates to:
-  /// **'Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.'**
+  /// **'Birden fazla varlıkla portföy kurun, toplam getirinizi hesaplayın ve en iyi stratejiyi keşfedin.'**
   String get onboardingPage3Body;
 
   /// No description provided for @onboardingPage4Title.
@@ -1300,7 +1264,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPage4Body.
   ///
   /// In tr, this message translates to:
-  /// **'Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.'**
+  /// **'Aylık veya haftalık düzenli alım simüle edin, ortalama maliyetinizi ve toplam getirinizi görün.'**
   String get onboardingPage4Body;
 
   /// No description provided for @onboardingPage5Title.
@@ -1312,7 +1276,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPage5Body.
   ///
   /// In tr, this message translates to:
-  /// **'Hedefine ulaşmak için ne kadar yatırmalıydın? Ters hesaplama ile gereken tutarı öğren.'**
+  /// **'Hedefinize ulaşmak için ne kadar yatırmalıydınız? Ters hesaplama ile gereken tutarı öğrenin.'**
   String get onboardingPage5Body;
 
   /// No description provided for @onboardingPage6Title.
@@ -1324,13 +1288,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingPage6Body.
   ///
   /// In tr, this message translates to:
-  /// **'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.'**
+  /// **'Sonuçlarınızı arkadaşlarınızla paylaşın, senaryolarınızı kaydedin ve istediğiniz zaman geri dönün.'**
   String get onboardingPage6Body;
 
   /// No description provided for @tabDca.
   ///
   /// In tr, this message translates to:
-  /// **'Birikim'**
+  /// **'Düzenli Yatırım'**
   String get tabDca;
 
   /// No description provided for @dcaTitle.
@@ -1386,12 +1350,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Periyot'**
   String get dcaPeriodLabel;
-
-  /// No description provided for @dcaPeriodicAmountLabel.
-  ///
-  /// In tr, this message translates to:
-  /// **'Periyodik Tutar'**
-  String get dcaPeriodicAmountLabel;
 
   /// No description provided for @dcaPeriodicAmount.
   ///
@@ -1462,7 +1420,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareTextDca.
   ///
   /// In tr, this message translates to:
-  /// **'{asset} için {count} alım yaptım, getiri: {percent}! 📊 #saydın'**
+  /// **'{asset} için {count, plural, =1{{count} alım} other{{count} alım}} yaptım, getiri: {percent}! 📊 #saydın'**
   String shareTextDca(String asset, int count, String percent);
 
   /// No description provided for @modeNormal.

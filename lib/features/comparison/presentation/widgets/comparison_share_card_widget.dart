@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:saydin/core/constants/app_branding.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 import 'package:saydin/features/what_if/presentation/widgets/share_card_widget.dart';
 
@@ -18,20 +19,18 @@ class ComparisonShareCardWidget extends StatelessWidget {
     this.sellDate,
   });
 
-  static final _pctFormatter = NumberFormat.decimalPercentPattern(
-    locale: 'tr_TR',
-    decimalDigits: 2,
-  );
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-
   static const _rankEmojis = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // Locale'e duyarlı formatter'lar (F-06-01).
+    final locale = context.localeName;
+    final pctFmt = AppFormat.percent(locale);
+    final dateFmt = AppFormat.date(locale);
     final sellLabel = sellDate != null
-        ? _dateFormatter.format(sellDate!)
-        : _dateFormatter.format(DateTime.now());
+        ? dateFmt.format(sellDate!)
+        : dateFmt.format(DateTime.now());
 
     return SizedBox(
       width: 540,
@@ -49,7 +48,7 @@ class ComparisonShareCardWidget extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               child: Center(
                 child: Text(
-                  'saydın',
+                  AppBranding.wordmark,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -107,7 +106,7 @@ class ComparisonShareCardWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${_dateFormatter.format(buyDate)}  →  $sellLabel',
+                    '${dateFmt.format(buyDate)}  →  $sellLabel',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                   ),
 
@@ -161,7 +160,7 @@ class ComparisonShareCardWidget extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '$sign${_pctFormatter.format(pct / 100)}',
+                            '$sign${pctFmt.format(pct / 100)}',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -192,7 +191,7 @@ class ComparisonShareCardWidget extends StatelessWidget {
                     ),
                   ),
                   const Text(
-                    'saydın.app',
+                    AppBranding.domain,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.primary,

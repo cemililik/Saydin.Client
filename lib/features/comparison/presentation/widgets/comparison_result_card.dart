@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 
 class ComparisonResultCard extends StatefulWidget {
@@ -48,16 +49,11 @@ class _ComparisonResultCardState extends State<ComparisonResultCard>
     super.dispose();
   }
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
-  static final _pctFormatter = NumberFormat.decimalPercentPattern(
-    locale: 'tr_TR',
-    decimalDigits: 2,
-  );
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
+  // Locale'e duyarlı formatter'lar (F-06-01) — State.context ile çağrı anında
+  // kurulur; dil değişiminde TR/EN ayraçları doğru gelir.
+  NumberFormat get _tryFormatter => AppFormat.tryCurrency(context.localeName);
+  NumberFormat get _pctFormatter => AppFormat.percent(context.localeName);
+  DateFormat get _dateFormatter => AppFormat.date(context.localeName);
 
   @override
   Widget build(BuildContext context) {

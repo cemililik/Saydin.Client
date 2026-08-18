@@ -1,16 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
-
-final _tryFmt = NumberFormat.currency(
-  locale: 'tr_TR',
-  symbol: '₺',
-  decimalDigits: 0,
-);
-final _dateFmt = DateFormat('dd.MM.yyyy', 'tr_TR');
 
 class DcaChart extends StatelessWidget {
   final List<DcaChartPoint> chartData;
@@ -23,6 +16,9 @@ class DcaChart extends StatelessWidget {
     if (chartData.length < 2) return const SizedBox.shrink();
 
     final l10n = context.l10n;
+    final locale = context.localeName;
+    final tryFmt = AppFormat.tryCurrency(locale, decimalDigits: 0);
+    final dateFmt = AppFormat.date(locale);
     final theme = Theme.of(context);
     final valueColor = isProfit ? AppColors.profit : AppColors.loss;
     const costColor = Color(0xFF757575);
@@ -92,8 +88,8 @@ class DcaChart extends StatelessWidget {
                       final isValue = s.barIndex == 1;
                       return LineTooltipItem(
                         isValue
-                            ? '${_dateFmt.format(date)}\n${_tryFmt.format(s.y)}'
-                            : _tryFmt.format(s.y),
+                            ? '${dateFmt.format(date)}\n${tryFmt.format(s.y)}'
+                            : tryFmt.format(s.y),
                         TextStyle(
                           color: isValue ? valueColor : costColor,
                           fontSize: 11,

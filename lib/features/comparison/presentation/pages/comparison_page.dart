@@ -69,7 +69,10 @@ class _ComparisonPageState extends State<ComparisonPage> {
       ).showSnackBar(SnackBar(content: Text(context.l10n.buyDateRequired)));
       return;
     }
-    final amount = LocaleNumberParser.tryParseTr(_amountController.text);
+    final amount = LocaleNumberParser.tryParse(
+      _amountController.text,
+      context.localeName,
+    );
     if (amount == null || amount <= 0) return;
     context.read<ComparisonBloc>()
       ..add(ComparisonAmountChanged(amount))
@@ -113,7 +116,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     final winnerPct = winner?.calculation.profitLossPercent ?? 0;
     final shareText = ctx.l10n.shareTextComparison(
       winnerName,
-      PercentageFormatter.signed(winnerPct.toDouble()),
+      PercentageFormatter.signed(winnerPct.toDouble(), locale: ctx.localeName),
     );
     showModalBottomSheet<void>(
       context: ctx,
@@ -168,13 +171,14 @@ class _ComparisonPageState extends State<ComparisonPage> {
               HapticFeedback.mediumImpact();
             }
             if (state is ComparisonSuccess && state.amount != null) {
-              final controllerAmount = LocaleNumberParser.tryParseTr(
+              final controllerAmount = LocaleNumberParser.tryParse(
                 _amountController.text,
+                context.localeName,
               );
               if (controllerAmount != state.amount) {
-                _amountController.text = state.amount.toString().replaceAll(
-                  '.',
-                  ',',
+                _amountController.text = LocaleNumberParser.formatForInput(
+                  state.amount!,
+                  context.localeName,
                 );
               }
             }
@@ -222,7 +226,9 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 children: [
                   // ── Selected assets ──────────────────────────────
                   Text(
-                    l10n.compareSelectAssets,
+                    // 2–5: karşılaştırma alt/üst sınırı (üst sınır
+                    // comparison_bloc `current.length < 5` ile zorlanır).
+                    l10n.compareSelectAssets(2, 5),
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 8),

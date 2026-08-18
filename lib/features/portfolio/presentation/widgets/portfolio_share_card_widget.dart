@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:saydin/core/constants/app_branding.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
 import 'package:saydin/features/what_if/presentation/widgets/share_card_widget.dart';
 
@@ -18,26 +19,20 @@ class PortfolioShareCardWidget extends StatelessWidget {
     this.sellDate,
   });
 
-  static final _tryFormatter = NumberFormat.currency(
-    locale: 'tr_TR',
-    symbol: '₺',
-    decimalDigits: 2,
-  );
-  static final _pctFormatter = NumberFormat.decimalPercentPattern(
-    locale: 'tr_TR',
-    decimalDigits: 2,
-  );
-  static final _dateFormatter = DateFormat('dd.MM.yyyy', 'tr_TR');
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // Locale'e duyarlı formatter'lar (F-06-01).
+    final locale = context.localeName;
+    final tryFmt = AppFormat.tryCurrency(locale);
+    final pctFmt = AppFormat.percent(locale);
+    final dateFmt = AppFormat.date(locale);
     final color = result.isProfit ? AppColors.profit : AppColors.loss;
     final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
     final sign = result.totalProfitLossPercent >= 0 ? '+' : '';
     final sellLabel = sellDate != null
-        ? _dateFormatter.format(sellDate!)
-        : _dateFormatter.format(DateTime.now());
+        ? dateFmt.format(sellDate!)
+        : dateFmt.format(DateTime.now());
 
     final hasInflation = result.totalRealProfitLossPercent != null;
     final realPct = result.totalRealProfitLossPercent ?? 0;
@@ -59,7 +54,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               child: Center(
                 child: Text(
-                  'saydın',
+                  AppBranding.wordmark,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -117,7 +112,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${_dateFormatter.format(buyDate)}  →  $sellLabel',
+                    '${dateFmt.format(buyDate)}  →  $sellLabel',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                   ),
                   const SizedBox(height: 6),
@@ -143,7 +138,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            _tryFormatter.format(
+                            tryFmt.format(
                               item.calculation.initialValueTry.toDouble(),
                             ),
                             style: const TextStyle(
@@ -185,7 +180,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(
+                                tryFmt.format(
                                   result.totalInitialValueTry.toDouble(),
                                 ),
                                 style: const TextStyle(
@@ -215,7 +210,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _tryFormatter.format(
+                                tryFmt.format(
                                   result.totalFinalValueTry.toDouble(),
                                 ),
                                 style: const TextStyle(
@@ -262,7 +257,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                             Icon(icon, color: color, size: 32),
                             const SizedBox(width: 8),
                             Text(
-                              '$sign${_pctFormatter.format(result.totalProfitLossPercent / 100)}',
+                              '$sign${pctFmt.format(result.totalProfitLossPercent / 100)}',
                               style: TextStyle(
                                 fontSize: 44,
                                 fontWeight: FontWeight.bold,
@@ -274,7 +269,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '$sign${_tryFormatter.format(result.totalProfitLossTry.toDouble())} '
+                          '$sign${tryFmt.format(result.totalProfitLossTry.toDouble())} '
                           '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
                           style: TextStyle(
                             fontSize: 15,
@@ -310,7 +305,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                               ),
                               Text(
                                 '${(result.totalCumulativeInflationPercent ?? 0) >= 0 ? '+' : ''}'
-                                '${_pctFormatter.format((result.totalCumulativeInflationPercent ?? 0) / 100)}',
+                                '${pctFmt.format((result.totalCumulativeInflationPercent ?? 0) / 100)}',
                                 style: const TextStyle(
                                   fontSize: 13,
                                   color: Color(0xFF666666),
@@ -334,7 +329,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '$realSign${_pctFormatter.format(realPct / 100)}',
+                                '$realSign${pctFmt.format(realPct / 100)}',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -367,7 +362,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                     ),
                   ),
                   const Text(
-                    'saydın.app',
+                    AppBranding.domain,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.primary,

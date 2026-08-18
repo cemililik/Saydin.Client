@@ -12,9 +12,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get appTitle => 'Saydın';
 
   @override
-  String get whatIfTitle => 'Ya Alsaydım?';
-
-  @override
   String get selectAsset => 'Varlık Seçin';
 
   @override
@@ -43,9 +40,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get calculating => 'Hesaplanıyor...';
-
-  @override
-  String get resultTitle => 'Sonuç';
 
   @override
   String get initialValue => 'Başlangıç Değeri';
@@ -137,9 +131,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get retry => 'Tekrar Dene';
 
   @override
-  String get tryAgain => 'Tekrar Hesapla';
-
-  @override
   String get scenariosTitle => 'Senaryolarım';
 
   @override
@@ -167,13 +158,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get deleteScenario => 'Sil';
 
   @override
-  String get undo => 'Geri Al';
-
-  @override
   String get tabCalculate => 'Hesapla';
 
   @override
-  String get tabScenarios => 'Kayıtlarım';
+  String get tabScenarios => 'Senaryolar';
 
   @override
   String get searchAsset => 'Varlık ara...';
@@ -204,22 +192,50 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String durationDays(int count) {
-    return '$count gün';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gün',
+      one: '$count gün',
+    );
+    return '$_temp0';
   }
 
   @override
   String durationMonths(int count) {
-    return '$count ay';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ay',
+      one: '$count ay',
+    );
+    return '$_temp0';
   }
 
   @override
   String durationYearsMonths(int years, int months) {
-    return '$years yıl $months ay';
+    String _temp0 = intl.Intl.pluralLogic(
+      years,
+      locale: localeName,
+      other: '$years yıl',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      months,
+      locale: localeName,
+      other: '$months ay',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override
   String durationYears(int count) {
-    return '$count yıl';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count yıl',
+      one: '$count yıl',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -240,7 +256,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get compareTitle => 'Varlık Karşılaştırma';
 
   @override
-  String get compareSelectAssets => 'Varlık Seçin (2-5 adet)';
+  String compareSelectAssets(int min, int max) {
+    return 'Varlık Seçin ($min-$max adet)';
+  }
 
   @override
   String get compareMinAssets => 'En az 2 varlık seçiniz.';
@@ -253,11 +271,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get compareResultTitle => 'Karşılaştırma Sonuçları';
-
-  @override
-  String compareRankLabel(int rank) {
-    return '$rank. Sıra';
-  }
 
   @override
   String get compareAddAsset => 'Varlık Ekle';
@@ -303,7 +316,7 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get reasonWeekend => 'haftasonu';
+  String get reasonWeekend => 'hafta sonu';
 
   @override
   String get reasonHoliday => 'resmi tatil veya fiyat yok';
@@ -363,7 +376,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String portfolioQuotaInfo(int count) {
-    return 'Bu hesaplama $count hesaplama hakkı kullanacak.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hesaplama hakkı',
+      one: '$count hesaplama hakkı',
+    );
+    return 'Bu hesaplama $_temp0 kullanacak.';
   }
 
   @override
@@ -419,7 +438,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get portfolioRealProfitLoss => 'Reel Kar / Zarar';
 
   @override
-  String get scenarioTypeWhatIf => 'Hesaplama';
+  String get scenarioTypeWhatIf => 'Ya Alsaydım?';
 
   @override
   String get scenarioTypeComparison => 'Karşılaştırma';
@@ -428,7 +447,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scenarioTypePortfolio => 'Portföy';
 
   @override
-  String get scenarioTypeDca => 'Birikim';
+  String get scenarioTypeDca => 'Düzenli Yatırım';
 
   @override
   String get brandedTitlePrefix => 'al/sat ';
@@ -453,9 +472,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get themeSystem => 'Sistem';
-
-  @override
-  String get settingsVersion => 'Versiyon';
 
   @override
   String get categoryFavorites => 'Favoriler';
@@ -588,17 +604,23 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String shareCardAssetCount(int count) {
-    return '$count varlık';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count varlık',
+      one: '$count varlık',
+    );
+    return '$_temp0';
   }
 
   @override
   String shareTextWhatIf(
     String asset,
     String initial,
-    String final_value,
+    String finalValue,
     String percent,
   ) {
-    return '$asset\'e $initial yatırsaydım $final_value ederdi ($percent)! 📊 #saydın';
+    return '$asset için $initial yatırsaydım bugün $finalValue ederdi ($percent)! 📊 #saydın';
   }
 
   @override
@@ -608,7 +630,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String shareTextPortfolio(int count, String percent) {
-    return 'Portföyüm $count varlıkla $percent getiri sağladı! 📊 #saydın';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count varlıkla',
+      one: '$count varlıkla',
+    );
+    return 'Portföyüm $_temp0 $percent getiri sağladı! 📊 #saydın';
   }
 
   @override
@@ -625,7 +653,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String scenarioNamePortfolio(int count) {
-    return 'Portföy ($count varlık)';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count varlık',
+      one: '$count varlık',
+    );
+    return 'Portföy ($_temp0)';
   }
 
   @override
@@ -656,45 +690,45 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get onboardingPage1Body =>
-      'Merak ettiğin yatırımı geçmişe dönük hesapla. Dolar, altın, Bitcoin ve daha fazlası.';
+      'Merak ettiğiniz yatırımı geçmişe dönük hesaplayın. Dolar, altın, Bitcoin ve daha fazlası.';
 
   @override
   String get onboardingPage2Title => 'Karşılaştır ve Keşfet';
 
   @override
   String get onboardingPage2Body =>
-      'Varlıkları yan yana karşılaştır, portföy oluştur. Hangisi daha kazandırdı?';
+      'Varlıkları yan yana karşılaştırın, portföy oluşturun. Hangisi daha çok kazandırdı?';
 
   @override
   String get onboardingPage3Title => 'Portföy Oluştur';
 
   @override
   String get onboardingPage3Body =>
-      'Birden fazla varlıkla portföy kur, toplam getirini hesapla ve en iyi stratejiyi keşfet.';
+      'Birden fazla varlıkla portföy kurun, toplam getirinizi hesaplayın ve en iyi stratejiyi keşfedin.';
 
   @override
   String get onboardingPage4Title => 'Düzenli Yatırım';
 
   @override
   String get onboardingPage4Body =>
-      'Aylık veya haftalık düzenli alım simüle et, ortalama maliyetini ve toplam getirisini gör.';
+      'Aylık veya haftalık düzenli alım simüle edin, ortalama maliyetinizi ve toplam getirinizi görün.';
 
   @override
   String get onboardingPage5Title => 'Ters Senaryo';
 
   @override
   String get onboardingPage5Body =>
-      'Hedefine ulaşmak için ne kadar yatırmalıydın? Ters hesaplama ile gereken tutarı öğren.';
+      'Hedefinize ulaşmak için ne kadar yatırmalıydınız? Ters hesaplama ile gereken tutarı öğrenin.';
 
   @override
   String get onboardingPage6Title => 'Paylaş ve Kaydet';
 
   @override
   String get onboardingPage6Body =>
-      'Sonuçlarını arkadaşlarınla paylaş, senaryolarını kaydet ve istediğin zaman geri dön.';
+      'Sonuçlarınızı arkadaşlarınızla paylaşın, senaryolarınızı kaydedin ve istediğiniz zaman geri dönün.';
 
   @override
-  String get tabDca => 'Birikim';
+  String get tabDca => 'Düzenli Yatırım';
 
   @override
   String get dcaTitle => 'Düzenli Yatırım Simülasyonu';
@@ -723,9 +757,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get dcaPeriodLabel => 'Periyot';
-
-  @override
-  String get dcaPeriodicAmountLabel => 'Periyodik Tutar';
 
   @override
   String get dcaPeriodicAmount => 'Periyodik Tutar';
@@ -762,7 +793,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String shareTextDca(String asset, int count, String percent) {
-    return '$asset için $count alım yaptım, getiri: $percent! 📊 #saydın';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count alım',
+      one: '$count alım',
+    );
+    return '$asset için $_temp0 yaptım, getiri: $percent! 📊 #saydın';
   }
 
   @override
