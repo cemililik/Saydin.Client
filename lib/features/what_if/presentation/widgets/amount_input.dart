@@ -103,8 +103,7 @@ class _AmountInputState extends State<AmountInput> {
             initialValue: effectiveType,
             decoration: const InputDecoration(border: OutlineInputBorder()),
             items: items,
-            onChanged: (v) =>
-                v != null ? widget.onAmountTypeChanged(v) : null,
+            onChanged: (v) => v != null ? widget.onAmountTypeChanged(v) : null,
           ),
         ),
       ],
