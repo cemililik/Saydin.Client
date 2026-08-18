@@ -5,8 +5,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import shutil
-import subprocess  # nosec B404 -- Git is invoked with a fixed argv, never a shell.
 import sys
 from pathlib import Path
 
@@ -34,25 +32,15 @@ class SecretScanError(ValueError):
     """Raised when a target cannot be enumerated safely."""
 
 
-def tracked_paths(repo_root: Path) -> list[Path]:
-    git_executable = shutil.which("git")
-    if git_executable is None:
-        raise SecretScanError("Git executable was not found")
-    result = subprocess.run(  # nosec B603 -- executable resolved; argv is constant.
-        [git_executable, "ls-files", "-z"],
-        cwd=repo_root,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise SecretScanError(
-            "git ls-files failed: " + result.stderr.decode(errors="replace").strip()
-        )
+def parse_tracked_paths(raw_paths: bytes, repo_root: Path) -> list[Path]:
     paths = []
-    for raw in result.stdout.split(b"\0"):
-        if raw:
-            paths.append(repo_root / raw.decode("utf-8"))
+    for raw in raw_paths.split(b"\0"):
+        if not raw:
+            continue
+        relative = Path(raw.decode("utf-8"))
+        if relative.is_absolute() or ".." in relative.parts:
+            raise SecretScanError(f"Unsafe tracked path: {relative}")
+        paths.append(repo_root / relative)
     return paths
 
 
@@ -86,14 +74,20 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--path", type=Path, action="append")
+    parser.add_argument("--paths-from-stdin", action="store_true")
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
     try:
-        paths = (
-            [path if path.is_absolute() else repo_root / path for path in args.path]
-            if args.path
-            else tracked_paths(repo_root)
-        )
+        if args.path and args.paths_from_stdin:
+            raise SecretScanError("Use either --path or --paths-from-stdin")
+        if args.path:
+            paths = [
+                path if path.is_absolute() else repo_root / path for path in args.path
+            ]
+        elif args.paths_from_stdin:
+            paths = parse_tracked_paths(sys.stdin.buffer.read(), repo_root)
+        else:
+            raise SecretScanError("Provide --path or --paths-from-stdin")
         findings = scan(paths, repo_root)
     except (OSError, SecretScanError, ValueError) as error:
         print(f"ERROR: secret scan could not complete: {error}", file=sys.stderr)

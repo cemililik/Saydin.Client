@@ -12,6 +12,17 @@ SPEC.loader.exec_module(secret_scan)
 
 
 class SecretScanTest(unittest.TestCase):
+    def test_nul_separated_tracked_paths_are_parsed(self) -> None:
+        root = Path("/repo")
+        self.assertEqual(
+            secret_scan.parse_tracked_paths(b"lib/a.dart\0README.md\0", root),
+            [root / "lib/a.dart", root / "README.md"],
+        )
+
+    def test_parent_traversal_in_tracked_paths_is_rejected(self) -> None:
+        with self.assertRaisesRegex(secret_scan.SecretScanError, "Unsafe"):
+            secret_scan.parse_tracked_paths(b"../outside.env\0", Path("/repo"))
+
     def test_private_key_fixture_is_detected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

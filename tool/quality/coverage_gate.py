@@ -7,8 +7,6 @@ import argparse
 import fnmatch
 import json
 import re
-import shutil
-import subprocess  # nosec B404 -- Git is invoked with a validated argv, never a shell.
 import sys
 from pathlib import Path
 from typing import NamedTuple
@@ -127,41 +125,12 @@ def production_sources(repo_root: Path, excluded: list[str]) -> set[str]:
 
 
 HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
-SAFE_GIT_REVISION = re.compile(r"^(?:[0-9a-fA-F]{40}|[A-Za-z0-9][A-Za-z0-9._/-]{0,199})$")
 
 
-def changed_lines(repo_root: Path, base_ref: str) -> dict[str, set[int]]:
-    if SAFE_GIT_REVISION.fullmatch(base_ref) is None or ".." in base_ref:
-        raise CoverageError(
-            "Coverage base ref must be a commit SHA or a simple Git ref name"
-        )
-    git_executable = shutil.which("git")
-    if git_executable is None:
-        raise CoverageError("Git executable was not found")
-    command = [
-        git_executable,
-        "diff",
-        "--unified=0",
-        "--no-ext-diff",
-        base_ref,
-        "--",
-        "lib",
-    ]
-    result = subprocess.run(  # nosec B603 -- fixed argv plus validated revision.
-        command,
-        cwd=repo_root,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise CoverageError(
-            f"Could not compute patch against {base_ref!r}: {result.stderr.strip()}"
-        )
+def parse_changed_lines(patch: str) -> dict[str, set[int]]:
     changes: dict[str, set[int]] = {}
     current: str | None = None
-    for line in result.stdout.splitlines():
+    for line in patch.splitlines():
         if line.startswith("+++ b/"):
             current = line[6:]
             changes.setdefault(current, set())
@@ -179,7 +148,7 @@ def evaluate(
     repo_root: Path,
     lcov_path: Path,
     policy_path: Path,
-    base_ref: str | None = None,
+    patch_path: Path | None = None,
 ) -> CoverageResult:
     policy = _read_policy(policy_path)
     excluded = list(policy["excluded_paths"])
@@ -214,8 +183,12 @@ def evaluate(
 
     patch_total = 0
     patch_hit = 0
-    if base_ref:
-        for path, added in changed_lines(repo_root, base_ref).items():
+    if patch_path is not None:
+        try:
+            patch = patch_path.read_text(encoding="utf-8")
+        except OSError as error:
+            raise CoverageError(f"Coverage patch is unreadable: {error}") from error
+        for path, added in parse_changed_lines(patch).items():
             if _excluded(path, excluded) or path not in expected:
                 continue
             if path not in records:
@@ -256,13 +229,18 @@ def main() -> int:
     parser.add_argument(
         "--policy", type=Path, default=Path("tool/quality/coverage_policy.json")
     )
-    parser.add_argument("--base-ref")
+    parser.add_argument("--patch-file", type=Path)
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
     lcov = args.lcov if args.lcov.is_absolute() else repo_root / args.lcov
     policy = args.policy if args.policy.is_absolute() else repo_root / args.policy
+    patch = (
+        args.patch_file
+        if args.patch_file is None or args.patch_file.is_absolute()
+        else repo_root / args.patch_file
+    )
     try:
-        result = evaluate(repo_root, lcov, policy, args.base_ref)
+        result = evaluate(repo_root, lcov, policy, patch)
     except CoverageError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 1
@@ -276,7 +254,7 @@ def main() -> int:
             f"Patch coverage: {result.patch_percent:.2f}% "
             f"({result.patch_hit}/{result.patch_total})"
         )
-    elif args.base_ref:
+    elif args.patch_file:
         print("Patch coverage: no changed executable Dart lines")
     return 0
 

@@ -16,9 +16,11 @@ claim that the dependency graph is vulnerability-free.
 - Dependabot opens weekly GitHub Actions and Gradle minor/patch updates. It does
   not pretend that the unsupported `bundler` ecosystem updates CocoaPods.
 - `tool/quality/scan_tracked_secrets.py` is a deterministic fast guard with
-  negative fixtures. Gitleaks scans Git history in CI. Signing keys, provisioning
-  profiles, store archives, service-account inputs and dart-define JSON are
-  ignored by `.gitignore`.
+  negative fixtures. It receives the NUL-delimited tracked-file inventory from
+  `git ls-files -z` over stdin, so untrusted filenames never become command
+  arguments inside Python. Gitleaks scans Git history in CI. Signing keys,
+  provisioning profiles, store archives, service-account inputs and dart-define
+  JSON are ignored by `.gitignore`.
 
 ## Weekly triage
 

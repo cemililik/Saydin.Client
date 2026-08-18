@@ -3,7 +3,6 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 
 MODULE_PATH = Path(__file__).parents[1] / "coverage_gate.py"
@@ -70,23 +69,39 @@ class CoverageGateTest(unittest.TestCase):
         self.lcov.write_text(
             "SF:lib/a.dart\nDA:1,1\nDA:2,0\nend_of_record\n", encoding="utf-8"
         )
-        with mock.patch.object(
-            coverage_gate,
-            "changed_lines",
-            return_value={"lib/a.dart": {1, 2}},
-        ):
-            with self.assertRaisesRegex(coverage_gate.CoverageError, "Patch"):
-                coverage_gate.evaluate(
-                    self.root, self.lcov, self.policy, base_ref="base"
-                )
+        patch = self.root / "coverage.patch"
+        patch.write_text(
+            "+++ b/lib/a.dart\n@@ -0,0 +1,2 @@\n+void a() {}\n+void b() {}\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(coverage_gate.CoverageError, "Patch"):
+            coverage_gate.evaluate(self.root, self.lcov, self.policy, patch)
 
-    def test_changed_lines_rejects_option_like_base_ref(self) -> None:
-        with self.assertRaisesRegex(coverage_gate.CoverageError, "base ref"):
-            coverage_gate.changed_lines(self.root, "--output=/tmp/coverage")
+    def test_patch_parser_tracks_only_added_line_ranges(self) -> None:
+        patch = "\n".join(
+            (
+                "+++ b/lib/a.dart",
+                "@@ -1 +2,2 @@",
+                "+first",
+                "+second",
+                "+++ b/lib/b.dart",
+                "@@ -0,0 +9 @@",
+                "+ninth",
+            )
+        )
+        self.assertEqual(
+            coverage_gate.parse_changed_lines(patch),
+            {"lib/a.dart": {2, 3}, "lib/b.dart": {9}},
+        )
 
-    def test_changed_lines_rejects_revision_expression(self) -> None:
-        with self.assertRaisesRegex(coverage_gate.CoverageError, "base ref"):
-            coverage_gate.changed_lines(self.root, "main..attacker")
+    def test_missing_patch_file_fails_closed(self) -> None:
+        self.lcov.write_text(
+            "SF:lib/a.dart\nDA:1,1\nend_of_record\n", encoding="utf-8"
+        )
+        with self.assertRaisesRegex(coverage_gate.CoverageError, "unreadable"):
+            coverage_gate.evaluate(
+                self.root, self.lcov, self.policy, self.root / "missing.patch"
+            )
 
 
 if __name__ == "__main__":

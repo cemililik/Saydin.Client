@@ -111,22 +111,6 @@ jobs:
       - name: Flutter analyze
         run: flutter analyze --fatal-infos
 
-      # Temporary one-run bootstrap: the resulting x64 Linux reference is
-      # committed in the follow-up change, then these two steps are removed.
-      - name: Generate Linux portfolio golden candidate
-        run: >-
-          flutter test
-          test/features/portfolio/presentation/widgets/portfolio_share_card_widget_test.dart
-          --update-goldens
-          --plain-name 'maksimum portföy paylaşım kartı golden smoke'
-
-      - name: Upload Linux portfolio golden candidate
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: portfolio-share-linux-golden
-          path: test/features/portfolio/presentation/widgets/goldens/portfolio_share_card_20_items.linux.png
-          if-no-files-found: error
-
       - name: Flutter test
         run: flutter test --coverage
 
@@ -140,7 +124,9 @@ jobs:
               echo "Pull request base SHA is missing or invalid" >&2
               exit 1
             fi
-            coverage_args+=(--base-ref "$PR_BASE_SHA")
+            coverage_patch="$RUNNER_TEMP/coverage.patch"
+            git diff --unified=0 --no-ext-diff "$PR_BASE_SHA" -- lib > "$coverage_patch"
+            coverage_args+=(--patch-file "$coverage_patch")
           fi
           {
             echo "## Test Coverage"
@@ -197,7 +183,7 @@ jobs:
           persist-credentials: false
 
       - name: Deterministic tracked-file guard
-        run: python3 tool/quality/scan_tracked_secrets.py
+        run: git ls-files -z | python3 tool/quality/scan_tracked_secrets.py --paths-from-stdin
 
       - name: Gitleaks history scan
         uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2

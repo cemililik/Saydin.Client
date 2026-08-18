@@ -45,7 +45,8 @@ flutter test --coverage
 python3 tool/quality/coverage_gate.py
 
 # Pull-request equivalent
-python3 tool/quality/coverage_gate.py --base-ref <base-commit-sha>
+git diff --unified=0 --no-ext-diff "$BASE_SHA" -- lib > coverage/patch.diff
+python3 tool/quality/coverage_gate.py --patch-file coverage/patch.diff
 ```
 
 When a production Dart file is added or removed, regenerate and commit the
