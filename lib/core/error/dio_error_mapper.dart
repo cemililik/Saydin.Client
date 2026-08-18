@@ -47,11 +47,14 @@ class DioErrorMapper {
         if (e.error is SocketException) return const NoInternetError();
         return UnknownError(cause: e.error ?? e);
       case DioExceptionType.cancel:
+        // Yaşam döngüsü/CancelToken iptali bir backend veya bağlantı arızası
+        // değildir. ServerError'a düşerse hem kullanıcıya yanlış hata gösterir
+        // hem de telemetri gürültüsü yaratır.
+        return const RequestCancelledError();
       case DioExceptionType.badCertificate:
       case DioExceptionType.badResponse:
         // Aşağıda status/type ile ele alınır. badCertificate güvenlik sinyali
-        // olarak ServerError'a düşüp raporlanır (kasıtlı). cancel bu uygulamada
-        // CancelToken kullanılmadığından pratikte oluşmaz.
+        // olarak ServerError'a düşüp raporlanır (kasıtlı).
         break;
     }
 
@@ -77,33 +80,22 @@ class DioErrorMapper {
           return FeatureDisabledError(
             featureKey: _stringExtension(data, 'feature'),
           );
-        // L-3: `scenario-not-found` (404) kasıtlı olarak ele alınmıyor.
-        // İstemcide tek 404-üreten senaryo yolu deleteScenario'dur ve orada 404
-        // idempotent başarı olarak (mapper'dan ÖNCE) yutulur; tekil senaryo
-        // GET-by-id yoktur → bu type pratikte mapper'a ulaşmaz, status 404
-        // fallback'inde PriceNotFoundError'a düşer (zararsız). İleride tekil
-        // senaryo GET eklenirse burada bir ScenarioNotFoundError varyantı + case
-        // gerekir (aksi halde yanlış "fiyat bulunamadı" mesajı çıkar).
+        // Bilinmeyen/henüz client'ta modellenmeyen type, endpoint-nötr status
+        // fallback'ine gider. Hiçbir 404'ü varsayılan olarak "fiyat yok" diye
+        // yorumlamayız.
       }
       // Diğer tanınan tipler (validation/external-api/internal-error) için ayrı
       // bir AppError varyantı yok → status fallback ile ServerError'a düşerler.
     }
 
     // ── `type` yok/tanınmıyor → HTTP status (savunma + eski sözleşme) ──────
-    if (status == 404) return const PriceNotFoundError();
+    if (status == 404) return const NotFoundError();
     if (status == 429) return DailyLimitError(resetAt: _resetAt(data));
-    // 403 = plan-kapısı. Gövdede `type` olmasa/tanınmasa bile (ör. ağ geçidi
-    // gövdeyi yutarsa) paywall'ı yakala — aksi halde "Sunucu hatası"na düşerdi.
-    // featureKey gövdede hâlâ varsa korunur (özelliğe özgü mesaj kurtarılır).
-    // NOT: Backend bugün YALNIZ feature-disabled için 403 döner (RequireDeviceId
-    // guard'ı 400 verir). İleride farklı bir 403 type'ı eklenirse, bu çıplak
-    // fallback'e DÜŞMEDEN ÖNCE yukarıdaki `type` switch'inde ele alınmalı —
-    // aksi halde yanlışlıkla paywall mesajı gösterilir.
-    if (status == 403) {
-      return FeatureDisabledError(
-        featureKey: _stringExtension(data, 'feature'),
-      );
-    }
+    // Yalnızca doğrulanmış `feature-disabled` RFC-7807 type'ı paywall'dır.
+    // Gateway'in gövdeyi düşürdüğü veya backend'in yeni bir 403 eklediği
+    // durumlarda kullanıcıyı yükseltme ekranına yönlendirmek yerine endpoint
+    // nötr [ForbiddenError] üretiriz.
+    if (status == 403) return const ForbiddenError();
 
     return ServerError(statusCode: status);
   }
@@ -136,7 +128,7 @@ class DioErrorMapper {
   /// `null`. Index erişiminden önce çağrılır (blind cast/NoSuchMethodError önler).
   static Map<String, dynamic>? _asMap(Object? value) {
     if (value is Map<String, dynamic>) return value;
-    if (value is Map) {
+    if (value is Map<Object?, Object?>) {
       // `Map<String,dynamic>.from` non-String key'de `k as String` ile
       // TypeError atardı (hot path'te). Key'leri toString ile güvenle çevir.
       return value.map((key, val) => MapEntry(key.toString(), val));

@@ -164,6 +164,12 @@ abstract class AppLocalizations {
   /// **'Hesaplanıyor...'**
   String get calculating;
 
+  /// No description provided for @configLoading.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ayarlar yükleniyor. Lütfen birkaç saniye sonra tekrar deneyin.'**
+  String get configLoading;
+
   /// No description provided for @initialValue.
   ///
   /// In tr, this message translates to:
@@ -362,6 +368,12 @@ abstract class AppLocalizations {
   /// **'Senaryo silindi.'**
   String get scenarioDeleted;
 
+  /// No description provided for @scenarioReplayInvalid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kaydedilmiş senaryo artık oynatılamıyor.'**
+  String get scenarioReplayInvalid;
+
   /// No description provided for @scenarioSavedAtSnapshot.
   ///
   /// In tr, this message translates to:
@@ -373,6 +385,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Sil'**
   String get deleteScenario;
+
+  /// No description provided for @scenarioDeleteConfirmTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senaryo silinsin mi?'**
+  String get scenarioDeleteConfirmTitle;
+
+  /// No description provided for @scenarioDeleteConfirmMessage.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} senaryosu kalıcı olarak silinecek.'**
+  String scenarioDeleteConfirmMessage(String name);
+
+  /// No description provided for @cancel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Vazgeç'**
+  String get cancel;
 
   /// No description provided for @tabCalculate.
   ///
@@ -866,6 +896,12 @@ abstract class AppLocalizations {
   /// **'Uygulamanın görünümünü seçin'**
   String get settingsThemeSubtitle;
 
+  /// No description provided for @settingsSaveFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ayarlar kaydedilemedi. Lütfen tekrar deneyin.'**
+  String get settingsSaveFailed;
+
   /// No description provided for @themeLight.
   ///
   /// In tr, this message translates to:
@@ -895,6 +931,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'En fazla {max} favori ekleyebilirsiniz.'**
   String favoritesMaxReached(int max);
+
+  /// No description provided for @favoritesSaveFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Favori değişikliği kaydedilemedi. Lütfen tekrar deneyin.'**
+  String get favoritesSaveFailed;
 
   /// No description provided for @settingsLanguage.
   ///
@@ -977,7 +1019,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteAccountWarning.
   ///
   /// In tr, this message translates to:
-  /// **'Bu işlem geri alınamaz. Cihazınızdaki tüm tercihleriniz, kaydedilen senaryolarınız ve favorileriniz kalıcı olarak silinir. KVKK Madde 11 / GDPR Madde 17 kapsamında verilerinizin silinmesi 30 gün içinde sonuçlandırılır.'**
+  /// **'Bu işlem geri alınamaz. Silme isteği önce hizmete gönderilir. Hizmet sonucu doğruladığında bu cihazdaki tercihler, favoriler ve diğer yerel veriler kalıcı olarak temizlenir. Sonuç doğrulanamazsa yerel veriler korunur ve yeniden deneyebilirsiniz.'**
   String get deleteAccountWarning;
 
   /// No description provided for @deleteAccountConfirmHint.
@@ -1001,25 +1043,25 @@ abstract class AppLocalizations {
   /// No description provided for @deleteAccountInProgress.
   ///
   /// In tr, this message translates to:
-  /// **'Veriler siliniyor...'**
+  /// **'Silme isteği işleniyor...'**
   String get deleteAccountInProgress;
 
   /// No description provided for @deleteAccountSuccess.
   ///
   /// In tr, this message translates to:
-  /// **'Hesabınız ve tüm verileriniz silindi.'**
+  /// **'Silme sonucu hizmet tarafından doğrulandı ve bu cihazdaki yerel veriler temizlendi.'**
   String get deleteAccountSuccess;
 
   /// No description provided for @deleteAccountPartialSuccess.
   ///
   /// In tr, this message translates to:
-  /// **'Cihazınızdaki tüm veriler silindi. Ancak sunucu silme talebimiz şu an iletilemedi; iletisim@saydin.app adresinden silme talebinizi takip edin.'**
+  /// **'Hizmet silme sonucunu doğruladı ancak bu cihazdaki yerel verilerin tamamı temizlenemedi. Lütfen tekrar deneyin veya destekle iletişime geçin.'**
   String get deleteAccountPartialSuccess;
 
   /// No description provided for @deleteAccountFailed.
   ///
   /// In tr, this message translates to:
-  /// **'Hesap silme tamamlanamadı. Tekrar deneyin veya iletişime geçin.'**
+  /// **'Silme sonucu doğrulanamadı veya cihaz temizliği tamamlanamadı. Lütfen tekrar deneyin ya da destekle iletişime geçin.'**
   String get deleteAccountFailed;
 
   /// No description provided for @shareCardInitialValue.
@@ -1204,7 +1246,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingLegalConsent.
   ///
   /// In tr, this message translates to:
-  /// **'Devam ederek {privacy} ve {kvkk} metinlerini okuduğumu ve kabul ettiğimi onaylıyorum.'**
+  /// **'{privacy} ve {kvkk} metinlerini inceledim. (İsteğe bağlı)'**
   String onboardingLegalConsent(String privacy, String kvkk);
 
   /// No description provided for @onboardingPrivacyPolicyLink.
@@ -1218,6 +1260,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'KVKK Aydınlatma Metni'**
   String get onboardingKvkkLink;
+
+  /// No description provided for @legalRecordSaveFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Legal bilgilendirme kaydı kaydedilemedi. Lütfen tekrar deneyin.'**
+  String get legalRecordSaveFailed;
 
   /// No description provided for @onboardingPage1Title.
   ///
@@ -1523,6 +1571,77 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Ters Hesaplama'**
   String get scenarioTypeReverse;
+
+  /// No description provided for @portfolioPartialResult.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bazı varlıklar hesaplanamadı'**
+  String get portfolioPartialResult;
+
+  /// No description provided for @portfolioPartialResultDetail.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gösterilen toplam yalnızca başarıyla hesaplanan varlıkları içerir. Eksik sonuç kaydedilemez veya paylaşılamaz.'**
+  String get portfolioPartialResultDetail;
+
+  /// No description provided for @compareNoCommonDateRange.
+  ///
+  /// In tr, this message translates to:
+  /// **'Seçilen varlıkların ortak fiyat tarihi bulunmuyor. Farklı bir varlık seçin.'**
+  String get compareNoCommonDateRange;
+
+  /// No description provided for @chartDataShow.
+  ///
+  /// In tr, this message translates to:
+  /// **'Grafik verilerini göster'**
+  String get chartDataShow;
+
+  /// No description provided for @chartDataHide.
+  ///
+  /// In tr, this message translates to:
+  /// **'Grafik verilerini gizle'**
+  String get chartDataHide;
+
+  /// No description provided for @priceChartSummary.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyat grafiği. {startDate}, {startValue} değerinden {endDate}, {endValue} değerine. {trend}.'**
+  String priceChartSummary(
+    String startDate,
+    String startValue,
+    String endDate,
+    String endValue,
+    String trend,
+  );
+
+  /// No description provided for @dcaChartSummary.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenli yatırım grafiği. {startDate} ile {endDate} arasında toplam maliyet {cost}, portföy değeri {value}.'**
+  String dcaChartSummary(
+    String startDate,
+    String endDate,
+    String cost,
+    String value,
+  );
+
+  /// No description provided for @chartDataPoint.
+  ///
+  /// In tr, this message translates to:
+  /// **'{date}: {value}'**
+  String chartDataPoint(String date, String value);
+
+  /// No description provided for @dcaChartDataPoint.
+  ///
+  /// In tr, this message translates to:
+  /// **'{date}: maliyet {cost}, değer {value}'**
+  String dcaChartDataPoint(String date, String cost, String value);
+
+  /// No description provided for @shareCardMoreAssets.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count, plural, =1{+1 varlık daha} other{+{count} varlık daha}}'**
+  String shareCardMoreAssets(int count);
 
   /// No description provided for @compareHint.
   ///

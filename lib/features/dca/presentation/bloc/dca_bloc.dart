@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/error_reporter.dart';
+import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/utils/financial_amount_validator.dart';
 import 'package:saydin/features/dca/domain/usecases/calculate_dca.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
@@ -11,6 +13,9 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
   final GetAssets _getAssets;
   final CalculateDca _calculateDca;
   final ErrorReporter _reporter;
+  int _requestSeq = 0;
+
+  void _invalidateInflightRequests() => _requestSeq++;
 
   DcaBloc(
     this._getAssets,
@@ -23,6 +28,7 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
     on<DcaStartDateChanged>(_onStartDateChanged);
     on<DcaEndDateChanged>(_onEndDateChanged);
     on<DcaPeriodChanged>(_onPeriodChanged);
+    on<DcaPeriodicAmountChanged>(_onPeriodicAmountChanged);
     on<DcaInflationToggled>(_onInflationToggled);
     on<DcaCalculateRequested>(_onCalculateRequested);
     on<DcaReplayRequested>(_onReplayRequested);
@@ -73,14 +79,56 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
   }
 
   void _onSymbolChanged(DcaSymbolChanged event, Emitter<DcaState> emit) {
+    final asset = _currentAssets()
+        .where((candidate) => candidate.symbol == event.symbol)
+        .firstOrNull;
+    if (asset == null) {
+      _emitWithUpdatedForm(
+        emit,
+        _formInput.copyWith(selectedSymbol: event.symbol),
+      );
+      return;
+    }
+    final range = assetDateRange(
+      assetFirstDate: asset.firstDate,
+      assetLastDate: asset.lastDate,
+      priceHistoryMonths: 0,
+    );
+    final startDate = _clampDate(_formInput.startDate, range);
+    var endDate = _clampDate(_formInput.endDate, range);
+    if (startDate != null && !isValidFinancialDateRange(startDate, endDate)) {
+      endDate = null;
+    }
     _emitWithUpdatedForm(
       emit,
-      _formInput.copyWith(selectedSymbol: event.symbol),
+      _formInput.copyWith(
+        selectedSymbol: event.symbol,
+        startDate: startDate,
+        endDate: endDate,
+      ),
     );
   }
 
+  DateTime? _clampDate(
+    DateTime? value,
+    ({DateTime? firstDate, DateTime? lastDate}) range,
+  ) {
+    if (value == null) return null;
+    final first = range.firstDate;
+    final last = range.lastDate;
+    if (first != null && value.isBefore(first)) return first;
+    if (last != null && value.isAfter(last)) return last;
+    return value;
+  }
+
   void _onStartDateChanged(DcaStartDateChanged event, Emitter<DcaState> emit) {
-    _emitWithUpdatedForm(emit, _formInput.copyWith(startDate: event.date));
+    final endDate = isValidFinancialDateRange(event.date, _formInput.endDate)
+        ? _formInput.endDate
+        : null;
+    _emitWithUpdatedForm(
+      emit,
+      _formInput.copyWith(startDate: event.date, endDate: endDate),
+    );
   }
 
   void _onEndDateChanged(DcaEndDateChanged event, Emitter<DcaState> emit) {
@@ -88,7 +136,18 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
   }
 
   void _onPeriodChanged(DcaPeriodChanged event, Emitter<DcaState> emit) {
+    if (!_validPeriods.contains(event.period)) return;
     _emitWithUpdatedForm(emit, _formInput.copyWith(period: event.period));
+  }
+
+  void _onPeriodicAmountChanged(
+    DcaPeriodicAmountChanged event,
+    Emitter<DcaState> emit,
+  ) {
+    _emitWithUpdatedForm(
+      emit,
+      _formInput.copyWith(periodicAmount: event.amount),
+    );
   }
 
   void _onInflationToggled(DcaInflationToggled event, Emitter<DcaState> emit) {
@@ -102,8 +161,10 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
     final current = state;
     if (current is DcaAssetsLoaded) {
       emit(current.copyWith(formInput: updated));
-    } else if (current is DcaSuccess) {
-      emit(current.copyWith(formInput: updated));
+    } else if (current is DcaSuccess || current is DcaCalculating) {
+      // Form değiştiğinde önceki hesap ve aksiyonlar artık geçerli değildir.
+      _invalidateInflightRequests();
+      emit(DcaAssetsLoaded(_currentAssets(), formInput: updated));
     } else if (current is DcaFailure) {
       emit(current.copyWith(formInput: updated));
     }
@@ -114,6 +175,20 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
     Emitter<DcaState> emit,
   ) async {
     final currentAssets = _currentAssets();
+    final asset = currentAssets
+        .where((candidate) => candidate.symbol == event.assetSymbol)
+        .firstOrNull;
+    if (asset == null ||
+        event.amountType != 'try' ||
+        !_validPeriods.contains(event.period) ||
+        !_datesAreValidForAsset(event.startDate, event.endDate, asset) ||
+        !FinancialAmountValidator.isValid(
+          value: event.periodicAmount,
+          amountType: event.amountType,
+          allowedAmountTypes: asset.allowedAmountTypes,
+        )) {
+      return;
+    }
 
     await _reporter.recordAction(
       'dca.calculated',
@@ -130,6 +205,7 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
       amountType: event.amountType,
       includeInflation: event.includeInflation,
     );
+    final requestSeq = ++_requestSeq;
     emit(DcaCalculating(currentAssets, formInput: updatedForm));
     try {
       final result = await _calculateDca(
@@ -141,6 +217,7 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
         amountType: event.amountType,
         includeInflation: event.includeInflation,
       );
+      if (requestSeq != _requestSeq) return;
       emit(
         DcaSuccess(
           assets: currentAssets,
@@ -149,6 +226,7 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
         ),
       );
     } on AppError catch (error, st) {
+      if (requestSeq != _requestSeq) return;
       if (error is UnknownError ||
           error is ServerError ||
           error is MalformedResponseError) {
@@ -158,6 +236,7 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
         DcaFailure(assets: currentAssets, error: error, formInput: updatedForm),
       );
     } catch (e, st) {
+      if (requestSeq != _requestSeq) return;
       await _reporter.report(e, st, context: 'dca_calculate');
       emit(
         DcaFailure(
@@ -173,6 +252,29 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
     DcaReplayRequested event,
     Emitter<DcaState> emit,
   ) async {
+    final assets = _currentAssets();
+    final asset = assets
+        .where((candidate) => candidate.symbol == event.assetSymbol)
+        .firstOrNull;
+    if (asset == null ||
+        event.amountType != 'try' ||
+        !_validPeriods.contains(event.period) ||
+        !_datesAreValidForAsset(event.startDate, event.endDate, asset) ||
+        !FinancialAmountValidator.isValid(
+          value: event.periodicAmount,
+          amountType: event.amountType,
+          allowedAmountTypes: asset.allowedAmountTypes,
+        )) {
+      emit(
+        DcaFailure(
+          assets: assets,
+          error: const InvalidScenarioReplayError(),
+          formInput: _formInput,
+        ),
+      );
+      return;
+    }
+
     final filled = _formInput.copyWith(
       selectedSymbol: event.assetSymbol,
       startDate: event.startDate,
@@ -197,47 +299,55 @@ class DcaBloc extends Bloc<DcaEvent, DcaState> {
     );
   }
 
+  static const _validPeriods = {'weekly', 'monthly'};
+
+  bool _datesAreValidForAsset(
+    DateTime startDate,
+    DateTime? endDate,
+    Asset asset,
+  ) {
+    if (!isValidFinancialDateRange(startDate, endDate)) return false;
+    final first = asset.firstDate;
+    final last = asset.lastDate;
+    if (first != null && startDate.isBefore(first)) return false;
+    if (last != null && startDate.isAfter(last)) return false;
+    if (endDate != null) {
+      if (first != null && endDate.isBefore(first)) return false;
+      if (last != null && endDate.isAfter(last)) return false;
+    }
+    return true;
+  }
+
   Future<void> _onLanguageChanged(
     DcaLanguageChanged event,
     Emitter<DcaState> emit,
   ) async {
     final savedForm = _formInput;
-    final hadResult = state is DcaSuccess;
-    final prevAssets = _currentAssets();
+    final previous = state;
 
     try {
       final assets = await _getAssets();
+      if (!identical(state, previous)) return;
 
-      // hadResult formInput dolu olduğunu garanti etmez; replay dereferanslanan
-      // alanları kontrol et (WhatIfBloc._onLanguageChanged ile aynı pattern).
-      final sym = savedForm.selectedSymbol;
-      final start = savedForm.startDate;
-      final amt = savedForm.periodicAmount;
-      if (hadResult && sym != null && start != null && amt != null) {
-        emit(DcaCalculating(assets, formInput: savedForm));
-        try {
-          final result = await _calculateDca(
-            assetSymbol: sym,
-            startDate: start,
-            endDate: savedForm.endDate,
-            periodicAmount: amt,
-            period: savedForm.period,
-            amountType: savedForm.amountType,
-            includeInflation: savedForm.includeInflation,
-          );
-          emit(
-            DcaSuccess(assets: assets, result: result, formInput: savedForm),
-          );
-        } catch (e) {
-          emit(DcaAssetsLoaded(assets, formInput: savedForm));
-        }
+      if (previous is DcaSuccess) {
+        final localizedName = assets
+            .where((asset) => asset.symbol == previous.result.assetSymbol)
+            .firstOrNull
+            ?.displayName;
+        emit(
+          DcaSuccess(
+            assets: assets,
+            result: previous.result.withAssetDisplayName(
+              localizedName ?? previous.result.assetDisplayName,
+            ),
+            formInput: savedForm,
+          ),
+        );
       } else {
         emit(DcaAssetsLoaded(assets, formInput: savedForm));
       }
     } catch (_) {
-      if (hadResult) {
-        emit(DcaAssetsLoaded(prevAssets, formInput: savedForm));
-      }
+      // Katalog yenileme başarısızsa mevcut state'i koru.
     }
   }
 }

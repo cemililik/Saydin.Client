@@ -32,6 +32,11 @@ void main() {
       expect(mapper.map(e), isA<NoInternetError>());
     });
 
+    test('map_cancel_returnsRequestCancelledError', () {
+      final e = make(DioExceptionType.cancel);
+      expect(mapper.map(e), isA<RequestCancelledError>());
+    });
+
     // F-05-10: `unknown` artık NoInternet'e DEĞİL UnknownError'a eşlenir —
     // `unknown` bağlantı yokluğu değil, istek sırasında beklenmeyen bir hatadır.
     test('map_unknownType_returnsUnknownError', () {
@@ -39,9 +44,9 @@ void main() {
       expect(mapper.map(e), isA<UnknownError>());
     });
 
-    test('map_404_returnsPriceNotFoundError', () {
+    test('map_unknown404_returnsNotFoundError', () {
       final e = make(DioExceptionType.badResponse, statusCode: 404);
-      expect(mapper.map(e), isA<PriceNotFoundError>());
+      expect(mapper.map(e), isA<NotFoundError>());
     });
 
     test(
@@ -188,13 +193,13 @@ void main() {
       expect(error.resetAt, equals(reset));
     });
 
-    test('map_404WithoutType_fallsBackToPriceNotFound', () {
+    test('map_404WithoutType_fallsBackToEndpointNeutralNotFound', () {
       final e = make(
         DioExceptionType.badResponse,
         statusCode: 404,
         data: <String, dynamic>{},
       );
-      expect(mapper.map(e), isA<PriceNotFoundError>());
+      expect(mapper.map(e), isA<NotFoundError>());
     });
 
     test('map_502_returnsServerError', () {
@@ -285,17 +290,15 @@ void main() {
       expect(error.featureKey, isNull);
     });
 
-    // 403 + tanınmayan/eksik type → status fallback ile FeatureDisabledError
-    // (ServerError DEĞİL — paywall ağ geçidi gövdeyi yutsa bile yakalanır).
-    test('map_403WithoutType_returnsFeatureDisabledError', () {
+    // 403 + eksik type bir paywall olduğunu kanıtlamaz.
+    test('map_403WithoutType_returnsEndpointNeutralForbiddenError', () {
       final e = make(DioExceptionType.badResponse, statusCode: 403);
-      final error = mapper.map(e) as FeatureDisabledError;
-      expect(error.featureKey, isNull);
+      expect(mapper.map(e), isA<ForbiddenError>());
     });
 
-    // 403 + tanınmayan type AMA gövdede `feature` varsa, status fallback'i
-    // featureKey'i korur (özelliğe özgü mesaj kurtarılır).
-    test('map_403UnknownTypeWithFeature_preservesFeatureKey', () {
+    // 403 + tanınmayan type, `feature` adında extension taşısa bile paywall
+    // sayılmaz; yalnız doğrulanmış feature-disabled type'ı bu semantiğe sahip.
+    test('map_403UnknownTypeWithFeature_returnsForbiddenError', () {
       final e = make(
         DioExceptionType.badResponse,
         statusCode: 403,
@@ -304,8 +307,7 @@ void main() {
           'feature': 'dca',
         },
       );
-      final error = mapper.map(e) as FeatureDisabledError;
-      expect(error.featureKey, 'dca');
+      expect(mapper.map(e), isA<ForbiddenError>());
     });
   });
 }

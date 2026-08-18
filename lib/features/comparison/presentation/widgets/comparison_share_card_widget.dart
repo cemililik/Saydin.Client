@@ -28,9 +28,9 @@ class ComparisonShareCardWidget extends StatelessWidget {
     final locale = context.localeName;
     final pctFmt = AppFormat.percent(locale);
     final dateFmt = AppFormat.date(locale);
-    final sellLabel = sellDate != null
-        ? dateFmt.format(sellDate!)
-        : dateFmt.format(DateTime.now());
+    final effectiveSellDate =
+        sellDate ?? result.results.firstOrNull?.calculation.effectiveSellDate;
+    final sellLabel = dateFmt.format(effectiveSellDate ?? buyDate);
 
     return SizedBox(
       width: 540,
@@ -93,7 +93,7 @@ class ComparisonShareCardWidget extends StatelessWidget {
                           ShareCardWidget.durationLabel(
                             l10n,
                             buyDate,
-                            sellDate,
+                            effectiveSellDate ?? buyDate,
                           ),
                           style: const TextStyle(
                             fontSize: 13,

@@ -46,6 +46,9 @@ concurrency:
 env:
   IOS_BUNDLE_ID: "com.saydin.saydin"
 
+permissions:
+  contents: read
+
 jobs:
   # ── Guard: tag main'in atası mı? ───────────────────────────────────────────
   guard:
@@ -53,6 +56,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.t.outputs.tag }}
+      tag_sha: ${{ steps.main.outputs.tag_sha }}
+      tag_object_sha: ${{ steps.main.outputs.tag_object_sha }}
+      tag_message_b64: ${{ steps.main.outputs.tag_message_b64 }}
     steps:
       - id: t
         # GÜVENLIK: workflow_dispatch `tag` input'u serbest metin (pattern
@@ -73,7 +79,7 @@ jobs:
             echo "❌ Geçersiz tag formatı: $TAG (beklenen: vX.Y.Z veya vX.Y.Z-rc.N)"
             exit 1
           fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "📌 Release tag: $TAG"
 
       - uses: actions/checkout@v4
@@ -82,71 +88,173 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Verify tag is on main
+      - id: main
+        name: Snapshot and verify annotated tag on main
+        env:
+          TAG: ${{ steps.t.outputs.tag }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
           git fetch origin main:refs/remotes/origin/main
-          TAG_SHA=$(git rev-parse "${{ steps.t.outputs.tag }}^{commit}")
+          TAG_OBJECT_TYPE=$(git cat-file -t "$TAG")
+          if [ "$TAG_OBJECT_TYPE" != "tag" ]; then
+            echo "❌ $TAG annotated tag değil; release notları ve review izi için lightweight tag kabul edilmez."
+            exit 1
+          fi
+
+          TAG_OBJECT_SHA=$(git rev-parse "$TAG^{tag}")
+          TAG_SHA=$(git rev-parse "$TAG^{commit}")
+          DIRECT_TARGET_SHA=$(git cat-file -p "$TAG_OBJECT_SHA" | sed -n '1s/^object //p')
+          if [ "$DIRECT_TARGET_SHA" != "$TAG_SHA" ]; then
+            echo "❌ Annotated tag doğrudan release commit'ini hedeflemiyor."
+            exit 1
+          fi
+
+          REMOTE_TAG=$(git ls-remote --tags --refs origin "refs/tags/$TAG")
+          REMOTE_TAG_COUNT=$(printf '%s\n' "$REMOTE_TAG" | sed '/^$/d' | wc -l)
+          REMOTE_TAG_OBJECT_SHA=$(printf '%s\n' "$REMOTE_TAG" | awk 'NR == 1 {print $1}')
+          if [ "$REMOTE_TAG_COUNT" -ne 1 ] || [ "$REMOTE_TAG_OBJECT_SHA" != "$TAG_OBJECT_SHA" ]; then
+            echo "❌ Remote tag mapping guard snapshot'uyla eşleşmiyor."
+            exit 1
+          fi
+
+          if [ "$EVENT_NAME" = "push" ] && [ "$EVENT_SHA" != "$TAG_SHA" ]; then
+            echo "❌ Push event SHA ($EVENT_SHA) ile tag commit SHA ($TAG_SHA) eşleşmiyor."
+            exit 1
+          fi
+
           if ! git merge-base --is-ancestor "$TAG_SHA" origin/main; then
-            echo "❌ Tag ${{ steps.t.outputs.tag }} ($TAG_SHA) main branch'da değil; release iptal."
+            echo "❌ Tag $TAG ($TAG_SHA) main branch'da değil; release iptal."
             echo "   Sadece main'e merge edilmiş commit'ler tag'lenebilir."
             exit 1
           fi
-          echo "✅ Tag main'in atası — release devam ediyor."
+
+          TAG_MESSAGE_FILE="$RUNNER_TEMP/verified-tag-message.txt"
+          git for-each-ref --format='%(contents:body)' "refs/tags/$TAG" > "$TAG_MESSAGE_FILE"
+          python3 - "$TAG_MESSAGE_FILE" <<'PY'
+          import pathlib
+          import sys
+
+          message = pathlib.Path(sys.argv[1]).read_bytes()
+          if len(message) > 49_152:
+              raise SystemExit("❌ Annotated tag body 48 KiB güvenli output sınırını aşıyor.")
+          try:
+              decoded = message.decode("utf-8")
+          except UnicodeDecodeError as error:
+              raise SystemExit("❌ Annotated tag body geçerli UTF-8 değil.") from error
+          if not decoded.strip():
+              raise SystemExit("❌ Annotated tag body boş; TR/EN release notes zorunlu.")
+          PY
+
+          TAG_MESSAGE_B64=$(base64 -w 0 "$TAG_MESSAGE_FILE")
+          {
+            echo "tag_sha=$TAG_SHA"
+            echo "tag_object_sha=$TAG_OBJECT_SHA"
+            echo "tag_message_b64=$TAG_MESSAGE_B64"
+          } >> "$GITHUB_OUTPUT"
+          echo "✅ Annotated tag snapshot'ı main üzerinde doğrulandı."
+
+  # ── Guard: release SHA için CI başarı kanıtı ──────────────────────────────
+  verify-ci:
+    name: Verify CI passed for release SHA
+    runs-on: ubuntu-latest
+    needs: guard
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Require successful CI run on tag commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.guard.outputs.tag }}
+          TAG_SHA: ${{ needs.guard.outputs.tag_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if ! printf '%s' "$TAG_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "❌ Geçersiz tag SHA: $TAG_SHA"
+            exit 1
+          fi
+
+          RUN_URL=$(gh api \
+            --method GET \
+            "repos/${REPOSITORY}/actions/workflows/ci.yml/runs" \
+            -f head_sha="$TAG_SHA" \
+            -f status=completed \
+            -f per_page=20 \
+            --jq '.workflow_runs[] | select(.conclusion=="success") | .html_url' \
+            | head -n 1)
+
+          if [ -z "$RUN_URL" ]; then
+            echo "❌ $TAG ($TAG_SHA) için başarılı CI run bulunamadı."
+            echo "   Önce aynı commit'i main/development CI'da yeşile döndürün; sonra tag push edin."
+            exit 1
+          fi
+
+          echo "✅ Release SHA için başarılı CI run bulundu: $RUN_URL"
 
   # ── Channel + tag mesajından release notes ─────────────────────────────────
   detect-channel:
     name: Detect channel & parse tag message
     runs-on: ubuntu-latest
-    needs: guard
+    needs: [guard, verify-ci]
     outputs:
       is_rc: ${{ steps.c.outputs.is_rc }}
       version_name: ${{ steps.c.outputs.version_name }}
-      build_number: ${{ github.run_number }}
+      build_number: ${{ steps.c.outputs.build_number }}
       tag: ${{ needs.guard.outputs.tag }}
       notes_tr: ${{ steps.notes.outputs.notes_tr }}
       notes_en: ${{ steps.notes.outputs.notes_en }}
       gh_body: ${{ steps.notes.outputs.gh_body }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.guard.outputs.tag }}
-          fetch-depth: 0
-          fetch-tags: true
-
       - id: c
         name: Parse version from tag
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
           TAG="${{ needs.guard.outputs.tag }}"
           V="${TAG#v}"
+          # GitHub run_number rerun'larda değişmez. Store build numarası ise
+          # aynı workflow yeniden çalıştırıldığında da benzersiz olmalıdır.
+          # Her run için 100 attempt ayır; makul platform üst sınırını koru.
+          BUILD_NUMBER=$((RUN_NUMBER * 100 + RUN_ATTEMPT))
+          if [ "$RUN_ATTEMPT" -lt 1 ] || [ "$RUN_ATTEMPT" -gt 99 ] || \
+             [ "$BUILD_NUMBER" -gt 2100000000 ]; then
+            echo "❌ Güvenli build-number aralığı aşıldı: $BUILD_NUMBER"
+            exit 1
+          fi
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
           if [[ "$V" == *-rc.* ]]; then
-            echo "is_rc=true" >> $GITHUB_OUTPUT
-            echo "version_name=${V%%-rc.*}" >> $GITHUB_OUTPUT
+            echo "is_rc=true" >> "$GITHUB_OUTPUT"
+            echo "version_name=${V%%-rc.*}" >> "$GITHUB_OUTPUT"
             echo "🟡 RC tag → staging kanalı"
           else
-            echo "is_rc=false" >> $GITHUB_OUTPUT
-            echo "version_name=$V" >> $GITHUB_OUTPUT
+            echo "is_rc=false" >> "$GITHUB_OUTPUT"
+            echo "version_name=$V" >> "$GITHUB_OUTPUT"
             echo "🟢 Production tag → production kanalı"
           fi
 
       - id: notes
-        name: Read annotated tag message
+        name: Read verified annotated tag message snapshot
         env:
-          TAG: ${{ needs.guard.outputs.tag }}
+          TAG_MESSAGE_B64: ${{ needs.guard.outputs.tag_message_b64 }}
         run: |
+          set -euo pipefail
           SEPARATOR="=====LANG_SEPARATOR====="
 
-          # Annotated tag body (subject hariç gövde)
-          BODY=$(git tag -l --format='%(contents:body)' "$TAG")
-
-          # Boşsa tam mesajı (subject dahil) dene
-          if [ -z "$BODY" ]; then
-            BODY=$(git tag -l --format='%(contents)' "$TAG")
+          TAG_MESSAGE_FILE="$RUNNER_TEMP/verified-tag-message.txt"
+          if ! printf '%s' "$TAG_MESSAGE_B64" | base64 --decode > "$TAG_MESSAGE_FILE"; then
+            echo "❌ Guard tag mesajı snapshot'ı decode edilemedi."
+            exit 1
           fi
+          BODY=$(<"$TAG_MESSAGE_FILE")
 
-          # Hâlâ boşsa lightweight tag — son commit subject'i fallback
+          # Guard lightweight/boş/UTF-8 olmayan/aşırı büyük tag body'lerini
+          # reddeder. Detect job remote mutable tag ref'ini yeniden okumaz.
           if [ -z "$BODY" ]; then
-            echo "⚠️  Annotated tag mesajı yok; lightweight tag varsayılıyor"
-            BODY=$(git log -1 --pretty=format:"%s" "$TAG")
+            echo "❌ Guard tag mesajı snapshot'ı boş."
+            exit 1
           fi
 
           # TR / EN ayır
@@ -180,14 +288,14 @@ jobs:
             echo "notes_tr<<$EOF"
             printf '%s\n' "$NOTES_TR_500"
             echo "$EOF"
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
           EOF2=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
           {
             echo "notes_en<<$EOF2"
             printf '%s\n' "$NOTES_EN_500"
             echo "$EOF2"
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
           # GitHub Release gövdesi — limit yok, tam metin
           EOF3=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
@@ -203,7 +311,7 @@ jobs:
             echo ""
             printf '%s\n' "$NOTES_EN"
             echo "$EOF3"
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
           echo "✅ Tag mesajı parse edildi"
           echo "--- TR (≤500) ---"
@@ -211,11 +319,61 @@ jobs:
           echo "--- EN (≤500) ---"
           printf '%s\n' "$NOTES_EN_500"
 
+  # ── Guard: production legal/privacy approval ──────────────────────────────
+  verify-legal:
+    name: Verify production legal approval
+    runs-on: ubuntu-latest
+    needs: [guard, verify-ci, detect-channel]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.guard.outputs.tag_sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Require content-bound approval for production
+        if: needs.detect-channel.outputs.is_rc == 'false'
+        env:
+          RELEASE_TAG: ${{ needs.guard.outputs.tag }}
+          RELEASE_COMMIT: ${{ needs.guard.outputs.tag_sha }}
+        run: |
+          set -euo pipefail
+          CHECKED_OUT_SHA=$(git rev-parse HEAD)
+          if [ "$CHECKED_OUT_SHA" != "$RELEASE_COMMIT" ]; then
+            echo "❌ Legal gate checkout SHA release snapshot'ı eşleşmiyor."
+            exit 1
+          fi
+          read -r -a COMMIT_AND_PARENTS <<< "$(git rev-list --parents -n 1 "$RELEASE_COMMIT")"
+          if [ "${#COMMIT_AND_PARENTS[@]}" -ne 2 ]; then
+            echo "❌ Production approval commit'i tam olarak bir parent'a sahip olmalıdır."
+            exit 1
+          fi
+          APPROVED_SOURCE_SHA="${COMMIT_AND_PARENTS[1]}"
+          APPROVAL_DIFF=$(git diff --name-only "$APPROVED_SOURCE_SHA" "$RELEASE_COMMIT")
+          if [ "$APPROVAL_DIFF" != "docs/legal/legal-release-approval.json" ]; then
+            echo "❌ Production approval commit'i yalnız legal approval artifact'ini eklemelidir."
+            echo "Değişen dosyalar:"
+            printf '%s\n' "$APPROVAL_DIFF"
+            exit 1
+          fi
+          python3 tool/verify_legal_release_approval.py \
+            --approval docs/legal/legal-release-approval.json \
+            --release-tag "$RELEASE_TAG" \
+            --source-sha "$APPROVED_SOURCE_SHA"
+
+      - name: Allow unsigned legal draft only on RC channel
+        if: needs.detect-channel.outputs.is_rc == 'true'
+        run: echo "RC channel — production legal approval gate not required."
+
   # ── Android Release AAB ────────────────────────────────────────────────────
   release-android:
     name: Release Android AAB
     runs-on: ubuntu-latest
-    needs: [guard, detect-channel]
+    needs: [guard, verify-ci, detect-channel, verify-legal]
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     environment:
       name: ${{ needs.detect-channel.outputs.is_rc == 'true' && 'staging' || 'production' }}
       url: https://play.google.com/store/apps/details?id=com.saydin.saydin
@@ -223,7 +381,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.guard.outputs.tag }}
+          ref: ${{ needs.guard.outputs.tag_sha }}
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -244,7 +402,7 @@ jobs:
         run: flutter gen-l10n
 
       - name: Pre-install CMake
-        run: yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "cmake;3.22.1"
 
       - name: Prepare & verify signing
         env:
@@ -292,29 +450,61 @@ jobs:
           fi
           echo "✅ [4/4] Key password doğrulandı"
 
-      - name: Set environment variables
-        id: env
-        run: |
-          if [ "${{ needs.detect-channel.outputs.is_rc }}" = "true" ]; then
-            echo "app_env=staging" >> $GITHUB_OUTPUT
-            echo "api_url=${{ vars.API_URL_STAGING }}" >> $GITHUB_OUTPUT
-          else
-            echo "app_env=production" >> $GITHUB_OUTPUT
-            echo "api_url=${{ vars.API_URL_PRODUCTION }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Build AAB (release)
         env:
           STORE_FILE: ../saydin-release.jks
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          BUILD_NAME: ${{ needs.detect-channel.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.detect-channel.outputs.build_number }}
+          IS_RC: ${{ needs.detect-channel.outputs.is_rc }}
+          API_URL_STAGING: ${{ vars.API_URL_STAGING }}
+          API_URL_PRODUCTION: ${{ vars.API_URL_PRODUCTION }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         run: |
+          if [ "$IS_RC" = "true" ]; then
+            app_env="staging"
+            api_url="$API_URL_STAGING"
+          else
+            app_env="production"
+            api_url="$API_URL_PRODUCTION"
+          fi
+
+          if [ -z "$api_url" ] || ! printf '%s' "$api_url" | grep -Eq '^https://[^[:space:]/?#]+/?$'; then
+            echo "❌ Release API URL boş veya origin-only HTTPS URL değil."
+            exit 1
+          fi
+          if [ -z "$SENTRY_DSN" ] || [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
+            echo "❌ Sentry DSN/auth/org/project eksik; release event ve symbolication zinciri kapalı olamaz."
+            exit 1
+          fi
+          export SENTRY_RELEASE="com.saydin.saydin@$BUILD_NAME+$BUILD_NUMBER"
+          export SENTRY_DIST="$BUILD_NUMBER"
+
           flutter build appbundle --release \
-            --build-name=${{ needs.detect-channel.outputs.version_name }} \
-            --build-number=${{ needs.detect-channel.outputs.build_number }} \
-            --dart-define=API_BASE_URL=${{ steps.env.outputs.api_url }} \
-            --dart-define=APP_ENV=${{ steps.env.outputs.app_env }}
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER" \
+            --obfuscate \
+            --split-debug-info=build/symbols \
+            --extra-gen-snapshot-options=--save-obfuscation-map=build/symbols/obfuscation.map.json \
+            --dart-define=API_BASE_URL="$api_url" \
+            --dart-define=APP_ENV="$app_env" \
+            --dart-define=SENTRY_DSN="$SENTRY_DSN" \
+            --dart-define=SENTRY_RELEASE="$SENTRY_RELEASE" \
+            --dart-define=SENTRY_DIST="$SENTRY_DIST"
+
+          # Dart/native symbols. Android R8 mapping aynı build sırasında
+          # Sentry Gradle plugin'i tarafından UUID ile yüklenir.
+          dart run sentry_dart_plugin
+
+      - name: Attest Android build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: build/app/outputs/bundle/release/app-release.aab
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
@@ -364,11 +554,24 @@ jobs:
           userFraction: 0.1
           whatsNewDirectory: whatsnew
 
+      - name: Remove decoded signing material
+        if: always()
+        run: |
+          if [ -L android/saydin-release.jks ]; then
+            echo "❌ Refusing to follow signing-material symlink"
+            exit 1
+          fi
+          rm -f android/saydin-release.jks
+
   # ── iOS Release IPA + TestFlight ──────────────────────────────────────────
   release-ios:
     name: Release iOS + TestFlight
     runs-on: macos-15
-    needs: [guard, detect-channel]
+    needs: [guard, verify-ci, detect-channel, verify-legal]
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     environment:
       name: ${{ needs.detect-channel.outputs.is_rc == 'true' && 'staging' || 'production' }}
       url: https://appstoreconnect.apple.com
@@ -376,7 +579,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.guard.outputs.tag }}
+          ref: ${{ needs.guard.outputs.tag_sha }}
 
       # Apple ITMS-90725: 28 Nisan 2026'dan itibaren App Store Connect
       # iOS 26 SDK altında derlenmiş build'leri reddediyor.
@@ -411,29 +614,60 @@ jobs:
           api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
-      - name: Set environment variables
-        id: env
+      - name: Build IPA (release)
+        env:
+          BUILD_NAME: ${{ needs.detect-channel.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.detect-channel.outputs.build_number }}
+          IS_RC: ${{ needs.detect-channel.outputs.is_rc }}
+          API_URL_STAGING: ${{ vars.API_URL_STAGING }}
+          API_URL_PRODUCTION: ${{ vars.API_URL_PRODUCTION }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         run: |
-          if [ "${{ needs.detect-channel.outputs.is_rc }}" = "true" ]; then
-            echo "app_env=staging" >> $GITHUB_OUTPUT
-            echo "api_url=${{ vars.API_URL_STAGING }}" >> $GITHUB_OUTPUT
+          if [ "$IS_RC" = "true" ]; then
+            app_env="staging"
+            api_url="$API_URL_STAGING"
           else
-            echo "app_env=production" >> $GITHUB_OUTPUT
-            echo "api_url=${{ vars.API_URL_PRODUCTION }}" >> $GITHUB_OUTPUT
+            app_env="production"
+            api_url="$API_URL_PRODUCTION"
           fi
 
-      - name: Build IPA (release)
-        run: |
+          if [ -z "$api_url" ] || ! printf '%s' "$api_url" | grep -Eq '^https://[^[:space:]/?#]+/?$'; then
+            echo "❌ Release API URL boş veya origin-only HTTPS URL değil."
+            exit 1
+          fi
+          if [ -z "$SENTRY_DSN" ] || [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
+            echo "❌ Sentry DSN/auth/org/project eksik; release event ve symbolication zinciri kapalı olamaz."
+            exit 1
+          fi
+          export SENTRY_RELEASE="com.saydin.saydin@$BUILD_NAME+$BUILD_NUMBER"
+          export SENTRY_DIST="$BUILD_NUMBER"
+
           flutter build ipa --release \
-            --build-name=${{ needs.detect-channel.outputs.version_name }} \
-            --build-number=${{ needs.detect-channel.outputs.build_number }} \
-            --dart-define=API_BASE_URL=${{ steps.env.outputs.api_url }} \
-            --dart-define=APP_ENV=${{ steps.env.outputs.app_env }} \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER" \
+            --obfuscate \
+            --split-debug-info=build/symbols \
+            --extra-gen-snapshot-options=--save-obfuscation-map=build/symbols/obfuscation.map.json \
+            --dart-define=API_BASE_URL="$api_url" \
+            --dart-define=APP_ENV="$app_env" \
+            --dart-define=SENTRY_DSN="$SENTRY_DSN" \
+            --dart-define=SENTRY_RELEASE="$SENTRY_RELEASE" \
+            --dart-define=SENTRY_DIST="$SENTRY_DIST" \
             --export-options-plist=ios/ExportOptions.plist
+
+          dart run sentry_dart_plugin
 
       - name: Find IPA path
         id: ipa
-        run: echo "path=$(find build/ios/ipa -name '*.ipa' | head -1)" >> $GITHUB_OUTPUT
+        run: echo "path=$(find build/ios/ipa -name '*.ipa' | head -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Attest iOS build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: ${{ steps.ipa.outputs.path }}
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
@@ -475,6 +709,14 @@ jobs:
           # bilinçli olarak başarısızlığa toleranslı komutlar `|| true` taşır.
           set -euo pipefail
           IFS=$'\n\t'
+          CURL_FLAGS=(
+            --silent
+            --show-error
+            --globoff
+            --fail-with-body
+            --retry 3
+            --retry-all-errors
+          )
 
           # ── 1. JWT token oluştur (App Store Connect API) ───────────────
           HEADER=$(printf '{"alg":"ES256","kid":"%s","typ":"JWT"}' "$KEY_ID" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
@@ -500,7 +742,7 @@ jobs:
           BUNDLE_ID="${IOS_BUNDLE_ID}"
           # Geçici ağ/parse hatasında `|| true` ile boşa düş → aşağıdaki açık
           # kontrol temiz bir hata mesajı üretir (pipefail aborte etmesin).
-          APP_RESPONSE=$(curl -sg \
+          APP_RESPONSE=$(curl "${CURL_FLAGS[@]}" \
             -H "Authorization: Bearer $JWT" \
             "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=${BUNDLE_ID}") || true
           APP_ID=$(printf '%s' "$APP_RESPONSE" | jq -r '.data[0].id // empty' 2>/dev/null || true)
@@ -524,7 +766,7 @@ jobs:
           # Adım non-blocking (continue-on-error) olduğundan uzun pencere yalnız
           # yavaş vakada bekler; build erken bulununca döngü kırılır.
           for i in $(seq 1 40); do
-            BUILDS=$(curl -sg \
+            BUILDS=$(curl "${CURL_FLAGS[@]}" \
               -H "Authorization: Bearer $JWT" \
               "https://api.appstoreconnect.apple.com/v1/builds?filter[version]=${BUILD_NUMBER}&filter[app]=${APP_ID}&limit=1") || true
 
@@ -543,23 +785,23 @@ jobs:
             # F-02-04: build App Store Connect'te işlenmediyse release notes
             # eklenemez → sessiz `exit 0` yerine fail-loud (IPA yüklendi ama
             # notlar elle eklenmeli).
-            echo "::error::Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te bulunamadı (30 deneme) — TestFlight release notes eklenemedi; notları elle ekleyin."
+            echo "::error::Build ${VERSION}+${BUILD_NUMBER} App Store Connect'te bulunamadı (40 deneme) — TestFlight release notes eklenemedi; notları elle ekleyin."
             exit 1
           fi
 
-          LOCALIZATIONS=$(curl -s \
+          LOCALIZATIONS=$(curl "${CURL_FLAGS[@]}" \
             -H "Authorization: Bearer $JWT" \
             "https://api.appstoreconnect.apple.com/v1/builds/${BUILD_ID}/betaBuildLocalizations") || true
 
           TR_ID=$(printf '%s' "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="tr") | .id // empty' 2>/dev/null || true)
           if [ -n "$TR_ID" ]; then
-            curl -s -X PATCH \
+            curl "${CURL_FLAGS[@]}" -X PATCH \
               -H "Authorization: Bearer $JWT" \
               -H "Content-Type: application/json" \
               "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations/${TR_ID}" \
               -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"id\":\"${TR_ID}\",\"attributes\":{\"whatsNew\":$(echo "$NOTES_TR" | jq -Rs .)}}}"
           else
-            curl -s -X POST \
+            curl "${CURL_FLAGS[@]}" -X POST \
               -H "Authorization: Bearer $JWT" \
               -H "Content-Type: application/json" \
               "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations" \
@@ -568,13 +810,13 @@ jobs:
 
           EN_ID=$(printf '%s' "$LOCALIZATIONS" | jq -r '(.data // [])[] | select(.attributes.locale=="en-US") | .id // empty' 2>/dev/null || true)
           if [ -n "$EN_ID" ]; then
-            curl -s -X PATCH \
+            curl "${CURL_FLAGS[@]}" -X PATCH \
               -H "Authorization: Bearer $JWT" \
               -H "Content-Type: application/json" \
               "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations/${EN_ID}" \
               -d "{\"data\":{\"type\":\"betaBuildLocalizations\",\"id\":\"${EN_ID}\",\"attributes\":{\"whatsNew\":$(echo "$NOTES_EN" | jq -Rs .)}}}"
           else
-            curl -s -X POST \
+            curl "${CURL_FLAGS[@]}" -X POST \
               -H "Authorization: Bearer $JWT" \
               -H "Content-Type: application/json" \
               "https://api.appstoreconnect.apple.com/v1/betaBuildLocalizations" \
@@ -590,11 +832,13 @@ jobs:
     needs: [guard, detect-channel, release-android, release-ios]
     permissions:
       contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.guard.outputs.tag }}
+          ref: ${{ needs.guard.outputs.tag_sha }}
 
       - name: Download Android AAB artifact
         uses: actions/download-artifact@v4
@@ -613,13 +857,122 @@ jobs:
           mv release-assets/app-release.aab "release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.aab"
           mv release-assets/*.ipa "release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.ipa"
 
+      - name: Generate checksums, SBOM and provenance
+        env:
+          RELEASE_TAG: ${{ needs.detect-channel.outputs.tag }}
+          SOURCE_SHA: ${{ needs.guard.outputs.tag_sha }}
+          BUILD_NUMBER: ${{ needs.detect-channel.outputs.build_number }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          CHECKED_OUT_SHA=$(git rev-parse HEAD)
+          if [ "$CHECKED_OUT_SHA" != "$SOURCE_SHA" ]; then
+            echo "❌ Evidence checkout SHA release snapshot'ı eşleşmiyor."
+            exit 1
+          fi
+          COMMIT_TIMESTAMP=$(git show -s --format=%cI "$SOURCE_SHA")
+          ruby tool/generate_release_evidence.rb \
+            --repo-root . \
+            --release-tag "$RELEASE_TAG" \
+            --source-sha "$SOURCE_SHA" \
+            --build-number "$BUILD_NUMBER" \
+            --timestamp "$COMMIT_TIMESTAMP" \
+            --repository "$REPOSITORY" \
+            --run-id "$RUN_ID" \
+            --artifact "release-assets/saydin-${RELEASE_TAG}.aab" \
+            --artifact "release-assets/saydin-${RELEASE_TAG}.ipa" \
+            --sbom "release-assets/saydin-${RELEASE_TAG}.cdx.json" \
+            --provenance "release-assets/saydin-${RELEASE_TAG}.provenance.json"
+
+          (
+            cd release-assets
+            shasum -a 256 \
+              "saydin-${RELEASE_TAG}.aab" \
+              "saydin-${RELEASE_TAG}.ipa" \
+              "saydin-${RELEASE_TAG}.cdx.json" \
+              "saydin-${RELEASE_TAG}.provenance.json" \
+              > "saydin-${RELEASE_TAG}-SHA256SUMS"
+          )
+
+      - name: Sign SBOM attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.aab
+            release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.ipa
+          sbom-path: release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.cdx.json
+
+      - name: Re-verify immutable tag and existing release binding
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.guard.outputs.tag }}
+          TAG_SHA: ${{ needs.guard.outputs.tag_sha }}
+          TAG_OBJECT_SHA: ${{ needs.guard.outputs.tag_object_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$TAG_SHA" | grep -Eq '^[0-9a-f]{40}$' || \
+             ! printf '%s' "$TAG_OBJECT_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "❌ Guard SHA output'ları geçersiz."
+            exit 1
+          fi
+
+          REF_JSON=$(gh api "repos/${REPOSITORY}/git/ref/tags/${RELEASE_TAG}")
+          REMOTE_TYPE=$(printf '%s' "$REF_JSON" | jq -er '.object.type')
+          REMOTE_TAG_OBJECT_SHA=$(printf '%s' "$REF_JSON" | jq -er '.object.sha')
+          if [ "$REMOTE_TYPE" != "tag" ] || [ "$REMOTE_TAG_OBJECT_SHA" != "$TAG_OBJECT_SHA" ]; then
+            echo "❌ Remote tag ref guard snapshot'ından sonra değiştirilmiş."
+            exit 1
+          fi
+
+          TAG_JSON=$(gh api "repos/${REPOSITORY}/git/tags/${TAG_OBJECT_SHA}")
+          REMOTE_TARGET_TYPE=$(printf '%s' "$TAG_JSON" | jq -er '.object.type')
+          REMOTE_TARGET_SHA=$(printf '%s' "$TAG_JSON" | jq -er '.object.sha')
+          if [ "$REMOTE_TARGET_TYPE" != "commit" ] || [ "$REMOTE_TARGET_SHA" != "$TAG_SHA" ]; then
+            echo "❌ Annotated tag object exact release commit'ini hedeflemiyor."
+            exit 1
+          fi
+
+          RELEASE_RESPONSE="$RUNNER_TEMP/existing-release.json"
+          HTTP_CODE=$(curl --silent --show-error \
+            --output "$RELEASE_RESPONSE" \
+            --write-out '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$GITHUB_API_URL/repos/${REPOSITORY}/releases/tags/${RELEASE_TAG}")
+          case "$HTTP_CODE" in
+            200)
+              EXISTING_TAG=$(jq -er '.tag_name' "$RELEASE_RESPONSE")
+              # GitHub target_commitish'i mevcut tag'lerde kullanmaz; release'in
+              # gerçek hedefi yukarıda object+peeled commit olarak doğrulanan
+              # tag_name binding'idir.
+              if [ "$EXISTING_TAG" != "$RELEASE_TAG" ]; then
+                echo "❌ Mevcut GitHub Release doğrulanmış tag binding'iyle eşleşmiyor."
+                exit 1
+              fi
+              ;;
+            404) ;;
+            *)
+              echo "❌ GitHub Release target sorgusu fail-closed durdu (HTTP $HTTP_CODE)."
+              exit 1
+              ;;
+          esac
+
+          echo "✅ Remote tag object ve GitHub Release binding bütünlüğü doğrulandı."
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.detect-channel.outputs.tag }}
+          target_commitish: ${{ needs.guard.outputs.tag_sha }}
           name: ${{ needs.detect-channel.outputs.tag }}
           prerelease: ${{ needs.detect-channel.outputs.is_rc == 'true' }}
           body: ${{ needs.detect-channel.outputs.gh_body }}
           files: |
             release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.aab
             release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.ipa
+            release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.cdx.json
+            release-assets/saydin-${{ needs.detect-channel.outputs.tag }}.provenance.json
+            release-assets/saydin-${{ needs.detect-channel.outputs.tag }}-SHA256SUMS

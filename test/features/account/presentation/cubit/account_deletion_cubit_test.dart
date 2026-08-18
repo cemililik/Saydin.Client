@@ -17,6 +17,9 @@ class _FakeErrorReporter implements ErrorReporter {
   final actions = <String>[];
   final reports = <Object>[];
   int scopeClearCount = 0;
+  bool throwOnRecordAction = false;
+  bool throwOnReport = false;
+  int remainingScopeClearFailures = 0;
 
   @override
   Future<void> recordAction(
@@ -24,6 +27,7 @@ class _FakeErrorReporter implements ErrorReporter {
     String? category,
     Map<String, Object?>? data,
   }) async {
+    if (throwOnRecordAction) throw Exception('telemetry unavailable');
     actions.add(action);
   }
 
@@ -34,6 +38,7 @@ class _FakeErrorReporter implements ErrorReporter {
     String? context,
     Map<String, Object?>? extras,
   }) async {
+    if (throwOnReport) throw Exception('reporter unavailable');
     reports.add(exception);
   }
 
@@ -43,6 +48,10 @@ class _FakeErrorReporter implements ErrorReporter {
   @override
   Future<void> clearScope() async {
     scopeClearCount++;
+    if (remainingScopeClearFailures > 0) {
+      remainingScopeClearFailures--;
+      throw Exception('scope clear unavailable');
+    }
   }
 }
 
@@ -58,6 +67,11 @@ void main() {
     lifecycleEvents = AppLifecycleEvents();
     resetCount = 0;
     lifecycleEvents.resetStream.listen((_) => resetCount++);
+    when(
+      () => repository.hasPendingLocalCleanup(),
+    ).thenAnswer((_) async => false);
+    when(() => repository.markLocalCleanupPending()).thenAnswer((_) async {});
+    when(() => repository.clearPendingLocalCleanup()).thenAnswer((_) async {});
   });
 
   tearDown(() async {
@@ -86,7 +100,9 @@ void main() {
     ],
     verify: (_) async {
       verify(() => repository.requestBackendDeletion()).called(1);
+      verify(() => repository.markLocalCleanupPending()).called(1);
       verify(() => repository.wipeLocalData()).called(1);
+      verify(() => repository.clearPendingLocalCleanup()).called(1);
       expect(reporter.actions, [
         'settings.account_delete_requested',
         'settings.account_deleted',
@@ -104,31 +120,33 @@ void main() {
   );
 
   blocTest<AccountDeletionCubit, AccountDeletionState>(
-    'backend hatası + yerel wipe başarılı → PartialSuccess (Success değil)',
+    'backend hatası → Failure; local wipe ve device identity korunur',
     setUp: () {
       when(
         () => repository.requestBackendDeletion(),
       ).thenAnswer((_) async => false);
-      when(() => repository.wipeLocalData()).thenAnswer((_) async {});
     },
     build: build,
     act: (cubit) => cubit.requestDeletion(),
     expect: () => [
       isA<AccountDeletionInProgress>(),
-      isA<AccountDeletionPartialSuccess>(),
+      isA<AccountDeletionFailure>().having(
+        (state) => state.error,
+        'error',
+        isA<AccountDeletionBackendException>(),
+      ),
     ],
     verify: (_) async {
       await Future<void>.delayed(Duration.zero);
-      expect(
-        resetCount,
-        1,
-        reason: 'Yerel veri silindi → reset event yine de yayılmalı',
-      );
+      verifyNever(() => repository.wipeLocalData());
+      verifyNever(() => repository.markLocalCleanupPending());
+      expect(reporter.scopeClearCount, 0);
+      expect(resetCount, 0, reason: 'Local veri korunurken reset olmamalı');
     },
   );
 
   blocTest<AccountDeletionCubit, AccountDeletionState>(
-    'wipe başarısızlığı Failure state ve Sentry raporu üretir',
+    'wipe başarısızlığı retryable LocalCleanupPending ve Sentry raporu üretir',
     setUp: () {
       when(
         () => repository.requestBackendDeletion(),
@@ -141,13 +159,168 @@ void main() {
     act: (cubit) => cubit.requestDeletion(),
     expect: () => [
       isA<AccountDeletionInProgress>(),
-      isA<AccountDeletionFailure>(),
+      isA<AccountDeletionLocalCleanupPending>(),
     ],
     verify: (_) async {
       expect(reporter.reports, hasLength(1));
       expect(reporter.reports.first, isA<AccountWipeException>());
       await Future<void>.delayed(Duration.zero);
       expect(resetCount, 0, reason: 'Wipe başarısız → reset event yayılmamalı');
+    },
+  );
+
+  blocTest<AccountDeletionCubit, AccountDeletionState>(
+    'remote success sonrası local retry backend DELETE tekrar etmez',
+    setUp: () {
+      var wipeCalls = 0;
+      when(
+        () => repository.requestBackendDeletion(),
+      ).thenAnswer((_) async => true);
+      when(() => repository.wipeLocalData()).thenAnswer((_) async {
+        wipeCalls++;
+        if (wipeCalls == 1) throw AccountWipeException(['temporary io']);
+      });
+    },
+    build: build,
+    act: (cubit) async {
+      await cubit.requestDeletion();
+      await cubit.requestDeletion();
+    },
+    expect: () => [
+      isA<AccountDeletionInProgress>(),
+      isA<AccountDeletionLocalCleanupPending>(),
+      isA<AccountDeletionInProgress>(),
+      isA<AccountDeletionSuccess>(),
+    ],
+    verify: (_) async {
+      verify(() => repository.requestBackendDeletion()).called(1);
+      verify(() => repository.markLocalCleanupPending()).called(1);
+      verify(() => repository.wipeLocalData()).called(2);
+      verify(() => repository.clearPendingLocalCleanup()).called(1);
+      await Future<void>.delayed(Duration.zero);
+      expect(resetCount, 1);
+    },
+  );
+
+  blocTest<AccountDeletionCubit, AccountDeletionState>(
+    'marker yazılamazsa wipe başlamaz; retry markerı yazıp cleanupı tamamlar',
+    setUp: () {
+      var markerWrites = 0;
+      when(
+        () => repository.requestBackendDeletion(),
+      ).thenAnswer((_) async => true);
+      when(() => repository.markLocalCleanupPending()).thenAnswer((_) async {
+        markerWrites++;
+        if (markerWrites == 1) throw Exception('disk temporarily read-only');
+      });
+      when(() => repository.wipeLocalData()).thenAnswer((_) async {});
+    },
+    build: build,
+    act: (cubit) async {
+      await cubit.requestDeletion();
+      await cubit.requestDeletion();
+    },
+    expect: () => [
+      isA<AccountDeletionInProgress>(),
+      isA<AccountDeletionLocalCleanupPending>(),
+      isA<AccountDeletionInProgress>(),
+      isA<AccountDeletionSuccess>(),
+    ],
+    verify: (_) {
+      verify(() => repository.requestBackendDeletion()).called(1);
+      verify(() => repository.markLocalCleanupPending()).called(2);
+      verify(() => repository.wipeLocalData()).called(1);
+      verify(() => repository.clearPendingLocalCleanup()).called(1);
+    },
+  );
+
+  blocTest<AccountDeletionCubit, AccountDeletionState>(
+    'scope cleanup düşerse marker korunur ve backend tekrar edilmeden retry olur',
+    setUp: () {
+      reporter.remainingScopeClearFailures = 1;
+      when(
+        () => repository.requestBackendDeletion(),
+      ).thenAnswer((_) async => true);
+      when(() => repository.wipeLocalData()).thenAnswer((_) async {});
+    },
+    build: build,
+    act: (cubit) async {
+      await cubit.requestDeletion();
+      await cubit.requestDeletion();
+    },
+    expect: () => [
+      isA<AccountDeletionInProgress>(),
+      isA<AccountDeletionLocalCleanupPending>(),
+      isA<AccountDeletionInProgress>(),
+      isA<AccountDeletionSuccess>(),
+    ],
+    verify: (_) {
+      verify(() => repository.requestBackendDeletion()).called(1);
+      verify(() => repository.wipeLocalData()).called(2);
+      verify(() => repository.clearPendingLocalCleanup()).called(1);
+      expect(reporter.scopeClearCount, 2);
+    },
+  );
+
+  blocTest<AccountDeletionCubit, AccountDeletionState>(
+    'telemetry hatası başarılı silme sonucunu veya reseti engellemez',
+    setUp: () {
+      reporter.throwOnRecordAction = true;
+      when(
+        () => repository.requestBackendDeletion(),
+      ).thenAnswer((_) async => true);
+      when(() => repository.wipeLocalData()).thenAnswer((_) async {});
+    },
+    build: build,
+    act: (cubit) => cubit.requestDeletion(),
+    expect: () => [
+      isA<AccountDeletionInProgress>(),
+      isA<AccountDeletionSuccess>(),
+    ],
+    verify: (_) async {
+      await Future<void>.delayed(Duration.zero);
+      expect(resetCount, 1);
+    },
+  );
+
+  blocTest<AccountDeletionCubit, AccountDeletionState>(
+    'reporter da hata atsa cleanup failure terminal state üretir',
+    setUp: () {
+      reporter.throwOnReport = true;
+      when(
+        () => repository.requestBackendDeletion(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => repository.wipeLocalData(),
+      ).thenThrow(AccountWipeException(['io']));
+    },
+    build: build,
+    act: (cubit) => cubit.requestDeletion(),
+    expect: () => [
+      isA<AccountDeletionInProgress>(),
+      isA<AccountDeletionLocalCleanupPending>(),
+    ],
+  );
+
+  blocTest<AccountDeletionCubit, AccountDeletionState>(
+    'persisted pending marker app restart sonrası yalnız local cleanup sürdürür',
+    setUp: () {
+      when(
+        () => repository.hasPendingLocalCleanup(),
+      ).thenAnswer((_) async => true);
+      when(() => repository.wipeLocalData()).thenAnswer((_) async {});
+    },
+    build: build,
+    act: (cubit) => cubit.requestDeletion(),
+    expect: () => [
+      isA<AccountDeletionInProgress>(),
+      isA<AccountDeletionSuccess>(),
+    ],
+    verify: (_) {
+      verifyNever(() => repository.requestBackendDeletion());
+      verifyNever(() => repository.markLocalCleanupPending());
+      verify(() => repository.wipeLocalData()).called(1);
+      verify(() => repository.clearPendingLocalCleanup()).called(1);
     },
   );
 
@@ -164,7 +337,7 @@ void main() {
   );
 
   blocTest<AccountDeletionCubit, AccountDeletionState>(
-    'requestBackendDeletion BEKLENMEDİK ŞEKİLDE throw etse de yerel wipe çalışır',
+    'requestBackendDeletion beklenmedik şekilde throw ederse local wipe çalışmaz',
     setUp: () {
       // Repository sözleşmesi throw etmemeyi söylüyor; cubit yine de
       // defansif olmalı. Burada implementation'ın sözleşmeyi ihlal ettiği
@@ -172,25 +345,23 @@ void main() {
       when(
         () => repository.requestBackendDeletion(),
       ).thenThrow(Exception('unexpected'));
-      when(() => repository.wipeLocalData()).thenAnswer((_) async {});
     },
     build: build,
     act: (cubit) => cubit.requestDeletion(),
     expect: () => [
       isA<AccountDeletionInProgress>(),
-      // backendOk = false (exception sonrası); yerel wipe başarılı → Partial
-      isA<AccountDeletionPartialSuccess>(),
+      isA<AccountDeletionFailure>(),
     ],
     verify: (_) async {
-      verify(() => repository.wipeLocalData()).called(1);
-      // Hem backend exception hem account_deletion context'leri raporlanır
+      verifyNever(() => repository.wipeLocalData());
+      // Beklenmedik backend exception raporlanır.
       expect(
         reporter.reports.length,
         1,
         reason: 'Sadece beklenmedik backend exception raporlanır',
       );
       await Future<void>.delayed(Duration.zero);
-      expect(resetCount, 1);
+      expect(resetCount, 0);
     },
   );
 }

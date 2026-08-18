@@ -1,9 +1,10 @@
 ---
 name: master-review
-description: Launch a comprehensive multi-agent project-wide review per docs/code-reviews/master/MASTER-REVIEW-PLAN.md. 24 lot agents review every file in the project through all lenses, 6 cross-cutting agents scan for patterns (security/KVKK, performance, doc consistency, l10n integrity, test coverage, architecture), a verifier agent validates each finding against code, and a consolidator produces a master review. Use only for major checkpoints (pre-release, post-feature-sprint, audit) — not for per-task review. Trigger phrases include "master review", "proje genelinde review", "kapsamlı review", "audit başlat".
+description: Launch a comprehensive multi-agent project-wide review per the tracked docs/review/MASTER-REVIEW-PLAN.md. 24 lot agents review every file in the project through all lenses, 6 cross-cutting agents scan for systemic patterns, independent verifiers validate findings, and a consolidator produces a master review. Use only for major checkpoints (pre-release, post-feature-sprint, audit) — not for per-task review.
 ---
 
-Tüm projeyi 4 fazlı çok-ajanlı review'den geçirir. Detaylı plan: [docs/code-reviews/master/MASTER-REVIEW-PLAN.md](../../../docs/code-reviews/master/MASTER-REVIEW-PLAN.md).
+Tüm projeyi çok-ajanlı review'den geçirir. Tracked ve kanonik plan:
+[docs/review/MASTER-REVIEW-PLAN.md](../../../docs/review/MASTER-REVIEW-PLAN.md).
 
 > **Bu skill bir launcher'dır** — ajanları dispatch eder, planı uygular, ilerlemeyi takip eder. Plan dosyası tüm detayları (lot tablosu, ajan brief'leri, çıktı şeması) içerir.
 
@@ -47,7 +48,9 @@ flowchart TD
 ### 1. Plan'ı oku (zorunlu)
 
 ```bash
-cat docs/code-reviews/master/MASTER-REVIEW-PLAN.md
+test -f docs/review/MASTER-REVIEW-PLAN.md
+python3 tool/quality/validate_repo_contracts.py
+sed -n '1,260p' docs/review/MASTER-REVIEW-PLAN.md
 ```
 
 Plan'ı **anlamadan ajan dispatch etme**. Lot tablosu, cross-cutting kapsamı, çıktı şeması, başlatma yönergeleri buradadır.
@@ -56,11 +59,14 @@ Plan'ı **anlamadan ajan dispatch etme**. Lot tablosu, cross-cutting kapsamı, �
 
 ```bash
 TS=$(date +%Y-%m-%dT%H-%M)
-MODEL="claude-opus-4-7-1m"
-SESSION_DIR="docs/code-reviews/master/${TS}-${MODEL}"
+RUNTIME_LABEL="${REVIEW_RUNTIME_LABEL:?set a filesystem-safe runtime/model label}"
+case "$RUNTIME_LABEL" in
+  ''|*[!A-Za-z0-9._-]*) echo "Invalid REVIEW_RUNTIME_LABEL" >&2; exit 1 ;;
+esac
+SESSION_DIR="docs/code-reviews/master/${TS}-${RUNTIME_LABEL}"
 
 mkdir -p "${SESSION_DIR}/lots" "${SESSION_DIR}/cross-cutting" "${SESSION_DIR}/verification"
-cp docs/code-reviews/master/MASTER-REVIEW-PLAN.md "${SESSION_DIR}/00-plan.md"
+cp docs/review/MASTER-REVIEW-PLAN.md "${SESSION_DIR}/00-plan.md"
 echo "📁 Session: ${SESSION_DIR}"
 ```
 
@@ -83,7 +89,8 @@ Batch 5: L18, L19, L20, L21
 Batch 6: L22, L23, L24
 ```
 
-Batch arası bekleme: önceki batch'in tamamı bitsin. **TodoWrite** ile her lot'un durumu takip edilir.
+Batch arası bekleme: önceki batch'in tamamı bitsin. Runtime'da progress
+tracker varsa kullan; yoksa session altında bir Markdown checklist tut.
 
 **Her ajana verilen brief** plan'ın 6. bölümünde — placeholder'ları doldurarak kullan.
 
@@ -129,9 +136,9 @@ Master raporu kullanıcıya teslim et:
 - En kritik 3 finding'i öne çıkar
 - "Sonraki sprint için backlog candidate" tablosu
 
-## TodoWrite kullanımı
+## İlerleme takibi
 
-Master review uzun sürer. **Her lot + her cross-cutting + verification + consolidation** ayrı todo. Şablon:
+Master review uzun sürer. **Her lot + her cross-cutting + verification + consolidation** ayrı kayıt. Runtime'a özel bir araç varsayma. Şablon:
 
 ```
 [ ] Phase 0 — Session init
@@ -154,7 +161,8 @@ Lot bittiğinde "completed", verifier başlayınca yeni todo eklenir.
 - **Cross-cutting değer** — sadece örüntü (≥2 lokasyon)
 - **Verifier yetkisi** — `❌ Invalid` işaretleyebilir ama gerekçesiz silemez
 - **Duplicate** — aynı bulgu hem lot'ta hem cross-cutting'te ise, consolidator birleştirir
-- **Model tutarlılığı** — bir session'da tüm ajanlar aynı model
+- **Model kaydı** — risk/karmaşıklığa göre model seçilebilir; her rapor
+  gerçek runtime/model bilgisini kaydeder ve model varsayımı yapmaz
 
 ## Çıktı
 
@@ -174,7 +182,8 @@ docs/code-reviews/master/{TS}-{MODEL}/
 
 ## Yasak
 
-- **Plan'ı atlayıp doğrudan ajan dispatch etmek** — MASTER-REVIEW-PLAN.md zorunlu prerequisite
+- **Plan'ı atlayıp doğrudan ajan dispatch etmek** — tracked
+  `docs/review/MASTER-REVIEW-PLAN.md` zorunlu prerequisite
 - **Bir lot'u atlamak** — istisna yok, plan'da listelenen tüm lot'lar çalışır
 - **Verification'sız konsolidasyon** — verifier görüşü olmadan master rapor üretmek finding kalitesini düşürür
 - **Kod düzenlemek** — bu skill audit'tir, fix değil. Fix'ler ayrı geliştirme döngüsünde

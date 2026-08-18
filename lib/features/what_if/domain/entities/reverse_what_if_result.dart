@@ -26,6 +26,7 @@ class ReverseWhatIfResult extends Equatable {
   final DateTime? inflationDataAsOf;
   final DateTime? actualBuyDate;
   final DateTime? actualSellDate;
+  final DateTime? calculatedAt;
 
   const ReverseWhatIfResult({
     required this.assetSymbol,
@@ -46,7 +47,62 @@ class ReverseWhatIfResult extends Equatable {
     this.inflationDataAsOf,
     this.actualBuyDate,
     this.actualSellDate,
+    this.calculatedAt,
   });
+
+  /// Sonucu üreten deterministik bitiş tarihi; render anındaki saate bağlı
+  /// değildir.
+  DateTime get effectiveSellDate =>
+      sellDate ??
+      actualSellDate ??
+      (priceHistory.isNotEmpty ? priceHistory.last.date : null) ??
+      (calculatedAt != null
+          ? DateTime(calculatedAt!.year, calculatedAt!.month, calculatedAt!.day)
+          : buyDate);
+
+  ReverseWhatIfResult withAssetDisplayName(String value) => ReverseWhatIfResult(
+    assetSymbol: assetSymbol,
+    assetDisplayName: value,
+    buyDate: buyDate,
+    sellDate: sellDate,
+    buyPrice: buyPrice,
+    sellPrice: sellPrice,
+    requiredInvestmentTry: requiredInvestmentTry,
+    unitsAcquired: unitsAcquired,
+    targetValueTry: targetValueTry,
+    profitLossTry: profitLossTry,
+    profitLossPercent: profitLossPercent,
+    isProfit: isProfit,
+    priceHistory: priceHistory,
+    cumulativeInflationPercent: cumulativeInflationPercent,
+    realProfitLossPercent: realProfitLossPercent,
+    inflationDataAsOf: inflationDataAsOf,
+    actualBuyDate: actualBuyDate,
+    actualSellDate: actualSellDate,
+    calculatedAt: calculatedAt,
+  );
+
+  ReverseWhatIfResult withCalculatedAt(DateTime value) => ReverseWhatIfResult(
+    assetSymbol: assetSymbol,
+    assetDisplayName: assetDisplayName,
+    buyDate: buyDate,
+    sellDate: sellDate,
+    buyPrice: buyPrice,
+    sellPrice: sellPrice,
+    requiredInvestmentTry: requiredInvestmentTry,
+    unitsAcquired: unitsAcquired,
+    targetValueTry: targetValueTry,
+    profitLossTry: profitLossTry,
+    profitLossPercent: profitLossPercent,
+    isProfit: isProfit,
+    priceHistory: priceHistory,
+    cumulativeInflationPercent: cumulativeInflationPercent,
+    realProfitLossPercent: realProfitLossPercent,
+    inflationDataAsOf: inflationDataAsOf,
+    actualBuyDate: actualBuyDate,
+    actualSellDate: actualSellDate,
+    calculatedAt: value,
+  );
 
   @override
   List<Object?> get props => [
@@ -68,5 +124,6 @@ class ReverseWhatIfResult extends Equatable {
     inflationDataAsOf,
     actualBuyDate,
     actualSellDate,
+    calculatedAt,
   ];
 }

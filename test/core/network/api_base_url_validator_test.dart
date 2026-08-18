@@ -35,9 +35,29 @@ void main() {
         returnsNormally,
       );
       expect(
-        () => ApiBaseUrlValidator.validate('https://api-staging.saydin.app/v1'),
+        () => ApiBaseUrlValidator.validate('https://api-staging.saydin.app'),
         returnsNormally,
       );
+    });
+
+    test('base URL path, query, fragment veya user-info içeremez', () {
+      for (final url in [
+        'https://api.saydin.app/v1',
+        'https://api.saydin.app?token=abc',
+        'https://api.saydin.app#debug',
+        'https://user:pass@api.saydin.app',
+      ]) {
+        expect(
+          () => ApiBaseUrlValidator.validate(url),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              contains('origin-only URL'),
+            ),
+          ),
+        );
+      }
     });
 
     test('debug modda http://localhost kabul edilir', () {
@@ -54,12 +74,34 @@ void main() {
       );
     });
 
-    test('debug modda http://*.ngrok-free.app kabul edilir', () {
+    test('debug modda http://127.0.0.1 kabul edilir', () {
       expect(
-        () => ApiBaseUrlValidator.validate('http://abc123.ngrok-free.app'),
+        () => ApiBaseUrlValidator.validate('http://127.0.0.1:5080'),
         returnsNormally,
       );
     });
+
+    test(
+      'debug modda cleartext tunnel reddedilir; tunnel HTTPS zorunludur',
+      () {
+        for (final url in [
+          'http://abc123.ngrok-free.app',
+          'http://abc123.ngrok.app',
+          'http://abc123.trycloudflare.com',
+        ]) {
+          expect(
+            () => ApiBaseUrlValidator.validate(url),
+            throwsA(
+              isA<StateError>().having(
+                (e) => e.message,
+                'message',
+                contains('Tunnels and LAN hosts must use https'),
+              ),
+            ),
+          );
+        }
+      },
+    );
 
     test('debug modda allowlist dışı http host StateError fırlatır', () {
       expect(
@@ -124,7 +166,7 @@ void main() {
         );
       });
 
-      test('release modda whitelisted ngrok http bile reddedilir', () {
+      test('release modda HTTP tunnel reddedilir', () {
         expectHttpsRequired(
           'http://abc123.ngrok-free.app',
           isRelease: true,
@@ -156,6 +198,43 @@ void main() {
             isProfile: true,
           ),
           returnsNormally,
+        );
+      });
+
+      test(
+        'release modda host kararı verilene kadar arbitrary https kabul edilir',
+        () {
+          for (final url in [
+            'https://abc123.ngrok-free.app',
+            'https://abc123.ngrok-free.dev',
+            'https://localhost',
+          ]) {
+            expect(
+              () => ApiBaseUrlValidator.validateForMode(
+                url,
+                isRelease: true,
+                isProfile: false,
+              ),
+              returnsNormally,
+            );
+          }
+        },
+      );
+
+      test('release modda custom https port reddedilir', () {
+        expect(
+          () => ApiBaseUrlValidator.validateForMode(
+            'https://api.saydin.app:8443',
+            isRelease: true,
+            isProfile: false,
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              contains('default HTTPS port'),
+            ),
+          ),
         );
       });
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
@@ -62,7 +63,7 @@ class ShareCardRenderer {
     final pixelRatio = displayWidth > 0 ? _targetPx / displayWidth : 2.0;
 
     final image = await boundary.toImage(pixelRatio: pixelRatio);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final byteData = await encodePngAndDispose(image);
     if (byteData == null) {
       throw const ShareCardException('encode_failed');
     }
@@ -90,6 +91,17 @@ class ShareCardRenderer {
       } catch (_) {
         /* best-effort */
       }
+    }
+  }
+
+  /// PNG encoding başarılı olsa da hata verse de yüksek çözünürlüklü native
+  /// image kaynağını aynı async frame içinde serbest bırakır.
+  @visibleForTesting
+  static Future<ByteData?> encodePngAndDispose(ui.Image image) async {
+    try {
+      return await image.toByteData(format: ui.ImageByteFormat.png);
+    } finally {
+      image.dispose();
     }
   }
 

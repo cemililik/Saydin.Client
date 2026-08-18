@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_calculation.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 
@@ -25,6 +26,16 @@ class PortfolioItemResult extends Equatable {
   List<Object?> get props => [item, calculation, sharePercent];
 }
 
+class PortfolioItemFailure extends Equatable {
+  final PortfolioItem item;
+  final AppError error;
+
+  const PortfolioItemFailure({required this.item, required this.error});
+
+  @override
+  List<Object?> get props => [item, error];
+}
+
 /// Tüm portföy hesaplama sonucu.
 ///
 /// Bir veya birden çok kalem hesaplanamazsa, başarılı kalemler [items]
@@ -40,13 +51,20 @@ class PortfolioResult extends Equatable {
 
   /// Hesaplama sırasında başarısız olan kalemler. UI bunları kullanıcıya
   /// "yeniden dene" akışıyla sunabilir. Tüm kalemler başarılı ise boş liste.
-  final List<PortfolioItem> failedItems;
+  final List<PortfolioItemFailure> failures;
+
+  List<PortfolioItem> get failedItems =>
+      failures.map((failure) => failure.item).toList(growable: false);
 
   final Decimal totalInitialValueTry;
   final Decimal totalFinalValueTry;
   final Decimal totalProfitLossTry;
   final double totalProfitLossPercent;
   final bool isProfit;
+
+  /// Hesabın üretildiği etkili bitiş günü. Açık uçlu isteklerde paylaşım
+  /// kartının render anında değişmemesi için use case sınırında snapshot alınır.
+  final DateTime? effectiveSellDate;
 
   // Enflasyon düzeltmesi — null ise hesaplanmadı / aktif değil
   final Decimal? totalRealProfitLossTry;
@@ -60,7 +78,8 @@ class PortfolioResult extends Equatable {
     required this.totalProfitLossTry,
     required this.totalProfitLossPercent,
     required this.isProfit,
-    this.failedItems = const [],
+    this.effectiveSellDate,
+    this.failures = const [],
     this.totalRealProfitLossTry,
     this.totalRealProfitLossPercent,
     this.totalCumulativeInflationPercent,
@@ -69,17 +88,20 @@ class PortfolioResult extends Equatable {
   bool get hasInflation => totalRealProfitLossPercent != null;
 
   /// Bir veya daha fazla kalem hesaplanamadıysa true.
-  bool get hasPartialFailure => failedItems.isNotEmpty;
+  bool get hasPartialFailure => failures.isNotEmpty;
+
+  bool get isComplete => failures.isEmpty;
 
   @override
   List<Object?> get props => [
     items,
-    failedItems,
+    failures,
     totalInitialValueTry,
     totalFinalValueTry,
     totalProfitLossTry,
     totalProfitLossPercent,
     isProfit,
+    effectiveSellDate,
     totalRealProfitLossTry,
     totalRealProfitLossPercent,
     totalCumulativeInflationPercent,

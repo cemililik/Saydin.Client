@@ -49,6 +49,7 @@ class WhatIfResult extends Equatable {
   // Haftasonu/tatil: kullanıcının seçtiği tarih yerine kullanılan gerçek işlem günü
   final DateTime? actualBuyDate;
   final DateTime? actualSellDate;
+  final DateTime? calculatedAt;
 
   const WhatIfResult({
     required this.assetSymbol,
@@ -69,7 +70,68 @@ class WhatIfResult extends Equatable {
     this.inflationDataAsOf,
     this.actualBuyDate,
     this.actualSellDate,
+    this.calculatedAt,
   });
+
+  /// Sonucu üreten deterministik bitiş tarihi.
+  ///
+  /// Açık uçlu isteklerde ekranda yeniden `DateTime.now()` hesaplamak, sonuç
+  /// aynı kaldığı halde tarih/süre etiketini gece yarısında değiştiriyordu.
+  /// Backend'in gerçek işlem günü ilk tercihtir; grafik son noktası da aynı
+  /// response snapshot'ına ait güvenli bir geri dönüş sağlar.
+  DateTime get effectiveSellDate =>
+      sellDate ??
+      actualSellDate ??
+      (priceHistory.isNotEmpty ? priceHistory.last.date : null) ??
+      (calculatedAt != null
+          ? DateTime(calculatedAt!.year, calculatedAt!.month, calculatedAt!.day)
+          : buyDate);
+
+  /// Locale değişiminde finansal sonucu yeniden hesaplamadan katalogdaki
+  /// kullanıcıya görünen adı günceller.
+  WhatIfResult withAssetDisplayName(String value) => WhatIfResult(
+    assetSymbol: assetSymbol,
+    assetDisplayName: value,
+    buyDate: buyDate,
+    sellDate: sellDate,
+    buyPrice: buyPrice,
+    sellPrice: sellPrice,
+    unitsAcquired: unitsAcquired,
+    initialValueTry: initialValueTry,
+    finalValueTry: finalValueTry,
+    profitLossTry: profitLossTry,
+    profitLossPercent: profitLossPercent,
+    isProfit: isProfit,
+    priceHistory: priceHistory,
+    cumulativeInflationPercent: cumulativeInflationPercent,
+    realProfitLossPercent: realProfitLossPercent,
+    inflationDataAsOf: inflationDataAsOf,
+    actualBuyDate: actualBuyDate,
+    actualSellDate: actualSellDate,
+    calculatedAt: calculatedAt,
+  );
+
+  WhatIfResult withCalculatedAt(DateTime value) => WhatIfResult(
+    assetSymbol: assetSymbol,
+    assetDisplayName: assetDisplayName,
+    buyDate: buyDate,
+    sellDate: sellDate,
+    buyPrice: buyPrice,
+    sellPrice: sellPrice,
+    unitsAcquired: unitsAcquired,
+    initialValueTry: initialValueTry,
+    finalValueTry: finalValueTry,
+    profitLossTry: profitLossTry,
+    profitLossPercent: profitLossPercent,
+    isProfit: isProfit,
+    priceHistory: priceHistory,
+    cumulativeInflationPercent: cumulativeInflationPercent,
+    realProfitLossPercent: realProfitLossPercent,
+    inflationDataAsOf: inflationDataAsOf,
+    actualBuyDate: actualBuyDate,
+    actualSellDate: actualSellDate,
+    calculatedAt: value,
+  );
 
   @override
   List<Object?> get props => [
@@ -91,5 +153,6 @@ class WhatIfResult extends Equatable {
     inflationDataAsOf,
     actualBuyDate,
     actualSellDate,
+    calculatedAt,
   ];
 }

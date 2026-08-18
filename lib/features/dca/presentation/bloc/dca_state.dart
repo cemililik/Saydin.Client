@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
@@ -10,7 +11,7 @@ class DcaFormInput extends Equatable {
   final String period;
   final String amountType;
   final bool includeInflation;
-  final num? periodicAmount;
+  final Decimal? periodicAmount;
 
   const DcaFormInput({
     this.selectedSymbol,
@@ -23,21 +24,29 @@ class DcaFormInput extends Equatable {
   });
 
   DcaFormInput copyWith({
-    String? selectedSymbol,
-    DateTime? startDate,
-    DateTime? endDate,
+    Object? selectedSymbol = _sentinel,
+    Object? startDate = _sentinel,
+    Object? endDate = _sentinel,
     String? period,
     String? amountType,
     bool? includeInflation,
-    num? periodicAmount,
+    Object? periodicAmount = _sentinel,
   }) => DcaFormInput(
-    selectedSymbol: selectedSymbol ?? this.selectedSymbol,
-    startDate: startDate ?? this.startDate,
-    endDate: endDate ?? this.endDate,
+    selectedSymbol: identical(selectedSymbol, _sentinel)
+        ? this.selectedSymbol
+        : selectedSymbol as String?,
+    startDate: identical(startDate, _sentinel)
+        ? this.startDate
+        : startDate as DateTime?,
+    endDate: identical(endDate, _sentinel)
+        ? this.endDate
+        : endDate as DateTime?,
     period: period ?? this.period,
     amountType: amountType ?? this.amountType,
     includeInflation: includeInflation ?? this.includeInflation,
-    periodicAmount: periodicAmount ?? this.periodicAmount,
+    periodicAmount: identical(periodicAmount, _sentinel)
+        ? this.periodicAmount
+        : periodicAmount as Decimal?,
   );
 
   @override
@@ -51,6 +60,8 @@ class DcaFormInput extends Equatable {
     periodicAmount,
   ];
 }
+
+const _sentinel = Object();
 
 sealed class DcaState extends Equatable {
   final DcaFormInput formInput;

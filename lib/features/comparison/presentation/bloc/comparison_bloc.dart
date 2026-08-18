@@ -1,7 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/error_reporter.dart';
+import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/utils/financial_amount_validator.dart';
 import 'package:saydin/features/comparison/domain/usecases/compare_what_if.dart';
+import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 import 'package:saydin/features/what_if/domain/usecases/get_assets.dart';
 import 'comparison_event.dart';
 import 'comparison_state.dart';
@@ -102,8 +105,33 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     } else if (current.length < 5) {
       current.add(event.symbol);
     }
+    final range = comparisonDateRange(
+      assets: loaded.assets,
+      selectedSymbols: current,
+      priceHistoryMonths: 0,
+    );
+    final buyDate = _clampDate(loaded.buyDate, range);
+    var sellDate = _clampDate(loaded.sellDate, range);
+    if (buyDate != null && sellDate != null && sellDate.isBefore(buyDate)) {
+      sellDate = null;
+    }
     _invalidateInflightRequests();
-    emit(loaded.copyWith(selectedSymbols: current));
+    emit(
+      loaded.copyWith(
+        selectedSymbols: current,
+        buyDate: buyDate,
+        sellDate: sellDate,
+      ),
+    );
+  }
+
+  DateTime? _clampDate(DateTime? date, ComparisonDateRange range) {
+    if (date == null || !range.hasOverlap) return null;
+    final first = range.firstDate;
+    final last = range.lastDate;
+    if (first != null && date.isBefore(first)) return first;
+    if (last != null && date.isAfter(last)) return last;
+    return date;
   }
 
   void _onBuyDateChanged(
@@ -167,6 +195,7 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
     final buyDate = loaded.buyDate;
     final amount = loaded.amount;
     if (buyDate == null || amount == null) return;
+    if (!_isValidCalculationInput(loaded)) return;
 
     // Bu istek için anlık snapshot. `_invalidateInflightRequests` (form
     // mutasyon handler'ları) sayacı ileri taşırsa uçuştaki cevap atılır.
@@ -249,84 +278,117 @@ class ComparisonBloc extends Bloc<ComparisonEvent, ComparisonState> {
   ) async {
     final loaded = _loaded;
     if (loaded == null) return;
-    emit(
-      loaded.copyWith(
-        selectedSymbols: event.symbols,
-        buyDate: event.buyDate,
-        sellDate: event.sellDate,
-        amount: event.amount,
-        includeInflation: event.includeInflation,
-      ),
+    final replay = loaded.copyWith(
+      selectedSymbols: List<String>.unmodifiable(event.symbols),
+      buyDate: event.buyDate,
+      sellDate: event.sellDate,
+      amount: event.amount,
+      amountType: event.amountType,
+      includeInflation: event.includeInflation,
     );
+    if (!_isValidCalculationInput(replay)) {
+      emit(
+        ComparisonFailure(
+          assets: loaded.assets,
+          selectedSymbols: loaded.selectedSymbols,
+          buyDate: loaded.buyDate,
+          sellDate: loaded.sellDate,
+          amount: loaded.amount,
+          amountType: loaded.amountType,
+          includeInflation: loaded.includeInflation,
+          error: const InvalidScenarioReplayError(),
+        ),
+      );
+      return;
+    }
+    emit(replay);
     await _onCalculateRequested(const ComparisonCalculateRequested(), emit);
+  }
+
+  bool _isValidCalculationInput(ComparisonAssetsLoaded loaded) {
+    final buyDate = loaded.buyDate;
+    final amount = loaded.amount;
+    if (buyDate == null || amount == null) return false;
+    final knownSymbols = loaded.assets.map((asset) => asset.symbol).toSet();
+    final uniqueSymbols = loaded.selectedSymbols.toSet();
+    final range = comparisonDateRange(
+      assets: loaded.assets,
+      selectedSymbols: loaded.selectedSymbols,
+      priceHistoryMonths: 0,
+    );
+    final sellDate = loaded.sellDate;
+    bool isOutsideRange(DateTime date) =>
+        (range.firstDate != null && date.isBefore(range.firstDate!)) ||
+        (range.lastDate != null && date.isAfter(range.lastDate!));
+
+    return uniqueSymbols.length >= 2 &&
+        uniqueSymbols.length <= 5 &&
+        uniqueSymbols.length == loaded.selectedSymbols.length &&
+        uniqueSymbols.every(knownSymbols.contains) &&
+        range.hasOverlap &&
+        !isOutsideRange(buyDate) &&
+        (sellDate == null || !isOutsideRange(sellDate)) &&
+        isValidFinancialDateRange(buyDate, sellDate) &&
+        FinancialAmountValidator.isValid(
+          value: amount,
+          amountType: loaded.amountType,
+          allowedAmountTypes: const ['try'],
+        );
   }
 
   Future<void> _onLanguageChanged(
     ComparisonLanguageChanged event,
     Emitter<ComparisonState> emit,
   ) async {
-    // Form state'i ve önceki hesaplama sonucunu kaydet
-    final savedSymbols = state.selectedSymbols;
-    final savedBuyDate = state.buyDate;
-    final savedSellDate = state.sellDate;
-    final savedAmount = state.amount;
-    final savedAmountType = state.amountType;
-    final savedInflation = state.includeInflation;
-    final hadResult = state is ComparisonSuccess;
+    final previous = state;
 
     try {
       final assets = await _getAssets();
-      final restored = ComparisonAssetsLoaded(
-        assets: assets,
-        selectedSymbols: savedSymbols,
-        buyDate: savedBuyDate,
-        sellDate: savedSellDate,
-        amount: savedAmount,
-        amountType: savedAmountType,
-        includeInflation: savedInflation,
-      );
-
-      if (hadResult &&
-          savedSymbols.length >= 2 &&
-          savedBuyDate != null &&
-          savedAmount != null) {
+      if (!identical(state, previous)) return;
+      if (previous is ComparisonSuccess) {
+        final localizedResult = CompareResult(
+          results: previous.result.results
+              .map(
+                (item) => CompareResultItem(
+                  rank: item.rank,
+                  calculation: item.calculation.withAssetDisplayName(
+                    assets
+                            .where(
+                              (asset) =>
+                                  asset.symbol == item.calculation.assetSymbol,
+                            )
+                            .firstOrNull
+                            ?.displayName ??
+                        item.calculation.assetDisplayName,
+                  ),
+                ),
+              )
+              .toList(growable: false),
+        );
         emit(
-          ComparisonCalculating(
+          ComparisonSuccess(
             assets: assets,
-            selectedSymbols: savedSymbols,
-            buyDate: savedBuyDate,
-            sellDate: savedSellDate,
-            amount: savedAmount,
-            amountType: savedAmountType,
-            includeInflation: savedInflation,
+            selectedSymbols: previous.selectedSymbols,
+            buyDate: previous.buyDate,
+            sellDate: previous.sellDate,
+            amount: previous.amount,
+            amountType: previous.amountType,
+            includeInflation: previous.includeInflation,
+            result: localizedResult,
           ),
         );
-        try {
-          final result = await _compareWhatIf(
-            assetSymbols: savedSymbols,
-            buyDate: savedBuyDate,
-            sellDate: savedSellDate,
-            amount: savedAmount,
-            amountType: savedAmountType,
-            includeInflation: savedInflation,
-          );
-          emit(
-            ComparisonSuccess(
-              assets: assets,
-              selectedSymbols: savedSymbols,
-              buyDate: savedBuyDate,
-              sellDate: savedSellDate,
-              amount: savedAmount,
-              amountType: savedAmountType,
-              includeInflation: savedInflation,
-              result: result,
-            ),
-          );
-        } catch (_) {
-          emit(restored);
-        }
       } else {
-        emit(restored);
+        emit(
+          ComparisonAssetsLoaded(
+            assets: assets,
+            selectedSymbols: previous.selectedSymbols,
+            buyDate: previous.buyDate,
+            sellDate: previous.sellDate,
+            amount: previous.amount,
+            amountType: previous.amountType,
+            includeInflation: previous.includeInflation,
+          ),
+        );
       }
     } catch (_) {
       // Asset fetch başarısız — mevcut state'i koru

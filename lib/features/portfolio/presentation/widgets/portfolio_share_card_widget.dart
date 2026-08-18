@@ -8,6 +8,8 @@ import 'package:saydin/features/what_if/presentation/widgets/share_card_widget.d
 
 /// Portföy sonucunu sosyal medyaya paylaşmak için render edilen kart.
 class PortfolioShareCardWidget extends StatelessWidget {
+  static const _maxVisibleItems = 6;
+
   final PortfolioResult result;
   final DateTime buyDate;
   final DateTime? sellDate;
@@ -30,14 +32,15 @@ class PortfolioShareCardWidget extends StatelessWidget {
     final color = result.isProfit ? AppColors.profit : AppColors.loss;
     final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
     final sign = result.totalProfitLossPercent >= 0 ? '+' : '';
-    final sellLabel = sellDate != null
-        ? dateFmt.format(sellDate!)
-        : dateFmt.format(DateTime.now());
+    final effectiveSellDate = sellDate ?? result.effectiveSellDate ?? buyDate;
+    final sellLabel = dateFmt.format(effectiveSellDate);
 
     final hasInflation = result.totalRealProfitLossPercent != null;
     final realPct = result.totalRealProfitLossPercent ?? 0;
     final realSign = realPct >= 0 ? '+' : '';
     final realColor = realPct >= 0 ? AppColors.profit : AppColors.loss;
+    final visibleItems = result.items.take(_maxVisibleItems).toList();
+    final remainingItemCount = result.items.length - visibleItems.length;
 
     return SizedBox(
       width: 540,
@@ -99,7 +102,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                           ShareCardWidget.durationLabel(
                             l10n,
                             buyDate,
-                            sellDate,
+                            effectiveSellDate,
                           ),
                           style: const TextStyle(
                             fontSize: 13,
@@ -124,19 +127,24 @@ class PortfolioShareCardWidget extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // Varlık listesi
-                  ...result.items.map(
+                  ...visibleItems.map(
                     (item) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            item.item.assetDisplayName,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF444444),
+                          Expanded(
+                            child: Text(
+                              item.item.assetDisplayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF444444),
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 12),
                           Text(
                             tryFmt.format(
                               item.calculation.initialValueTry.toDouble(),
@@ -151,6 +159,20 @@ class PortfolioShareCardWidget extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (remainingItemCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: Text(
+                        l10n.shareCardMoreAssets(remainingItemCount),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF666666),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
 
                   const SizedBox(height: 20),
 

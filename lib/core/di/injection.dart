@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -53,7 +54,16 @@ import 'package:saydin/features/what_if/presentation/bloc/what_if_bloc.dart';
 
 final sl = GetIt.instance;
 
-Future<void> configureDependencies() async {
+Future<void> configureDependencies({
+  @visibleForTesting String? apiBaseUrlOverride,
+}) async {
+  // Ağ bağımlılığı lazy singleton olsa bile base URL hatası lazy olmamalı:
+  // uygulama açılışında, hiçbir request/device identifier payload'ı
+  // gönderilmeden fail-loud olur (SEC-08).
+  const configuredApiBaseUrl = String.fromEnvironment('API_BASE_URL');
+  final apiBaseUrl = apiBaseUrlOverride ?? configuredApiBaseUrl;
+  ApiBaseUrlValidator.validate(apiBaseUrl);
+
   // PackageInfo (async — uygulama başlangıcında bir kez çözümlenir).
   // Singleton olarak kaydedilir: hem network katmanı hem de Sentry cihaz
   // scope'u (F-05-07) aynı instance'ı paylaşır.
@@ -68,13 +78,8 @@ Future<void> configureDependencies() async {
 
   // Network
   sl.registerLazySingleton<ApiClient>(() {
-    const baseUrl = String.fromEnvironment('API_BASE_URL');
-    // Validator hem boş hem invalid URL hem de release'de http için
-    // `StateError` fırlatır. `assert` release build'te derlenmez —
-    // fail-loud için runtime check (`StateError`) zorunlu.
-    ApiBaseUrlValidator.validate(baseUrl);
     return ApiClient(
-      baseUrl: baseUrl,
+      baseUrl: apiBaseUrl,
       packageInfo: packageInfo,
       platformInfo: sl<PlatformInfo>(),
       localeProvider: sl<LocaleProvider>(),
@@ -92,16 +97,10 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<OnboardingRepository>(
     () => OnboardingRepositoryImpl(SharedPreferencesAsync()),
   );
-  sl.registerLazySingleton(
-    () => OnboardingCubit(sl(), sl<AppLifecycleEvents>(), reporter: sl()),
-  );
 
   // Settings
   sl.registerLazySingleton<SettingsRepository>(
     () => SettingsRepositoryImpl(SharedPreferencesAsync()),
-  );
-  sl.registerLazySingleton(
-    () => SettingsCubit(sl(), sl<LocaleProvider>(), reporter: sl()),
   );
 
   // Legal — statik içerik, network çağrısı yok
@@ -128,13 +127,12 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<FavoritesRepository>(
     () => FavoritesRepositoryImpl(SharedPreferencesAsync()),
   );
-  sl.registerLazySingleton(() => FavoritesCubit(sl(), reporter: sl()));
 
   // App Config
   sl.registerLazySingleton<AppConfigRepository>(
     () => AppConfigRepositoryImpl(sl<ApiClient>().dio),
   );
-  sl.registerLazySingleton(() => AppConfigCubit(sl(), reporter: sl()));
+  registerSessionCubitFactories(sl);
 
   // Repositories — DioErrorMapper repo katmanına enjekte edilir; BLoC'lar
   // yalnızca AppError görür (F-07-02/F-08-17/F-10-12; Dio sızıntısı kapatıldı).
@@ -145,7 +143,7 @@ Future<void> configureDependencies() async {
   // Use cases
   sl.registerLazySingleton(() => CalculateWhatIf(sl()));
   sl.registerLazySingleton(() => CalculateReverseWhatIf(sl()));
-  sl.registerLazySingleton(() => GetAssets(sl()));
+  sl.registerLazySingleton(() => GetAssets(sl(), sl<LocaleProvider>()));
 
   // Portfolio — kendi data katmanı (F-09-01); hesaplamayı WhatIfRepository'ye
   // delege eder ve WhatIfResult'ı portföye ait PortfolioCalculation'a map'ler.
@@ -187,4 +185,36 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton(() => SaveScenario(sl()));
   sl.registerLazySingleton(() => DeleteScenario(sl()));
   sl.registerFactory(() => ScenariosBloc(sl(), sl(), sl(), reporter: sl()));
+}
+
+/// Root [BlocProvider] ağacının sahip olduğu session cubit'leri factory olmak
+/// zorundadır. Hesap silme resetinde provider'lar eski instance'ları kapatır;
+/// lazy singleton kullanılırsa GetIt aynı kapalı instance'ı yeni ağaca verirdi.
+@visibleForTesting
+void registerSessionCubitFactories(GetIt locator) {
+  locator.registerFactory(
+    () => OnboardingCubit(
+      locator<OnboardingRepository>(),
+      reporter: locator<ErrorReporter>(),
+    ),
+  );
+  locator.registerFactory(
+    () => SettingsCubit(
+      locator<SettingsRepository>(),
+      locator<LocaleProvider>(),
+      reporter: locator<ErrorReporter>(),
+    ),
+  );
+  locator.registerFactory(
+    () => FavoritesCubit(
+      locator<FavoritesRepository>(),
+      reporter: locator<ErrorReporter>(),
+    ),
+  );
+  locator.registerFactory(
+    () => AppConfigCubit(
+      locator<AppConfigRepository>(),
+      reporter: locator<ErrorReporter>(),
+    ),
+  );
 }

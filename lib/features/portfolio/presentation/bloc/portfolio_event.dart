@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 
@@ -31,7 +32,7 @@ class PortfolioSellDateChanged extends PortfolioEvent {
 class PortfolioItemAdded extends PortfolioEvent {
   final String assetSymbol;
   final String assetDisplayName;
-  final num amount;
+  final Decimal amount;
   final String amountType;
 
   const PortfolioItemAdded({
@@ -55,7 +56,7 @@ class PortfolioItemUpdated extends PortfolioEvent {
   final String id;
   final String assetSymbol;
   final String assetDisplayName;
-  final num amount;
+  final Decimal amount;
   final String amountType;
 
   const PortfolioItemUpdated({

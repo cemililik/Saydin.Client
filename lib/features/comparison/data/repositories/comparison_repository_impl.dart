@@ -1,7 +1,10 @@
+import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:saydin/core/constants/api_endpoints.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
+import 'package:saydin/core/error/response_body_validator.dart';
+import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/comparison/data/models/compare_result_model.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 import 'package:saydin/features/comparison/domain/repositories/comparison_repository.dart';
@@ -24,7 +27,7 @@ class ComparisonRepositoryImpl implements ComparisonRepository {
     required List<String> assetSymbols,
     required DateTime buyDate,
     DateTime? sellDate,
-    required num amount,
+    required Decimal amount,
     required String amountType,
     bool includeInflation = false,
   }) async {
@@ -35,17 +38,15 @@ class ComparisonRepositoryImpl implements ComparisonRepository {
           'assetSymbols': assetSymbols,
           'buyDate': _formatDate(buyDate),
           if (sellDate != null) 'sellDate': _formatDate(sellDate),
-          'amount': amount,
+          'amount': MoneyParser.toJsonString(amount),
           'amountType': amountType,
           'includeInflation': includeInflation,
         },
       );
-      final data = response.data;
-      // 200 + boş gövde → ServerError (hardcoded TR FormatException yerine).
-      if (data == null) {
-        throw ServerError(statusCode: response.statusCode);
-      }
-      return CompareResultModel.fromJson(data);
+      final data = ResponseBodyValidator.requireMap(response.data);
+      return ResponseBodyValidator.parse(
+        () => CompareResultModel.fromJson(data),
+      );
     } on DioException catch (e) {
       throw _errorMapper.map(e);
     }

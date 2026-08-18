@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:saydin/core/network/device_id_interceptor.dart';
+import 'package:saydin/core/constants/api_endpoints.dart';
 import 'package:saydin/features/account/data/repositories/account_data_repository_impl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,10 +24,6 @@ void main() {
     dio = _MockDio();
   });
 
-  /// Cubit ile entegrasyon: `wipeLocalData` ve `DeviceIdInterceptor.resetCache`
-  /// SDK/IO bağımlılığı gerektirdiği için bu testler sadece
-  /// `requestBackendDeletion`'a odaklanır. Geri kalan davranış cubit testinde
-  /// fake'lerle simüle edilmiştir.
   group('AccountDataRepositoryImpl.requestBackendDeletion', () {
     AccountDataRepositoryImpl buildRepo() {
       // Sadece `_dio` kullanılan testlerde diğer bağımlılıklar `late`
@@ -43,6 +42,7 @@ void main() {
       );
 
       expect(await buildRepo().requestBackendDeletion(), isTrue);
+      verify(() => dio.delete<void>(ApiEndpoints.account)).called(1);
     });
 
     test('requestBackendDeletion_status204_returnsTrue', () async {
@@ -55,6 +55,20 @@ void main() {
 
       expect(await buildRepo().requestBackendDeletion(), isTrue);
     });
+
+    test(
+      'requestBackendDeletion_status202_returnsFalseUntilStatusIsVerifiable',
+      () async {
+        when(() => dio.delete<void>(any())).thenAnswer(
+          (_) async => Response<void>(
+            requestOptions: RequestOptions(path: '/v1/account'),
+            statusCode: 202,
+          ),
+        );
+
+        expect(await buildRepo().requestBackendDeletion(), isFalse);
+      },
+    );
 
     test('requestBackendDeletion_status404_returnsFalse', () async {
       // Önceki davranış: 404 → true ("endpoint hazır değil, yerel wipe yeter")
@@ -113,6 +127,109 @@ void main() {
       );
 
       expect(await buildRepo().requestBackendDeletion(), isFalse);
+    });
+  });
+
+  group('AccountDataRepositoryImpl.wipeLocalData', () {
+    late _MockPrefs prefs;
+    late _MockSecureStorage secureStorage;
+    late _MockDeviceIdInterceptor deviceIdInterceptor;
+    late Directory temporaryDirectory;
+
+    setUp(() async {
+      prefs = _MockPrefs();
+      secureStorage = _MockSecureStorage();
+      deviceIdInterceptor = _MockDeviceIdInterceptor();
+      temporaryDirectory = await Directory.systemTemp.createTemp(
+        'saydin-account-wipe-test-',
+      );
+      when(() => prefs.clear()).thenAnswer((_) async {});
+      when(() => secureStorage.deleteAll()).thenAnswer((_) async {});
+    });
+
+    tearDown(() async {
+      if (temporaryDirectory.existsSync()) {
+        await temporaryDirectory.delete(recursive: true);
+      }
+    });
+
+    AccountDataRepositoryImpl buildWipeRepo() => AccountDataRepositoryImpl(
+      prefs: prefs,
+      secureStorage: secureStorage,
+      dio: dio,
+      deviceIdInterceptor: deviceIdInterceptor,
+      temporaryDirectoryProvider: () async => temporaryDirectory,
+      deletionStateDirectoryProvider: () async => temporaryDirectory,
+    );
+
+    test(
+      'backend-confirmed marker wipe boyunca kalır ve explicit clear ile silinir',
+      () async {
+        final repository = buildWipeRepo();
+
+        expect(await repository.hasPendingLocalCleanup(), isFalse);
+        await repository.markLocalCleanupPending();
+        expect(await repository.hasPendingLocalCleanup(), isTrue);
+
+        await repository.wipeLocalData();
+        expect(
+          await repository.hasPendingLocalCleanup(),
+          isTrue,
+          reason: 'Partial wipe sonrası process restart retry bilgisi kalmalı',
+        );
+
+        await repository.clearPendingLocalCleanup();
+        expect(await repository.hasPendingLocalCleanup(), isFalse);
+      },
+    );
+
+    test(
+      'clears preferences secure storage share files and device id cache',
+      () async {
+        final sharePng = File(
+          '${temporaryDirectory.path}/saydin_share_result.png',
+        );
+        final unrelatedPng = File('${temporaryDirectory.path}/other.png');
+        final wrongExtension = File(
+          '${temporaryDirectory.path}/saydin_share_result.txt',
+        );
+        await sharePng.writeAsBytes([1, 2, 3]);
+        await unrelatedPng.writeAsBytes([4]);
+        await wrongExtension.writeAsBytes([5]);
+
+        await buildWipeRepo().wipeLocalData();
+
+        verify(() => prefs.clear()).called(1);
+        verify(() => secureStorage.deleteAll()).called(1);
+        verify(() => deviceIdInterceptor.resetCache()).called(1);
+        expect(sharePng.existsSync(), isFalse);
+        expect(unrelatedPng.existsSync(), isTrue);
+        expect(wrongExtension.existsSync(), isTrue);
+      },
+    );
+
+    test('continues remaining cleanup and reports partial failure', () async {
+      when(() => prefs.clear()).thenThrow(StateError('prefs unavailable'));
+      final sharePng = File(
+        '${temporaryDirectory.path}/saydin_share_partial.png',
+      );
+      await sharePng.writeAsBytes([1]);
+
+      await expectLater(
+        buildWipeRepo().wipeLocalData(),
+        throwsA(
+          isA<AccountWipeException>().having(
+            (error) => error.causes,
+            'causes',
+            hasLength(1),
+          ),
+        ),
+      );
+
+      verify(() => prefs.clear()).called(1);
+      verify(() => secureStorage.deleteAll()).called(1);
+      verify(() => deviceIdInterceptor.resetCache()).called(1);
+      expect(sharePng.existsSync(), isFalse);
     });
   });
 }

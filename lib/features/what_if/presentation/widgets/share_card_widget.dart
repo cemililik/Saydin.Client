@@ -35,9 +35,8 @@ class ShareCardWidget extends StatelessWidget {
         ? Icons.trending_up
         : Icons.trending_down;
     final nominalSign = result.profitLossPercent >= 0 ? '+' : '';
-    final sellLabel = result.sellDate != null
-        ? dateFmt.format(result.sellDate!)
-        : dateFmt.format(DateTime.now());
+    final effectiveSellDate = result.effectiveSellDate;
+    final sellLabel = dateFmt.format(effectiveSellDate);
 
     final hasInflation =
         result.cumulativeInflationPercent != null &&
@@ -103,7 +102,11 @@ class ShareCardWidget extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          durationLabel(l10n, result.buyDate, result.sellDate),
+                          durationLabel(
+                            l10n,
+                            result.buyDate,
+                            effectiveSellDate,
+                          ),
                           style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.primary,

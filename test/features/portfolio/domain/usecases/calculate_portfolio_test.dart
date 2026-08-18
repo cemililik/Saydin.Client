@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_calculation.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/repositories/portfolio_repository.dart';
@@ -27,7 +28,7 @@ void main() {
     id: symbol,
     assetSymbol: symbol,
     assetDisplayName: symbol,
-    amount: 1000,
+    amount: Decimal.fromInt(1000),
     amountType: 'try',
   );
 
@@ -72,15 +73,39 @@ void main() {
       );
 
   group('CalculatePortfolio — Decimal aggregasyon (happy path)', () {
+    test(
+      'açık uçlu sonuç effectiveSellDate değerini fake clock ile sabitler',
+      () async {
+        final a = item('AAA');
+        stubOutcomes([
+          PortfolioItemCalculatedOutcome(
+            item: a,
+            calculation: calc(initial: '100', finalV: '120'),
+          ),
+        ]);
+        usecase = CalculatePortfolio(
+          repo,
+          clock: () => DateTime(2024, 7, 9, 23, 59),
+        );
+
+        final result = await usecase.call(
+          items: [a],
+          buyDate: DateTime(2020, 1, 1),
+        );
+
+        expect(result.effectiveSellDate, DateTime(2024, 7, 9));
+      },
+    );
+
     test('initial/final toplamları exact Decimal — 0.1 + 0.2 == 0.3', () async {
       final a = item('AAA');
       final b = item('BBB');
       stubOutcomes([
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: a,
           calculation: calc(initial: '0.1', finalV: '0.15'),
         ),
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: b,
           calculation: calc(initial: '0.2', finalV: '0.25'),
         ),
@@ -101,7 +126,7 @@ void main() {
     test('zarar durumunda isProfit false', () async {
       final a = item('AAA');
       stubOutcomes([
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: a,
           calculation: calc(initial: '1000', finalV: '900'),
         ),
@@ -119,12 +144,12 @@ void main() {
       final a = item('AAA');
       final b = item('BBB');
       stubOutcomes([
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: a,
           calculation: calc(initial: '1000', finalV: '1200'),
         ),
         // BBB hesaplanamadı (repo izolasyonu → calculation: null).
-        PortfolioItemOutcome(item: b),
+        PortfolioItemErrorOutcome(item: b, error: const ServerError()),
       ]);
 
       final result = await run([a, b]);
@@ -142,11 +167,11 @@ void main() {
       final a = item('AAA');
       final b = item('BBB');
       stubOutcomes([
-        PortfolioItemOutcome(item: a),
-        PortfolioItemOutcome(item: b),
+        PortfolioItemErrorOutcome(item: a, error: const ServerError()),
+        PortfolioItemErrorOutcome(item: b, error: const NoInternetError()),
       ]);
 
-      expect(() => run([a, b]), throwsA(isA<PortfolioCalculationFailure>()));
+      expect(() => run([a, b]), throwsA(isA<NoInternetError>()));
     });
   });
 
@@ -156,7 +181,7 @@ void main() {
       // realFinal = 110 → realPnL = 10
       final a = item('AAA');
       stubOutcomes([
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: a,
           calculation: calc(
             initial: '100',
@@ -181,7 +206,7 @@ void main() {
         // realFinal = 300 * 1.333333 = 399.9999 → realPnL = 99.9999
         final a = item('AAA');
         stubOutcomes([
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: a,
             calculation: calc(initial: '300', finalV: '300', realPct: 33.3333),
           ),
@@ -199,12 +224,12 @@ void main() {
         final a = item('AAA');
         final b = item('BBB');
         stubOutcomes([
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: a,
             calculation: calc(initial: '100', finalV: '110', realPct: 10),
           ),
           // BBB'de realPct null → every() false → reel aggregasyon atlanır.
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: b,
             calculation: calc(initial: '100', finalV: '120'),
           ),
@@ -227,7 +252,7 @@ void main() {
         final a = item('AAA');
         final b = item('BBB');
         stubOutcomes([
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: a,
             calculation: calc(
               initial: '100',
@@ -236,7 +261,7 @@ void main() {
               cumInfl: 5,
             ),
           ),
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: b,
             calculation: calc(initial: '100', finalV: '120', realPct: 20),
           ),

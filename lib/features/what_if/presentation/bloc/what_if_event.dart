@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
 
@@ -39,12 +40,19 @@ class WhatIfAmountTypeChanged extends WhatIfEvent {
   List<Object?> get props => [amountType];
 }
 
+class WhatIfAmountChanged extends WhatIfEvent {
+  final Decimal? amount;
+  const WhatIfAmountChanged(this.amount);
+  @override
+  List<Object?> get props => [amount];
+}
+
 /// Kaydedilmiş senaryoyu yeniden hesaplar: formu doldurur + calculate tetikler.
 class WhatIfReplayRequested extends WhatIfEvent {
   final String assetSymbol;
   final DateTime buyDate;
   final DateTime? sellDate;
-  final num amount;
+  final Decimal amount;
   final String amountType;
   final bool includeInflation;
   final CalculationMode calculationMode;
@@ -75,8 +83,7 @@ class WhatIfInflationToggled extends WhatIfEvent {
   const WhatIfInflationToggled();
 }
 
-/// Dil değiştiğinde asset listesini yeniler, form state'i korur,
-/// eğer önceden hesaplama yapılmışsa otomatik yeniden hesaplar.
+/// Dil değiştiğinde yalnız asset listesini yeniler; finansal sonuç korunur.
 class WhatIfLanguageChanged extends WhatIfEvent {
   const WhatIfLanguageChanged();
 }
@@ -92,7 +99,7 @@ class WhatIfCalculateRequested extends WhatIfEvent {
   final String assetSymbol;
   final DateTime buyDate;
   final DateTime? sellDate;
-  final num amount;
+  final Decimal amount;
   final String amountType;
   final bool includeInflation;
 
@@ -120,7 +127,7 @@ class WhatIfReverseCalculateRequested extends WhatIfEvent {
   final String assetSymbol;
   final DateTime buyDate;
   final DateTime? sellDate;
-  final num targetAmount;
+  final Decimal targetAmount;
   final String targetAmountType;
   final bool includeInflation;
 

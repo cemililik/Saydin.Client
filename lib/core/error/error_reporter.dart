@@ -33,9 +33,11 @@ class ErrorReporter {
           scope.setTag('context', context);
         }
         if (safeExtras != null && safeExtras.isNotEmpty) {
-          // `setContexts` Sentry'nin yapılandırılmış (deprecated olmayan) yolu.
-          // Tek bir "app" namespace altında toplanır.
-          scope.setContexts('app', safeExtras);
+          // SDK'nin typed `app` context'iyle çakışmayan, scrubber'ın açıkça
+          // allowlist'e aldığı tek custom namespace. Böylece `beforeSend`
+          // typed context'leri deny-by-default drop ederken bu şemalı teknik
+          // alanlar korunur.
+          scope.setContexts('app_telemetry', safeExtras);
         }
       },
     );

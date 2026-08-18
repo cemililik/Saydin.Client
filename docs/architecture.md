@@ -7,13 +7,13 @@ Feature-first Clean Architecture + BLoC pattern. Her özellik kendi klasöründe
 ```
 lib/
 ├── core/                          ← Özelliklerden bağımsız altyapı
-│   ├── constants/                 ← AppColors, ApiEndpoints
+│   ├── constants/                 ← AppColors (seed/legacy palette), ApiEndpoints
 │   ├── di/                        ← injection.dart (get_it service locator)
 │   ├── error/                     ← AppError, DioErrorMapper, ErrorReporter
 │   ├── l10n/                      ← L10nContext extension (context.l10n)
 │   ├── network/                   ← ApiClient, *Interceptor, LocaleProvider (Accept-Language)
 │   ├── platform/                  ← PlatformInfo (dart:io soyutlaması — F-05-06)
-│   ├── theme/                     ← AppTheme (light/dark ThemeData), ThemeModeMapper
+│   ├── theme/                     ← AppTheme, FinancialColors ThemeExtension, ThemeModeMapper
 │   ├── utils/                     ← date_utils (isSameDay), money_parser, percentage_formatter, ...
 │   └── widgets/                   ← InflationToggle, SharePreviewSheet, SettingsIconButton
 ├── features/
@@ -41,8 +41,8 @@ lib/
 │   │   │   └── usecases/         ← GetScenarios, SaveScenario, DeleteScenario
 │   │   └── presentation/
 │   │       ├── bloc/              ← ScenariosBloc, ScenariosEvent, ScenariosState
-│   │       ├── pages/             ← ScenariosPage (swipe-to-delete, refresh)
-│   │       └── widgets/           ← ScenarioCard (avatar, Dismissible)
+│   │       ├── pages/             ← ScenariosPage (confirm-delete, gerçek refresh Future'ı)
+│   │       └── widgets/           ← ScenarioCard (erişilebilir görünür silme aksiyonu sayfada)
 │   └── settings/                  ← Kullanıcı ayarları (tema, gelecek tercihler)
 │       ├── data/
 │       │   └── repositories/     ← SettingsRepositoryImpl (SharedPreferences)
@@ -102,45 +102,27 @@ Form alanları `WhatIfFormInput` veri sınıfında taşınır ve tüm state'lere
 
 **Hesaplama Modu:** `CalculationMode` enum'u (`normal` | `reverse`) ile iki hesaplama modu desteklenir. `SegmentedButton` ile kullanıcı mod değiştirebilir.
 
+```mermaid
+stateDiagram-v2
+    [*] --> WhatIfInitial
+    WhatIfInitial --> WhatIfAssetsLoading: WhatIfAssetsRequested
+    WhatIfAssetsLoading --> WhatIfAssetsLoaded: assets success
+    WhatIfAssetsLoading --> WhatIfFailure: typed AppError
+    WhatIfAssetsLoaded --> WhatIfAssetsLoaded: form mutation
+    WhatIfSuccess --> WhatIfSuccess: form mutation invalidates prior result
+    WhatIfFailure --> WhatIfFailure: form mutation
+    WhatIfAssetsLoaded --> WhatIfCalculating: calculate / reverse calculate
+    WhatIfSuccess --> WhatIfCalculating: calculate / reverse calculate
+    WhatIfFailure --> WhatIfCalculating: calculate / reverse calculate
+    WhatIfCalculating --> WhatIfSuccess: immutable request snapshot + result
+    WhatIfCalculating --> WhatIfFailure: typed AppError
 ```
-WhatIfInitial
-    │
-    │ WhatIfAssetsRequested
-    ▼
-WhatIfAssetsLoading
-    ├─ başarı ──► WhatIfAssetsLoaded(assets, formInput)
-    └─ hata ───► WhatIfFailure(assets: [], error, formInput)
 
-WhatIfAssetsLoaded / WhatIfSuccess / WhatIfFailure
-    │
-    │ WhatIfSymbolChanged
-    ▼
-    Aynı state, formInput güncellenerek yeniden emit edilir.
-    • amountType yeni asset için geçersizse → 'try'e sıfırlanır
-    • buyDate/sellDate asset'in [firstDate, lastDate] dışındaysa → sıkıştırılır,
-      formInput.dateAdjusted = true (tek seferlik flag — UI snackbar gösterir, sonra false olur)
-
-    │ WhatIfModeChanged(CalculationMode)
-    ▼
-    formInput.calculationMode güncellenir.
-    Ters modda amountType otomatik 'try'e zorlanır (hedef tutar yalnızca TL).
-
-    │ WhatIfBuyDateChanged / WhatIfSellDateChanged / WhatIfAmountTypeChanged
-    ▼
-    Aynı state, formInput güncellenerek yeniden emit edilir
-
-    │ WhatIfCalculateRequested (normal mod)
-    ▼
-WhatIfCalculating(assets, formInput)
-    ├─ başarı ──► WhatIfSuccess(assets, result: WhatIfResult, formInput)
-    └─ hata ───► WhatIfFailure(assets, error, formInput)
-
-    │ WhatIfReverseCalculateRequested (ters mod)
-    ▼
-WhatIfCalculating(assets, formInput)
-    ├─ başarı ──► WhatIfSuccess(assets, reverseResult: ReverseWhatIfResult, formInput)
-    └─ hata ───► WhatIfFailure(assets, error, formInput)
-```
+Sembol/tarih/tutar/tür/mod değişiklikleri `formInput`'u günceller. `amountType`
+yeni asset için geçersizse `try`'a döner; tarihler asset aralığına atomik olarak
+sıkıştırılır veya geçersiz aralık temizlenir. Form mutasyonu mevcut sonucu
+geçersiz kılar; request sıra numarası da geç gelen eski cevabın emit edilmesini
+önler. Ters mod hedef tutarı yalnız TRY kabul eder.
 
 **`WhatIfSuccess` state'i:** `result` (nullable `WhatIfResult`) ve `reverseResult` (nullable `ReverseWhatIfResult`) taşır. Mod'a göre yalnızca biri dolu olur.
 
@@ -152,7 +134,7 @@ WhatIfCalculating(assets, formInput)
 | `buyDate` | `DateTime?` | Alış tarihi |
 | `sellDate` | `DateTime?` | Satış tarihi (opsiyonel) |
 | `amountType` | `String` | `try` \| `units` \| `grams` |
-| `amount` | `num?` | Tutar (replay/senaryo yüklemede doldurulur) |
+| `amount` | `Decimal?` | Form, replay ve hesaplama boyunca kayıpsız tutar snapshot'ı |
 | `calculationMode` | `CalculationMode` | `normal` veya `reverse` — hesaplama modunu belirler |
 | `includeInflation` | `bool` | Enflasyon düzeltmesi dahil mi |
 | `dateAdjusted` | `bool` | Sembol değişince tarih sıkıştırıldıysa `true` — bir kez UI'a iletildikten sonra `copyWith` ile otomatik `false`'a döner (one-shot flag) |
@@ -164,28 +146,23 @@ WhatIfCalculating(assets, formInput)
 
 ### ScenariosBloc
 
-Silme işlemi **optimistic** yapılır: API çağrısından önce öğe UI'dan kaldırılır, hata durumunda liste eski haline döndürülür.
+Silme işlemi kullanıcı onayından sonra **optimistic** yapılır: API çağrısından
+önce öğe UI'dan kaldırılır, hata durumunda liste eski haline döndürülür. Swipe
+ve ekran okuyucu/klavye için görünür silme düğmesi aynı confirmation akışını
+kullanır. Backend restore sözleşmesi olmadığı için yanıltıcı Undo sunulmaz.
 
-```
-ScenariosInitial
-    │ ScenariosRequested
-    ▼
-ScenariosLoading
-    ├─ başarı ──► ScenariosLoaded(scenarios)
-    └─ hata ───► ScenariosFailure(scenarios: [], error)
-
-ScenariosLoaded
-    │ ScenarioDeleteRequested
-    ▼
-    ScenariosLoaded(scenarios - silinen)   ← hemen (optimistic)
-    └─ API hata ──► ScenariosFailure(scenarios orijinal, error)
-
-    │ ScenarioSaveRequested
-    ├─ duplicate ──► ScenariosDuplicate(scenarios)  ← API'ye gidilmez, UI snackbar gösterir
-    ▼
-ScenariosSaving(scenarios)
-    ├─ başarı ──► ScenariosLoaded([yeni, ...scenarios])
-    └─ hata ───► ScenariosFailure(scenarios, error)
+```mermaid
+stateDiagram-v2
+    [*] --> ScenariosInitial
+    ScenariosInitial --> ScenariosLoading: ScenariosRequested
+    ScenariosLoading --> ScenariosLoaded: success
+    ScenariosLoading --> ScenariosFailure: typed AppError
+    ScenariosLoaded --> ScenariosDuplicate: duplicate save
+    ScenariosLoaded --> ScenariosSaving: unique save
+    ScenariosSaving --> ScenariosSaved: success
+    ScenariosSaving --> ScenariosFailure: typed AppError
+    ScenariosLoaded --> ScenariosLoaded: confirmed optimistic delete
+    ScenariosLoaded --> ScenariosFailure: delete failed / restore original list
 ```
 
 **Duplicate kontrolü:** Kaydetmeden önce mevcut liste; `assetSymbol` + `buyDate` + `sellDate` + `amount` + `amountType` bileşimine göre taranır. Aynı kombinasyon zaten varsa `ScenariosDuplicate` emit edilir — API çağrısı yapılmaz.
@@ -350,9 +327,14 @@ Backend hataları **`application/problem+json`** döndürür; ayırt edici alan
 | `scenario-limit-exceeded` | 422 | `ScenarioLimitError(limit)` |
 | `daily-limit-exceeded` | 429 | `DailyLimitError(resetAt)` |
 | `validation` | 400 | `ServerError(400)` |
-| `feature-disabled` | 403 | `FeatureDisabledError(featureKey)` — çıplak 403 status fallback'i de buraya eşlenir |
+| `feature-disabled` | 403 | `FeatureDisabledError(featureKey)` — yalnız explicit RFC-7807 `type` URI semantiğiyle |
 | `external-api` | 502 | `ServerError(502)` (retry'lenebilir) |
 | `internal-error` | 500 | `ServerError(500)` |
+
+`Çıplak 403` veya tanınmayan bir ProblemDetails `type` değeri paywall
+anlamına gelmez; endpoint-nötr `ForbiddenError`'a eşlenir. Böylece yalnızca
+explicit `https://saydin.app/errors/feature-disabled` yanıtı
+`FeatureDisabledError` üretir.
 
 > **Extensions düzleştirme (kritik):** ASP.NET `ProblemDetails.Extensions`'ı
 > `[JsonExtensionData]` ile **üst seviyeye düzleştirir** (`{ "type":…, "limit":10,
@@ -516,8 +498,11 @@ sayıdan sonra çoğul eki olmadığından TR dalları özdeştir.
 |---|---|---|
 | Tooltip | Tek dokunuş | O noktadaki tarih ve fiyatı gösterir (2 ondalık) |
 | Range seçimi | Uzun basış + sürükleme | İki nokta arası dolgu + dikey çizgiler; alt çubukta tarih aralığı ve % değişim |
+| Erişilebilir veri | Klavye/ekran okuyucu düğmesi | Lokalize özet ve kaydırılabilir tarih/değer listesi |
 
-Range modunda tooltip devre dışı kalır (`handleBuiltInTouches: !_isRangeMode`). Dışarı tıklamak range'i temizler.
+Range modunda tooltip devre dışı kalır (`handleBuiltInTouches: !_isRangeMode`).
+Dışarı tıklamak range'i temizler. Canvas tek başına semantics üretmez; grafik
+özeti ve veri alternatifi aynı bilgiyi renkten bağımsız olarak sunar.
 
 ---
 
@@ -536,8 +521,8 @@ PercentageFormatter.unsigned(3.70)  // "%3,70"    (başlık / pasta dilim etiket
 // Tarih
 DateFormat('dd.MM.yyyy', 'tr_TR').format(date)  // 01.03.2020
 
-// Kar/zarar rengi + ikonu (erişilebilirlik: renkle birlikte ikon da gerekli)
-Color: Colors.green.shade700 / Colors.red.shade700
+// Kar/zarar rengi + ikonu (erişilebilirlik: renkle birlikte ikon/metin gerekli)
+Color: context.financialColors.profit / context.financialColors.loss
 Icon:  Icons.trending_up / Icons.trending_down
 ```
 
@@ -596,20 +581,26 @@ MaterialApp(
 
 `SettingsCubit` `MaterialApp`'in **üstünde** `BlocProvider` ile sağlanır. Tema değiştiğinde `BlocBuilder` tüm MaterialApp'i rebuild eder — bu Flutter'ın önerdiği tema değiştirme yöntemidir.
 
-### AppColors ve Dark Mode
+### FinancialColors ve Dark Mode
 
-`AppColors` profit/loss renkleri için iki set sunar:
+Finansal anlam taşıyan renkler `FinancialColors` `ThemeExtension`'ında tutulur
+ve `AppTheme.light`/`AppTheme.dark` içine eklenir:
 
 | Renk | Light | Dark |
 |------|-------|------|
 | Kar (profit) | `#2E7D32` (koyu yeşil) | `#66BB6A` (açık yeşil) |
 | Zarar (loss) | `#C62828` (koyu kırmızı) | `#EF5350` (açık kırmızı) |
 
-Helper methodlar:
+Tüketim:
 ```dart
-AppColors.profitColor(Theme.of(context).brightness)
-AppColors.lossColor(Theme.of(context).brightness)
+context.financialColors.profit
+context.financialColors.loss
+context.financialColors.chartCost
+context.financialColors.portfolioPalette
 ```
+
+Renk tek başına anlam taşımaz; sonuç yönü ikon/metinle, grafik serileri ise
+legend/tooltip ve erişilebilir veri listesiyle de belirtilir.
 
 ### BottomNavigationBar
 
@@ -690,10 +681,11 @@ flowchart LR
   **data katmanında** (`PortfolioRepositoryImpl`) yapılır; böylece portföy
   domain'i What-If domain'ine bağımlı değildir (F-09-19; önceden
   `PortfolioItemResult.result` doğrudan `WhatIfResult`'tı).
-- **Per-item izolasyon** repository'dedir: bir kalem çökerse
-  `PortfolioItemOutcome.calculation == null` döner; use case bunu `failedItems`'a
-  düşürüp partial-success gösterir. Tüm kalemler çökerse
-  `PortfolioCalculationFailure` fırlatılır.
+- **Per-item izolasyon** repository'dedir: her kalem sealed
+  `PortfolioItemOutcome` ile başarı veya typed `AppError` döndürür.
+  Use case başarısızlıkları `PortfolioItemFailure` olarak korur; partial sonuç
+  kartta başarısız kalem ve nedeni ile açıkça gösterilir, save/share kapatılır.
+  Tüm kalemler çökerse en anlamlı typed `AppError` fırlatılır.
 - Backend ileride batch `/v1/portfolio/calculate` eklerse `PortfolioRepository`
   sözleşmesi sabit kalır; yalnızca impl, delegasyon yerine doğrudan Dio'ya geçer.
 
@@ -714,19 +706,25 @@ edilebilir bir Clean Architecture pragmatizmidir (F-07-26):
 
 `AppConfig.tier` magic-string (`'free'`/`'premium'`) yerine tip-güvenli
 `enum SubscriptionTier { free, premium }`'dir (F-12-07). `AppConfigModel.fromJson`
-wire string'i güvenle enum'a map'ler; bilinmeyen/eksik değer **güvenli varsayılan**
-`SubscriptionTier.free`'e düşer (config asla uygulamayı bloklamaz).
+wire string'i güvenle enum'a map'ler; bilinmeyen/eksik değer **güvenli fallback**
+`SubscriptionTier.free`'e düşer. `AppConfigReadiness.loading/ready/fallback`
+plan kararının güvenilirliğini açıkça taşır; ana özellik ağacı config çözülene
+kadar `ConfigReadinessGate` arkasında bekler.
 `isPremium => tier == SubscriptionTier.premium`. Backend'e gönderilen `plan`
 parametresi (scenarios) `tier.name` ile wire string'e çevrilir.
 
 ## Onboarding (OnboardingCubit)
 
 Onboarding tamamlanma durumu `OnboardingCubit` (`OnboardingStatus { unknown,
-pending, completed }`) ile yönetilir (F-12-09). Önceden `_AppHome` `StatefulWidget`
+pending, legalUpdateRequired, completed }`) ile yönetilir. Önceden `_AppHome` `StatefulWidget`
 içinde ad-hoc `bool? + setState` + elle yönetilen `StreamSubscription` vardı.
-Cubit, hesap-silme reset aboneliğini (`AppLifecycleEvents.resetStream`) de sahiplenir
-ve `close()`'da iptal eder; `AppHome` artık durumu yalnızca `BlocBuilder` ile okuyan
-stateless bir widget'tır.
+Hesap-silme reset aboneliğini app-level `AppSessionResetBoundary` sahiplenir;
+session cubit'leri DI'da factory'dir ve keyed provider ağacı tümünü atomik olarak
+kapatıp yeniden yaratır. `AppHome` durumu yalnızca `BlocBuilder` ile okuyan
+stateless bir widget'tır. Güncel `LegalNoticeRecord` sürüm + legal bundle hash +
+doküman kimlikleri + locale + UTC zaman + `seen/acknowledged` kararını taşır.
+Atla işlemi kabul yazmaz; bildirimin görüldüğünü kaydeder. Güncel kayıt oluşmadan
+`ConfigReadinessGate` kurulmaz ve device-ID taşıyan ilk config isteği başlamaz.
 
 ## Backend API Namespace Sözleşmesi
 
@@ -739,12 +737,22 @@ API namespace'i kasıtlı olarak ayrışır; bu tutarsızlık değildir. Tek kay
 
 ## CI/CD (GitHub Actions)
 
-`.github/workflows/ci.yml` — PR ve `main` push'ta tetiklenir.
+`.github/workflows/ci.yml`; `main`/`development` push ve pull request'lerinde,
+haftalık takvimde ve manuel olarak tetiklenir.
 
 | Job | Runner | Adımlar |
 |---|---|---|
-| `analyze-and-test` | ubuntu-latest | flutter pub get → gen-l10n → dart format → flutter analyze --fatal-infos → flutter test --coverage → Codecov |
-| `build-android` | ubuntu-latest | APK debug (yalnızca PR) |
-| `build-ios` | macos-15 | no-codesign build (yalnızca PR) |
+| `analyze-and-test` | ubuntu-latest | ARB ve generated l10n gate → legal testleri → production-library manifest → format → analyze → coverage'lı 537+ test → project/patch coverage gate → Codecov |
+| `non-dart-quality` | ubuntu-latest | Python/Ruby fixture testleri → agent/doküman sözleşmeleri → YAML → actionlint → ShellCheck |
+| `secret-scan` | ubuntu-latest | Tracked-file secret guard → tam Git history üzerinde Gitleaks |
+| `osv-scan` | ubuntu-latest | OSV raporu → CVSS ≥7 veya belirsiz severity için fail-closed politika |
+| `build-android` | ubuntu-latest | PR ve `development` push'unda debug APK sanity build |
+| `build-ios` | macos-15 | PR ve `development` push'unda no-codesign debug sanity build |
 
-Aynı branch için paralel çalışan iş akışı otomatik iptal edilir (`cancel-in-progress: true`).
+Aynı ref için paralel CI otomatik iptal edilir (`cancel-in-progress: true`). Tag
+tabanlı [release workflow'u](../.github/workflows/release.yml) exact tag SHA için
+başarılı CI arar; production kanalında content-bound legal approval gate uygular;
+Android/iOS artifact'lerini checksum, CycloneDX SBOM, provenance ve GitHub
+attestation kanıtıyla yayınlar. GitHub Environment required-reviewer ve branch
+ruleset'leri repository dışı yönetişim ayarıdır; workflow içinde varmış gibi
+kabul edilmez.

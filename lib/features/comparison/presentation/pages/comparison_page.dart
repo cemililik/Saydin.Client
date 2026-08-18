@@ -6,8 +6,10 @@ import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/utils/financial_amount_validator.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
+import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
@@ -53,6 +55,13 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   void _onCompare(ComparisonState state) {
     FocusScope.of(context).unfocus();
+    final config = context.read<AppConfigCubit>().state;
+    if (!config.isReady) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.configLoading)));
+      return;
+    }
     if (_formKey.currentState?.validate() != true) return;
     if (state.selectedSymbols.length < 2) {
       ScaffoldMessenger.of(
@@ -73,7 +82,17 @@ class _ComparisonPageState extends State<ComparisonPage> {
       _amountController.text,
       context.localeName,
     );
-    if (amount == null || amount <= 0) return;
+    if (amount == null ||
+        !FinancialAmountValidator.isValid(
+          value: amount,
+          amountType: state.amountType,
+          allowedAmountTypes: const ['try'],
+        )) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.validAmountRequired)));
+      return;
+    }
     context.read<ComparisonBloc>()
       ..add(ComparisonAmountChanged(amount))
       ..add(const ComparisonCalculateRequested());
@@ -81,6 +100,8 @@ class _ComparisonPageState extends State<ComparisonPage> {
 
   void _saveComparisonScenario(BuildContext ctx, ComparisonSuccess state) {
     if (state.buyDate == null) return;
+    final amount = state.amount;
+    if (amount == null) return;
     final winner = state.result.results.firstOrNull;
     final symbols = state.selectedSymbols.join(',');
     ctx.read<ScenariosBloc>().add(
@@ -91,10 +112,11 @@ class _ComparisonPageState extends State<ComparisonPage> {
         ),
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
-        amount: state.amount ?? 0,
+        amount: amount,
         amountType: 'try',
         type: ScenarioType.comparison,
         extraData: {
+          'schemaVersion': ScenarioReplayParser.currentSchemaVersion,
           'winnerSymbol': winner?.calculation.assetSymbol ?? '',
           'winnerName': winner?.calculation.assetDisplayName ?? '',
           'winnerReturn': winner?.calculation.profitLossPercent ?? 0.0,
@@ -217,6 +239,15 @@ class _ComparisonPageState extends State<ComparisonPage> {
             }
 
             final isCalculating = state is ComparisonCalculating;
+            final config = context.watch<AppConfigCubit>().state;
+            final priceHistoryMonths = config.features.priceHistoryMonths;
+            final dateRange = comparisonDateRange(
+              assets: state.assets,
+              selectedSymbols: state.selectedSymbols,
+              priceHistoryMonths: priceHistoryMonths,
+            );
+            final hasDateOverlap =
+                state.selectedSymbols.length < 2 || dateRange.hasOverlap;
 
             return Form(
               key: _formKey,
@@ -244,48 +275,45 @@ class _ComparisonPageState extends State<ComparisonPage> {
                   const SizedBox(height: 16),
 
                   // ── Dates ────────────────────────────────────────
-                  Builder(
-                    builder: (context) {
-                      final priceHistoryMonths = context
-                          .read<AppConfigCubit>()
-                          .state
-                          .features
-                          .priceHistoryMonths;
-                      final range = comparisonDateRange(
-                        assets: state.assets,
-                        selectedSymbols: state.selectedSymbols,
-                        priceHistoryMonths: priceHistoryMonths,
-                      );
-                      return Column(
-                        children: [
-                          DateInput(
-                            label: l10n.buyDate,
-                            value: state.buyDate,
-                            firstDate: range.firstDate,
-                            lastDate: range.lastDate,
-                            onChanged: (d) {
-                              if (d != null) {
-                                context.read<ComparisonBloc>().add(
-                                  ComparisonBuyDateChanged(d),
-                                );
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          DateInput(
-                            label: l10n.sellDate,
-                            value: state.sellDate,
-                            firstDate: state.buyDate ?? range.firstDate,
-                            lastDate: range.lastDate,
-                            required: false,
-                            onChanged: (d) => context
-                                .read<ComparisonBloc>()
-                                .add(ComparisonSellDateChanged(d)),
-                          ),
-                        ],
-                      );
-                    },
+                  Column(
+                    children: [
+                      DateInput(
+                        label: l10n.buyDate,
+                        value: state.buyDate,
+                        firstDate: dateRange.firstDate,
+                        lastDate: dateRange.lastDate,
+                        enabled: hasDateOverlap,
+                        onChanged: (d) {
+                          if (d != null) {
+                            context.read<ComparisonBloc>().add(
+                              ComparisonBuyDateChanged(d),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DateInput(
+                        label: l10n.sellDate,
+                        value: state.sellDate,
+                        firstDate: state.buyDate ?? dateRange.firstDate,
+                        lastDate: dateRange.lastDate,
+                        enabled: hasDateOverlap,
+                        required: false,
+                        onChanged: (d) => context.read<ComparisonBloc>().add(
+                          ComparisonSellDateChanged(d),
+                        ),
+                      ),
+                    ],
                   ),
+                  if (!hasDateOverlap) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.compareNoCommonDateRange,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   // ── Amount ───────────────────────────────────────
@@ -296,17 +324,23 @@ class _ComparisonPageState extends State<ComparisonPage> {
                     onAmountTypeChanged: (t) => context
                         .read<ComparisonBloc>()
                         .add(ComparisonAmountTypeChanged(t)),
+                    onAmountChanged: (text) {
+                      final amount = LocaleNumberParser.tryParse(
+                        text,
+                        context.localeName,
+                      );
+                      context.read<ComparisonBloc>().add(
+                        ComparisonAmountChanged(amount),
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
 
                   // ── Inflation toggle ─────────────────────────────
                   Builder(
                     builder: (context) {
-                      final inflationEnabled = context
-                          .read<AppConfigCubit>()
-                          .state
-                          .features
-                          .inflationAdjustment;
+                      final inflationEnabled =
+                          config.features.inflationAdjustment;
                       return InflationToggle(
                         value: state.includeInflation,
                         enabled: inflationEnabled,
@@ -346,7 +380,9 @@ class _ComparisonPageState extends State<ComparisonPage> {
                   SizedBox(
                     height: 52,
                     child: FilledButton.icon(
-                      onPressed: isCalculating ? null : () => _onCompare(state),
+                      onPressed: isCalculating || !hasDateOverlap
+                          ? null
+                          : () => _onCompare(state),
                       icon: isCalculating
                           ? const SizedBox(
                               width: 18,

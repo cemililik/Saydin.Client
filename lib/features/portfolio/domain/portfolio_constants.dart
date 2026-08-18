@@ -1,3 +1,5 @@
+import 'package:decimal/decimal.dart';
+
 /// Portföy özelliğine özgü sabitler.
 ///
 /// CLAUDE.md "Sabitler": magic number widget/BLoC içinde YASAK; merkezi sabit.
@@ -11,5 +13,5 @@ class PortfolioConstants {
 
   /// Tek kalem için kabul edilen üst tutar sınırı (1 milyar). Astronomik
   /// girişleri (ör. 999999999999999) eler.
-  static const num maxItemAmount = 1000000000;
+  static final Decimal maxItemAmount = Decimal.fromInt(1000000000);
 }

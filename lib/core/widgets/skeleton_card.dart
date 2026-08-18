@@ -7,8 +7,9 @@ class SkeletonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = Theme.of(context).colorScheme.surfaceContainerHighest;
-    final highlightColor = Theme.of(context).colorScheme.surface;
+    final scheme = Theme.of(context).colorScheme;
+    final baseColor = scheme.surfaceContainerHighest;
+    final highlightColor = scheme.surface;
 
     return Card(
       elevation: 4,
@@ -23,15 +24,15 @@ class SkeletonCard extends StatelessWidget {
               // Başlık
               Row(
                 children: [
-                  _box(28, 28, circular: true),
+                  _box(28, 28, baseColor, circular: true),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _box(120, 20),
+                        _box(120, 20, baseColor),
                         const SizedBox(height: 6),
-                        _box(200, 14),
+                        _box(200, 14, baseColor),
                       ],
                     ),
                   ),
@@ -39,25 +40,25 @@ class SkeletonCard extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               // Grafik alanı
-              _box(double.infinity, 96),
+              _box(double.infinity, 96, baseColor),
               const SizedBox(height: 16),
               // Metrik satırları
-              _metricRow(),
+              _metricRow(baseColor),
               const SizedBox(height: 10),
-              _metricRow(),
+              _metricRow(baseColor),
               const SizedBox(height: 10),
-              _metricRow(),
+              _metricRow(baseColor),
               const SizedBox(height: 10),
-              _metricRow(),
+              _metricRow(baseColor),
               const SizedBox(height: 16),
               // Detay satırları
-              _metricRow(valueWidth: 80),
+              _metricRow(baseColor, valueWidth: 80),
               const SizedBox(height: 10),
-              _metricRow(valueWidth: 80),
+              _metricRow(baseColor, valueWidth: 80),
               const SizedBox(height: 10),
-              _metricRow(valueWidth: 60),
+              _metricRow(baseColor, valueWidth: 60),
               const SizedBox(height: 10),
-              _metricRow(valueWidth: 50),
+              _metricRow(baseColor, valueWidth: 50),
             ],
           ),
         ),
@@ -65,22 +66,27 @@ class SkeletonCard extends StatelessWidget {
     );
   }
 
-  static Widget _box(double width, double height, {bool circular = false}) {
+  static Widget _box(
+    double width,
+    double height,
+    Color color, {
+    bool circular = false,
+  }) {
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: color,
         borderRadius: circular ? null : BorderRadius.circular(4),
         shape: circular ? BoxShape.circle : BoxShape.rectangle,
       ),
     );
   }
 
-  static Widget _metricRow({double valueWidth = 100}) {
+  static Widget _metricRow(Color color, {double valueWidth = 100}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [_box(100, 14), _box(valueWidth, 14)],
+      children: [_box(100, 14, color), _box(valueWidth, 14, color)],
     );
   }
 }

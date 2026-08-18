@@ -6,6 +6,7 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("io.sentry.android.gradle")
 }
 
 // key.properties dosyası varsa oku (lokal geliştirme)
@@ -65,4 +66,32 @@ android {
 
 flutter {
     source = "../.."
+}
+
+// Release R8 mapping UUID'sini artifact'e gömer ve yalnız gerekli CI
+// credential'ları mevcutsa mapping'i Sentry'ye yükler. Plugin'in farklı bir
+// Sentry Android SDK sürümü auto-install etmesi kapalıdır; runtime SDK
+// sentry_flutter tarafından yönetilir. Kaynak kodu/telemetry upload edilmez.
+sentry {
+    includeProguardMapping.set(true)
+    includeSourceContext.set(false)
+    uploadNativeSymbols.set(false)
+    includeDependenciesReport.set(false)
+    telemetry.set(false)
+    ignoredBuildTypes.set(setOf("debug", "profile"))
+    autoInstallation {
+        enabled.set(false)
+    }
+
+    val sentryAuthToken = System.getenv("SENTRY_AUTH_TOKEN")
+    val sentryOrg = System.getenv("SENTRY_ORG")
+    val sentryProject = System.getenv("SENTRY_PROJECT")
+    autoUploadProguardMapping.set(
+        !sentryAuthToken.isNullOrBlank() &&
+            !sentryOrg.isNullOrBlank() &&
+            !sentryProject.isNullOrBlank(),
+    )
+    sentryAuthToken?.takeIf { it.isNotBlank() }?.let(authToken::set)
+    sentryOrg?.takeIf { it.isNotBlank() }?.let(org::set)
+    sentryProject?.takeIf { it.isNotBlank() }?.let(projectName::set)
 }

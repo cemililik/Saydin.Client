@@ -24,10 +24,17 @@ void main() {
       expect(scrubber.redactText('amount=1,250,500.99'), 'amount=<NUMBER>');
     });
 
-    test('3 haneli sayıları korur (HTTP status vb.)', () {
-      expect(scrubber.redactText('http=404'), 'http=404');
-      expect(scrubber.redactText('retry=3 status=503'), 'retry=3 status=503');
-    });
+    test(
+      'küçük tutarlar ve teknik görünen sayılar dahil serbest metindeki tüm sayıları sansürler',
+      () {
+        expect(scrubber.redactText('amount=99'), 'amount=<NUMBER>');
+        expect(scrubber.redactText('price=0.5'), 'price=<NUMBER>');
+        expect(
+          scrubber.redactText('http=404 retry=3'),
+          'http=<NUMBER> retry=<NUMBER>',
+        );
+      },
+    );
 
     test('Asset sembolü pair pattern (USDTRY, BTC/USD) sansürler', () {
       expect(scrubber.redactText('symbol=USD/TRY'), 'symbol=<SYMBOL>');
@@ -89,6 +96,37 @@ void main() {
         'httpStatus': 503,
         'feature': 'what_if',
       });
+    });
+
+    test('Allowlist değerlerinin tür ve aralık şeması zorunludur', () {
+      final filtered = scrubber.filterAllowedKeys({
+        'httpStatus': 503,
+        'durationMs': 99,
+        'backendOk': true,
+        'method': 'POST',
+        'endpoint': '/v1/what-if/calculate',
+        'feature': 'what_if',
+        'os': 'ios',
+        'os_version': '18.6',
+        'app_version': '1.2.3+4',
+      });
+      expect(filtered!['httpStatus'], 503);
+      expect(filtered['durationMs'], 99);
+      expect(filtered['backendOk'], isTrue);
+      expect(filtered['endpoint'], '/v1/what-if/calculate');
+      expect(filtered['feature'], 'what_if');
+    });
+
+    test('Allowlist anahtarı yanlış değer şemasıyla PII bypass edemez', () {
+      final filtered = scrubber.filterAllowedKeys({
+        'httpStatus': 'amount=99',
+        'durationMs': -1,
+        'backendOk': 'true',
+        'method': 'BUY BTC',
+        'endpoint': '/v1/account/42',
+        'feature': 'BTC/USD',
+      });
+      expect(filtered!.values, everyElement('<REDACTED>'));
     });
 
     test('Allowlist dışı anahtarları <REDACTED> ile değiştirir', () {
@@ -195,6 +233,48 @@ void main() {
       expect(scrubbed.message!.formatted, contains('<NUMBER>'));
     });
 
+    test('message template ve typed params da sansürlenir', () {
+      final hint = Hint();
+      final event = SentryEvent(
+        message: const SentryMessage(
+          'safe',
+          template: 'amount=99 asset=BTC/USD',
+          params: ['price=0.5', 99],
+        ),
+      );
+      final message = scrubber.scrubEvent(event, hint)!.message!;
+      expect(message.template, 'amount=<NUMBER> asset=<SYMBOL>');
+      expect(message.params, ['price=<NUMBER>', '<REDACTED>']);
+    });
+
+    test(
+      'SDK typed contexts deny-by-default drop edilir; yalnız custom telemetri korunur',
+      () {
+        final hint = Hint();
+        final contexts =
+            Contexts(
+                device: const SentryDevice(
+                  name: 'Cemil iPhone',
+                  deviceUniqueIdentifier:
+                      '550e8400-e29b-41d4-a716-446655440000',
+                ),
+              )
+              ..['app_telemetry'] = <String, Object?>{
+                'httpStatus': 503,
+                'amount': 99,
+              };
+        final scrubbed = scrubber.scrubEvent(
+          SentryEvent(contexts: contexts),
+          hint,
+        )!;
+        expect(scrubbed.contexts.device, isNull);
+        expect(scrubbed.contexts['app_telemetry'], {
+          'httpStatus': 503,
+          'amount': '<REDACTED>',
+        });
+      },
+    );
+
     test('Attachments + Hint.screenshot/viewHierarchy zorla kaldırılır', () {
       final hint = Hint();
       hint.attachments.add(SentryAttachment.fromIntList([1, 2, 3], 'shot.png'));
@@ -278,6 +358,7 @@ void main() {
             headers: const {
               'Authorization': 'Bearer secret-token',
               'Content-Type': 'application/json',
+              'User-Agent': 'Cemil iPhone',
             },
           ),
         );
@@ -286,9 +367,21 @@ void main() {
         expect(req.queryString, isNull);
         expect(req.cookies, isNull);
         expect(req.data, isNull);
+        expect(req.apiTarget, isNull);
         expect(req.headers, isNot(contains('Authorization')));
+        expect(req.headers, isNot(contains('User-Agent')));
         expect(req.headers, contains('Content-Type'));
       },
     );
+
+    test('URL içindeki dinamik path identifier redact edilir', () {
+      final event = SentryEvent(
+        request: SentryRequest(
+          url: 'https://api.example.com/v1/account/42?amount=99',
+        ),
+      );
+      final request = scrubber.scrubEvent(event, Hint())!.request!;
+      expect(request.url, '<REDACTED>');
+    });
   });
 }

@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,8 +7,10 @@ import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/utils/financial_amount_validator.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
+import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
@@ -38,7 +41,7 @@ class _WhatIfPageState extends State<WhatIfPage> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _scrollController = ScrollController();
-  num? _lastSyncedAmount;
+  Decimal? _lastSyncedAmount;
 
   @override
   void initState() {
@@ -56,6 +59,13 @@ class _WhatIfPageState extends State<WhatIfPage> {
   void _onCalculate() {
     FocusScope.of(context).unfocus();
     final l10n = context.l10n;
+    final config = context.read<AppConfigCubit>().state;
+    if (!config.isReady) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.configLoading)));
+      return;
+    }
     if (_formKey.currentState?.validate() != true) return;
 
     final formInput = context.read<WhatIfBloc>().state.formInput;
@@ -79,7 +89,27 @@ class _WhatIfPageState extends State<WhatIfPage> {
       _amountController.text,
       context.localeName,
     );
-    if (amount == null || amount <= 0) {
+    final selectedAsset = context
+        .read<WhatIfBloc>()
+        .state
+        .formInput
+        .selectedSymbol;
+    final allowedTypes = context.read<WhatIfBloc>().state;
+    final asset = switch (allowedTypes) {
+      WhatIfAssetsLoaded(:final assets) ||
+      WhatIfCalculating(:final assets) ||
+      WhatIfSuccess(:final assets) ||
+      WhatIfFailure(
+        :final assets,
+      ) => assets.where((a) => a.symbol == selectedAsset).firstOrNull,
+      _ => null,
+    };
+    if (amount == null ||
+        !FinancialAmountValidator.isValid(
+          value: amount,
+          amountType: formInput.amountType,
+          allowedAmountTypes: asset?.allowedAmountTypes,
+        )) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.validAmountRequired)));
@@ -189,18 +219,14 @@ class _WhatIfPageState extends State<WhatIfPage> {
           final selectedAsset = assets
               .where((a) => a.symbol == formInput.selectedSymbol)
               .firstOrNull;
-          final priceHistoryMonths = context
-              .read<AppConfigCubit>()
-              .state
-              .features
-              .priceHistoryMonths;
+          final config = context.watch<AppConfigCubit>().state;
+          final priceHistoryMonths = config.features.priceHistoryMonths;
           final dateRange = assetDateRange(
             assetFirstDate: selectedAsset?.firstDate,
             assetLastDate: selectedAsset?.lastDate,
             priceHistoryMonths: priceHistoryMonths,
           );
 
-          final config = context.read<AppConfigCubit>().state;
           final hasResult = successResult != null || reverseResult != null;
           return _WhatIfForm(
             formKey: _formKey,
@@ -227,6 +253,11 @@ class _WhatIfPageState extends State<WhatIfPage> {
                 context.read<WhatIfBloc>().add(WhatIfSellDateChanged(v)),
             onAmountTypeChanged: (v) =>
                 context.read<WhatIfBloc>().add(WhatIfAmountTypeChanged(v)),
+            onAmountChanged: (text) => context.read<WhatIfBloc>().add(
+              WhatIfAmountChanged(
+                LocaleNumberParser.tryParse(text, context.localeName),
+              ),
+            ),
             onInflationToggled: () =>
                 context.read<WhatIfBloc>().add(const WhatIfInflationToggled()),
             onModeChanged: (mode) =>
@@ -296,21 +327,19 @@ class _WhatIfPageState extends State<WhatIfPage> {
                         reverseResult?.buyDate ?? successResult!.buyDate;
                     final sellDate =
                         reverseResult?.sellDate ?? successResult!.sellDate;
+                    final amount = formInput.amount;
+                    if (amount == null) return;
                     context.read<ScenariosBloc>().add(
                       ScenarioSaveRequested(
                         assetSymbol: assetSymbol,
                         assetDisplayName: assetDisplayName,
                         buyDate: buyDate,
                         sellDate: sellDate,
-                        amount: _amountController.text.isEmpty
-                            ? 0
-                            : LocaleNumberParser.tryParse(
-                                    _amountController.text,
-                                    context.localeName,
-                                  ) ??
-                                  0,
+                        amount: amount,
                         amountType: formInput.amountType,
                         extraData: {
+                          'schemaVersion':
+                              ScenarioReplayParser.currentSchemaVersion,
                           'includeInflation': formInput.includeInflation,
                           if (formInput.calculationMode ==
                               CalculationMode.reverse)
@@ -344,6 +373,7 @@ class _WhatIfForm extends StatelessWidget {
     required this.onBuyDateChanged,
     required this.onSellDateChanged,
     required this.onAmountTypeChanged,
+    required this.onAmountChanged,
     required this.onModeChanged,
     required this.onCalculate,
     required this.includeInflation,
@@ -372,6 +402,7 @@ class _WhatIfForm extends StatelessWidget {
   final ValueChanged<DateTime?> onBuyDateChanged;
   final ValueChanged<DateTime?> onSellDateChanged;
   final ValueChanged<String> onAmountTypeChanged;
+  final ValueChanged<String> onAmountChanged;
   final ValueChanged<CalculationMode> onModeChanged;
   final VoidCallback onCalculate;
   final bool includeInflation;
@@ -479,6 +510,7 @@ class _WhatIfForm extends StatelessWidget {
                               .firstOrNull ??
                           const ['try'],
                 onAmountTypeChanged: onAmountTypeChanged,
+                onAmountChanged: onAmountChanged,
                 labelOverride: amountLabel,
                 validatorOverride: amountValidator,
               ),

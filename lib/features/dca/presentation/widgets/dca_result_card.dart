@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_colors.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
@@ -96,7 +96,10 @@ class _DcaResultCardState extends State<DcaResultCard>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final color = result.isProfit ? AppColors.profit : AppColors.loss;
+    final financialColors = context.financialColors;
+    final color = result.isProfit
+        ? financialColors.profit
+        : financialColors.loss;
     final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
 
     final periodLabel = result.period == 'weekly'
@@ -208,7 +211,8 @@ class _DcaResultCardState extends State<DcaResultCard>
                 _Row(l10n.resultDuration, _formatDuration(l10n)),
 
                 // Enflasyon düzeltmesi
-                if (result.realProfitLossPercent != null) ...[
+                if (result.realProfitLossPercent != null ||
+                    result.cumulativeInflationPercent != null) ...[
                   const Divider(height: 24),
                   Text(
                     l10n.inflationSectionTitle,
@@ -218,34 +222,35 @@ class _DcaResultCardState extends State<DcaResultCard>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _AnimatedRow(
-                    l10n.cumulativeInflation,
-                    result.cumulativeInflationPercent!,
-                    formatter: _pctSignedFormatter,
-                  ),
-                  _AnimatedRow(
-                    l10n.realReturn,
-                    result.realProfitLossPercent!,
-                    formatter: _pctSignedFormatter,
-                    valueColor: result.realProfitLossPercent! >= 0
-                        ? AppColors.profit
-                        : AppColors.loss,
-                    bold: true,
-                  ),
-                  // WhatIf result_card.dart ile paralel: reel kar/zarar TL
-                  // tutarı (totalInvestedTry * realPct / 100). Sadece percent
-                  // göstermek kullanıcıyı "kaç TL kazandım gerçekten?"
-                  // sorusuyla baş başa bırakıyordu.
-                  _AnimatedRow(
-                    l10n.realProfitLoss,
-                    result.totalInvestedTry.toDouble() *
-                        result.realProfitLossPercent! /
-                        100,
-                    formatter: _trySignedFormatter,
-                    valueColor: result.realProfitLossPercent! >= 0
-                        ? AppColors.profit
-                        : AppColors.loss,
-                  ),
+                  if (result.cumulativeInflationPercent case final value?)
+                    _AnimatedRow(
+                      l10n.cumulativeInflation,
+                      value,
+                      formatter: _pctSignedFormatter,
+                    ),
+                  if (result.realProfitLossPercent case final value?) ...[
+                    _AnimatedRow(
+                      l10n.realReturn,
+                      value,
+                      formatter: _pctSignedFormatter,
+                      valueColor: value >= 0
+                          ? financialColors.profit
+                          : financialColors.loss,
+                      bold: true,
+                    ),
+                    // WhatIf result_card.dart ile paralel: reel kar/zarar TL
+                    // tutarı (totalInvestedTry * realPct / 100). Sadece percent
+                    // göstermek kullanıcıyı "kaç TL kazandım gerçekten?"
+                    // sorusuyla baş başa bırakıyordu.
+                    _AnimatedRow(
+                      l10n.realProfitLoss,
+                      result.totalInvestedTry.toDouble() * value / 100,
+                      formatter: _trySignedFormatter,
+                      valueColor: value >= 0
+                          ? financialColors.profit
+                          : financialColors.loss,
+                    ),
+                  ],
                   if (result.inflationDataAsOf != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),

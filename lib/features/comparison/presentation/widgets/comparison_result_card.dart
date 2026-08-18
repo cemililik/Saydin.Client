@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_colors.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 
@@ -59,17 +59,16 @@ class _ComparisonResultCardState extends State<ComparisonResultCard>
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final calc = item.calculation;
-    final color = calc.isProfit ? AppColors.profit : AppColors.loss;
+    final financialColors = context.financialColors;
+    final color = calc.isProfit ? financialColors.profit : financialColors.loss;
     final icon = calc.isProfit ? Icons.trending_up : Icons.trending_down;
-    final sellLabel = calc.sellDate != null
-        ? _dateFormatter.format(calc.sellDate!)
-        : l10n.today;
+    final sellLabel = _dateFormatter.format(calc.effectiveSellDate);
 
     final hasDateNote =
         calc.actualBuyDate != null || calc.actualSellDate != null;
     final realColor = (calc.realProfitLossPercent ?? 0) >= 0
-        ? AppColors.profit
-        : AppColors.loss;
+        ? financialColors.profit
+        : financialColors.loss;
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -215,7 +214,7 @@ class _RankBadge extends StatelessWidget {
         child: Text(
           '$rank',
           style: TextStyle(
-            color: isFirst ? Colors.white : color,
+            color: isFirst ? Theme.of(context).colorScheme.surface : color,
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),

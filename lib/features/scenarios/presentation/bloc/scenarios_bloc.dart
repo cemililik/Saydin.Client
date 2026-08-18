@@ -1,13 +1,18 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/error_reporter.dart';
-import 'package:saydin/core/utils/date_utils.dart';
-import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/scenarios/domain/usecases/delete_scenario.dart';
+import 'package:saydin/features/scenarios/domain/scenario_input_fingerprint.dart';
 import 'package:saydin/features/scenarios/domain/usecases/get_scenarios.dart';
 import 'package:saydin/features/scenarios/domain/usecases/save_scenario.dart';
 import 'scenarios_event.dart';
 import 'scenarios_state.dart';
+
+/// `bloc_concurrency` paketindeki `sequential()` ile aynı davranış: aynı event
+/// tipinin handler'larını sırayla çalıştırır. Paket doğrudan bağımlılık olmadığı
+/// için küçük transformer burada tutulur.
+EventTransformer<E> _sequential<E>() =>
+    (events, mapper) => events.asyncExpand(mapper);
 
 class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
   final GetScenarios _getScenarios;
@@ -23,8 +28,8 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
   }) : _reporter = reporter,
        super(const ScenariosInitial()) {
     on<ScenariosRequested>(_onRequested);
-    on<ScenarioSaveRequested>(_onSaveRequested);
-    on<ScenarioDeleteRequested>(_onDeleteRequested);
+    on<ScenarioSaveRequested>(_onSaveRequested, transformer: _sequential());
+    on<ScenarioDeleteRequested>(_onDeleteRequested, transformer: _sequential());
   }
 
   Future<void> _onRequested(
@@ -50,6 +55,11 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
           error: UnknownError(cause: e),
         ),
       );
+    } finally {
+      final completion = event.completion;
+      if (completion != null && !completion.isCompleted) {
+        completion.complete();
+      }
     }
   }
 
@@ -59,37 +69,23 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
   ) async {
     final current = state.scenarios;
 
-    // `s.amount` Decimal, `event.amount` num (form input). Daha önce
-    // `.toDouble()` üzerinden double `==` karşılaştırması vardı; bu
-    // IEEE-754 precision farkını sızdırma riski taşıyordu (ve Decimal
-    // sözleşmesiyle çelişiyordu). Event tutarını Decimal'a çevirip
-    // Decimal `==` ile karşılaştır — Decimal equality exact.
-    //
-    // `MoneyParser.tryDecimal` ham `Decimal.parse` yerine kullanılır: num
-    // NaN/Infinity'de null döner (ham `Decimal.parse` `FormatException` atıp
-    // try bloğu dışında crash ederdi). null'ı `Decimal.zero`'a COERCE ETME —
-    // geçersiz tutarı 0 gibi göstermek, amount'u 0 olan bir senaryoyla
-    // yanlış-pozitif duplicate eşleşmesi yaratır. Parse edilemiyorsa duplicate
-    // kontrolünü tümden atla (kaydetme akışı geçersiz tutarı kendi yakalar);
-    // geçerli parse'ta Decimal `==` ile exact karşılaştır.
-    final eventAmountDecimal = MoneyParser.tryDecimal(event.amount);
-    // F-11-08: normal ('what_if') ve ters ('reverse') hesaplama aynı
-    // type=whatIf taşır; ayrım extraData['mode']'da. Mode duplicate anahtarına
-    // dahil edilmezse aynı asset+tarih+tutarlı bir normal ve bir ters senaryo
-    // çakışır ve ikincisi kaydedilemez.
-    final eventMode = _mode(event.extraData);
-    final isDuplicate =
-        eventAmountDecimal != null &&
-        current.any(
-          (s) =>
-              s.type == event.type &&
-              s.assetSymbol == event.assetSymbol &&
-              isSameDay(s.buyDate, event.buyDate) &&
-              isSameDay(s.sellDate, event.sellDate) &&
-              s.amount == eventAmountDecimal &&
-              s.amountType == event.amountType &&
-              _mode(s.extraData) == eventMode,
-        );
+    // Ortak alanlara ek olarak her hesap türünün gerçek girdilerini kapsayan
+    // canonical fingerprint kullanılır. Böylece DCA periodu, enflasyon seçimi
+    // ve portföy dağılımı gibi farklı hesaplar yanlış duplicate sayılmaz;
+    // winner/totalReturn/displayName gibi sonuç alanları anahtara sızmaz.
+    final eventFingerprint = ScenarioInputFingerprint.fromValues(
+      type: event.type,
+      assetSymbol: event.assetSymbol,
+      buyDate: event.buyDate,
+      sellDate: event.sellDate,
+      amount: event.amount,
+      amountType: event.amountType,
+      extraData: event.extraData,
+    );
+    final isDuplicate = current.any(
+      (scenario) =>
+          ScenarioInputFingerprint.fromScenario(scenario) == eventFingerprint,
+    );
     if (isDuplicate) {
       emit(ScenariosDuplicate(current));
       return;
@@ -126,14 +122,6 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     }
   }
 
-  /// `extraData['mode']`'u defensive okur — non-String/eksikte `null`
-  /// (`as String?` non-String'de throw ederdi; PR genelindeki `is String`
-  /// stiliyle tutarlı).
-  static String? _mode(Map<String, dynamic>? extraData) {
-    final m = extraData?['mode'];
-    return m is String ? m : null;
-  }
-
   Future<void> _onDeleteRequested(
     ScenarioDeleteRequested event,
     Emitter<ScenariosState> emit,
@@ -143,6 +131,10 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
     emit(ScenariosLoaded(original.where((s) => s.id != event.id).toList()));
     try {
       await _deleteScenario(event.id);
+      if (event.completion case final completion?
+          when !completion.isCompleted) {
+        completion.complete(true);
+      }
     } on AppError catch (error, st) {
       // F-11-03 idempotency (404 = zaten yok → sessiz başarı) repository
       // katmanına taşındı; burada yalnızca gerçek hatalar (5xx/network) görülür.
@@ -153,6 +145,10 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
       }
       // 5xx / network: optimistic kaldırmayı geri al (original'i taşıyan Failure).
       emit(ScenariosFailure(scenarios: original, error: error));
+      if (event.completion case final completion?
+          when !completion.isCompleted) {
+        completion.complete(false);
+      }
     } catch (e, st) {
       await _reporter.report(e, st, context: 'delete_scenario');
       emit(
@@ -161,6 +157,10 @@ class ScenariosBloc extends Bloc<ScenariosEvent, ScenariosState> {
           error: UnknownError(cause: e),
         ),
       );
+      if (event.completion case final completion?
+          when !completion.isCompleted) {
+        completion.complete(false);
+      }
     }
   }
 }

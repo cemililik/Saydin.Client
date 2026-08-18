@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
 import 'package:saydin/features/portfolio/domain/repositories/portfolio_repository.dart';
@@ -16,8 +17,10 @@ import 'package:saydin/features/portfolio/domain/repositories/portfolio_reposito
 /// Yüzde alanları `double` (display-only, aggregasyon precision'a hassas değil).
 class CalculatePortfolio {
   final PortfolioRepository _repository;
+  final DateTime Function() _clock;
 
-  const CalculatePortfolio(this._repository);
+  CalculatePortfolio(this._repository, {DateTime Function()? clock})
+    : _clock = clock ?? DateTime.now;
 
   Future<PortfolioResult> call({
     required List<PortfolioItem> items,
@@ -35,15 +38,13 @@ class CalculatePortfolio {
     );
 
     final successful = outcomes.where((o) => o.isSuccess).toList();
-    final failedItems = outcomes
+    final failures = outcomes
         .where((o) => !o.isSuccess)
-        .map((o) => o.item)
+        .map((o) => PortfolioItemFailure(item: o.item, error: o.error!))
         .toList(growable: false);
 
     if (successful.isEmpty) {
-      throw const PortfolioCalculationFailure(
-        'Portföydeki hiçbir kalem hesaplanamadı.',
-      );
+      throw _aggregateFailure(failures);
     }
 
     final results = successful
@@ -126,25 +127,38 @@ class CalculatePortfolio {
 
     return PortfolioResult(
       items: itemResults,
-      failedItems: failedItems,
+      failures: failures,
       totalInitialValueTry: totalInitial,
       totalFinalValueTry: totalFinal,
       totalProfitLossTry: totalPnL,
       totalProfitLossPercent: totalPct,
       isProfit: totalPnL >= Decimal.zero,
+      effectiveSellDate: sellDate ?? _dateOnly(_clock()),
       totalRealProfitLossTry: totalRealPnL,
       totalRealProfitLossPercent: totalRealPct,
       totalCumulativeInflationPercent: totalInflation,
     );
   }
-}
 
-/// Tüm kalemler hesaplama sırasında çöktüğünde fırlatılır. BLoC bunu
-/// `PortfolioFailure` state'ine map'ler.
-class PortfolioCalculationFailure implements Exception {
-  final String message;
-  const PortfolioCalculationFailure(this.message);
+  static DateTime _dateOnly(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
 
-  @override
-  String toString() => 'PortfolioCalculationFailure: $message';
+  AppError _aggregateFailure(List<PortfolioItemFailure> failures) {
+    final errors = failures.map((failure) => failure.error).toList();
+    T? first<T extends AppError>() => errors.whereType<T>().firstOrNull;
+
+    // Kullanıcı-aksiyonlu hata önceliği: kota/plan > bağlantı > sunucu >
+    // beklenmedik. Aynı batch'teki typed neden generic exception'a düşmez.
+    return first<DailyLimitError>() ??
+        first<FeatureDisabledError>() ??
+        first<NoInternetError>() ??
+        first<PriceNotFoundError>() ??
+        first<AssetNotFoundError>() ??
+        first<ForbiddenError>() ??
+        first<NotFoundError>() ??
+        first<MalformedResponseError>() ??
+        first<ServerError>() ??
+        first<UnknownError>() ??
+        const UnknownError();
+  }
 }

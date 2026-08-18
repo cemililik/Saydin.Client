@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class DcaEvent extends Equatable {
@@ -43,6 +44,14 @@ class DcaPeriodChanged extends DcaEvent {
   List<Object?> get props => [period];
 }
 
+class DcaPeriodicAmountChanged extends DcaEvent {
+  final Decimal? amount;
+  const DcaPeriodicAmountChanged(this.amount);
+
+  @override
+  List<Object?> get props => [amount];
+}
+
 class DcaInflationToggled extends DcaEvent {
   const DcaInflationToggled();
 }
@@ -51,7 +60,7 @@ class DcaCalculateRequested extends DcaEvent {
   final String assetSymbol;
   final DateTime startDate;
   final DateTime? endDate;
-  final num periodicAmount;
+  final Decimal periodicAmount;
   final String period;
   final String amountType;
   final bool includeInflation;
@@ -82,7 +91,7 @@ class DcaReplayRequested extends DcaEvent {
   final String assetSymbol;
   final DateTime startDate;
   final DateTime? endDate;
-  final num periodicAmount;
+  final Decimal periodicAmount;
   final String period;
   final String amountType;
   final bool includeInflation;

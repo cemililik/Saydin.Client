@@ -11,4 +11,3 @@ github:
     - "**/*.freezed.dart"
     - "**/generated/**"
     - "**/build/**"
-    - "docs/**"

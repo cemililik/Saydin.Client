@@ -11,6 +11,7 @@
   "amountTypeGrams": "Grams",
   "calculate": "Calculate",
   "calculating": "Calculating...",
+  "configLoading": "Settings are still loading. Please try again in a few seconds.",
   "initialValue": "Initial Value",
   "finalValue": "Current Value",
   "profitLoss": "Profit / Loss",
@@ -49,11 +50,18 @@
   "saveScenario": "Save",
   "scenarioSaved": "Scenario saved.",
   "scenarioDeleted": "Scenario deleted.",
+  "scenarioReplayInvalid": "This saved scenario can no longer be replayed.",
   "scenarioSavedAtSnapshot": "Saved on {date} — result as of that date",
   "@scenarioSavedAtSnapshot": {
     "placeholders": { "date": { "type": "String" } }
   },
   "deleteScenario": "Delete",
+  "scenarioDeleteConfirmTitle": "Delete scenario?",
+  "scenarioDeleteConfirmMessage": "The {name} scenario will be permanently deleted.",
+  "@scenarioDeleteConfirmMessage": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "cancel": "Cancel",
   "tabCalculate": "Calculate",
   "tabScenarios": "Scenarios",
 
@@ -194,12 +202,14 @@
   "settings": "Settings",
   "settingsTheme": "Theme",
   "settingsThemeSubtitle": "Choose app appearance",
+  "settingsSaveFailed": "Settings could not be saved. Please try again.",
   "themeLight": "Light",
   "themeDark": "Dark",
   "themeSystem": "System",
 
   "categoryFavorites": "Favorites",
   "favoritesMaxReached": "You can add up to {max} favorites.",
+  "favoritesSaveFailed": "The favorite change could not be saved. Please try again.",
   "@favoritesMaxReached": {
     "placeholders": {
       "max": { "type": "int" }
@@ -227,7 +237,7 @@
   },
 
   "deleteAccountTitle": "Delete My Account",
-  "deleteAccountWarning": "This action cannot be undone. All your preferences, saved scenarios, and favorites on this device will be permanently deleted. Under KVKK Article 11 / GDPR Article 17, your data erasure request will be completed within 30 days.",
+  "deleteAccountWarning": "This action cannot be undone. The deletion request is sent to the service first. Once the service confirms the result, preferences, favorites, and other local data on this device are permanently cleared. If the result cannot be verified, local data is retained so you can retry.",
   "deleteAccountConfirmHint": "To confirm, please type \"{word}\" below.",
   "@deleteAccountConfirmHint": {
     "placeholders": {
@@ -236,10 +246,10 @@
   },
   "deleteAccountConfirmWord": "DELETE",
   "deleteAccountConfirmButton": "Permanently Delete My Account",
-  "deleteAccountInProgress": "Deleting your data...",
-  "deleteAccountSuccess": "Your account and all data have been deleted.",
-  "deleteAccountPartialSuccess": "All your local data has been deleted. However, our server deletion request could not be sent right now; please follow up via iletisim@saydin.app.",
-  "deleteAccountFailed": "Account deletion could not be completed. Please try again or contact support.",
+  "deleteAccountInProgress": "Processing the deletion request...",
+  "deleteAccountSuccess": "The service confirmed the deletion result, and local data on this device was cleared.",
+  "deleteAccountPartialSuccess": "The service confirmed the deletion result, but not all local data on this device could be cleared. Please retry or contact support.",
+  "deleteAccountFailed": "The deletion result could not be verified or device cleanup did not finish. Please retry or contact support.",
 
   "shareCardInitialValue": "Initial",
   "shareCardFinalValue": "Final Value",
@@ -303,7 +313,7 @@
   "onboardingSkip": "Skip",
   "onboardingNext": "Next",
   "onboardingGetStarted": "Get Started",
-  "onboardingLegalConsent": "By continuing I confirm that I have read and accept the {privacy} and {kvkk}.",
+  "onboardingLegalConsent": "I reviewed the {privacy} and {kvkk}. (Optional)",
   "@onboardingLegalConsent": {
     "placeholders": {
       "privacy": { "type": "String" },
@@ -312,6 +322,7 @@
   },
   "onboardingPrivacyPolicyLink": "Privacy Policy",
   "onboardingKvkkLink": "KVKK Disclosure",
+  "legalRecordSaveFailed": "The legal notice record could not be saved. Please try again.",
   "onboardingPage1Title": "What If I Bought?",
   "onboardingPage1Body": "Calculate any investment retroactively. Dollar, gold, Bitcoin and more.",
   "onboardingPage2Title": "Compare and Discover",
@@ -380,6 +391,49 @@
   "shareCardRequiredInvestment": "Required Investment",
   "shareCardTargetValue": "Target Value",
   "scenarioTypeReverse": "Reverse Calculation",
+  "portfolioPartialResult": "Some assets could not be calculated",
+  "portfolioPartialResultDetail": "The displayed total includes only successfully calculated assets. An incomplete result cannot be saved or shared.",
+  "compareNoCommonDateRange": "The selected assets have no common price date. Choose a different asset.",
+  "chartDataShow": "Show chart data",
+  "chartDataHide": "Hide chart data",
+  "priceChartSummary": "Price chart. From {startDate}, {startValue} to {endDate}, {endValue}. {trend}.",
+  "@priceChartSummary": {
+    "placeholders": {
+      "startDate": { "type": "String" },
+      "startValue": { "type": "String" },
+      "endDate": { "type": "String" },
+      "endValue": { "type": "String" },
+      "trend": { "type": "String" }
+    }
+  },
+  "dcaChartSummary": "Recurring investment chart. From {startDate} to {endDate}. Total cost {cost}, portfolio value {value}.",
+  "@dcaChartSummary": {
+    "placeholders": {
+      "startDate": { "type": "String" },
+      "endDate": { "type": "String" },
+      "cost": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "chartDataPoint": "{date}: {value}",
+  "@chartDataPoint": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "dcaChartDataPoint": "{date}: cost {cost}, value {value}",
+  "@dcaChartDataPoint": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "cost": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "shareCardMoreAssets": "{count, plural, =1{+1 more asset} other{+{count} more assets}}",
+  "@shareCardMoreAssets": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "compareHint": "Which asset would have earned more if you invested the same amount?",
   "dcaHint": "Simulate regular purchases at fixed intervals to see average cost and total return."
 }

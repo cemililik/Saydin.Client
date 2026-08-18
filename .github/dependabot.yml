@@ -1,8 +1,10 @@
 # Dependabot — Saydın Client bağımlılık otomasyonu (F-02-10).
 #
-# pub.dev için resmi destek henüz yok; pub bağımlılıkları osv-scanner
-# step'i (`ci.yml`) ile haftalık taranıyor. Burada native (Gradle, Pods)
-# ve GitHub Actions sürümleri Dependabot ile haftalık güncellenir.
+# pub.dev ve CocoaPods için Dependabot package-ecosystem desteği yoktur.
+# Lockfile'lar `ci.yml` OSV policy job'uyla her PR/push ve haftalık schedule'da
+# taranır. GitHub Actions ile Gradle update PR'ları burada yönetilir; Flutter/pub
+# ve Flutter tarafından üretilen Pod update akışı için
+# `docs/dependency-security-runbook.md` izlenir.
 #
 # Strateji: minor/patch PR'larını otomatik aç, major'ı insan onayı için
 # beklet ("ignore" ile filtre).
@@ -42,25 +44,6 @@ updates:
     commit-message:
       prefix: chore
       prefix-development: chore
-      include: scope
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-major
-
-  - package-ecosystem: bundler
-    directory: /ios
-    schedule:
-      interval: weekly
-      day: monday
-      time: "07:00"
-      timezone: Europe/Istanbul
-    open-pull-requests-limit: 3
-    labels:
-      - dependencies
-      - ios
-    commit-message:
-      prefix: chore
       include: scope
     ignore:
       - dependency-name: "*"

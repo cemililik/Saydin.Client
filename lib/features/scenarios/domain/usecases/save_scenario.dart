@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/domain/repositories/scenarios_repository.dart';
 
@@ -11,7 +12,7 @@ class SaveScenario {
     required String assetDisplayName,
     required DateTime buyDate,
     DateTime? sellDate,
-    required num amount,
+    required Decimal amount,
     required String amountType,
     ScenarioType type = ScenarioType.whatIf,
     Map<String, dynamic>? extraData,

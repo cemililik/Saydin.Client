@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
@@ -12,7 +13,7 @@ class WhatIfFormInput extends Equatable {
   final DateTime? buyDate;
   final DateTime? sellDate;
   final String amountType;
-  final num? amount;
+  final Decimal? amount;
   final bool includeInflation;
   final CalculationMode calculationMode;
 
@@ -52,7 +53,7 @@ class WhatIfFormInput extends Equatable {
           ? this.sellDate
           : sellDate as DateTime?,
       amountType: amountType ?? this.amountType,
-      amount: identical(amount, _sentinel) ? this.amount : amount as num?,
+      amount: identical(amount, _sentinel) ? this.amount : amount as Decimal?,
       includeInflation: includeInflation ?? this.includeInflation,
       calculationMode: calculationMode ?? this.calculationMode,
       dateAdjusted: dateAdjusted,

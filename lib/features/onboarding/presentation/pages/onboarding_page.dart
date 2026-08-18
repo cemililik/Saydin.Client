@@ -1,6 +1,5 @@
-import 'dart:math' as math;
-
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,8 +13,13 @@ import 'package:saydin/features/onboarding/domain/repositories/onboarding_reposi
 
 class OnboardingPage extends StatefulWidget {
   final VoidCallback onComplete;
+  final bool legalUpdateOnly;
 
-  const OnboardingPage({super.key, required this.onComplete});
+  const OnboardingPage({
+    super.key,
+    required this.onComplete,
+    this.legalUpdateOnly = false,
+  });
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -23,13 +27,15 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage>
     with TickerProviderStateMixin {
-  final _controller = PageController();
-  int _currentPage = 0;
+  late final PageController _controller;
+  late int _currentPage;
 
   /// Onboarding tamamlama re-entrancy guard. Son sayfada "Hemen Dene"
   /// butonu hızlı çift-tıklanırsa veya CTA `pop` öncesi tekrar tetiklenirse,
-  /// `recordLegalAcceptance` ve `widget.onComplete()` ikinci kez çalışmasın.
+  /// legal kayıt ve `widget.onComplete()` ikinci kez çalışmasın.
   bool _isCompleting = false;
+  bool _legalAcknowledged = false;
+  bool _legalSaveFailed = false;
   static const _pageCount = 6;
 
   late final AnimationController _iconPulse;
@@ -38,6 +44,8 @@ class _OnboardingPageState extends State<OnboardingPage>
   @override
   void initState() {
     super.initState();
+    _currentPage = widget.legalUpdateOnly ? _pageCount - 1 : 0;
+    _controller = PageController(initialPage: _currentPage);
     _iconPulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -47,6 +55,18 @@ class _OnboardingPageState extends State<OnboardingPage>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _iconPulse.stop();
+      _iconPulse.value = 0;
+      _contentEntrance.value = 1;
+    } else if (!_iconPulse.isAnimating) {
+      _iconPulse.repeat(reverse: true);
+    }
   }
 
   @override
@@ -65,35 +85,50 @@ class _OnboardingPageState extends State<OnboardingPage>
       );
       return;
     }
-    await HapticFeedback.mediumImpact();
-    await _completeWithLegalAcceptance();
+    // Haptic platform kanalı yavaş/yanıtsız olsa bile ana akışı bloklamasın.
+    unawaited(HapticFeedback.mediumImpact());
+    await _completeWithLegalNotice();
   }
 
-  /// Son sayfada "Hemen Dene" → implicit KVKK / Gizlilik Politikası kabul.
-  /// Yasal metinler ekranda link olarak gösterilmektedir; butona basmak
-  /// KVKK Madde 5/2(c) "açık rıza" kapsamında kabul sayılır.
-  ///
-  /// İki gariplikle dikkat: (1) çift-tap re-entrancy → `_isCompleting`
-  /// guard. (2) `recordLegalAcceptance` storage hatası ile çökerse
-  /// kullanıcı onboarding'te sıkışıp kalmamalı → try/catch + finally ile
-  /// `widget.onComplete()` her durumda çağrılır, hata Sentry'ye raporlanır.
-  Future<void> _completeWithLegalAcceptance() async {
+  Future<void> _skipOnboarding() async {
+    await _completeWithLegalNotice(forceSeen: true);
+  }
+
+  /// Legal bağlantılar her onboarding sayfasında görünür. Akış tamamlandığında
+  /// `seen`; kullanıcı son sayfadaki checkbox ile açıkça seçerse
+  /// `acknowledged` kaydı yazar. `seen` bir kabul/rıza değildir.
+  /// Yazma başarısızlığı sessizce kabul edilmiş gibi davranmaz: hata görünür,
+  /// re-entrancy kilidi açılır ve kullanıcı retry edebilir.
+  Future<void> _completeWithLegalNotice({bool forceSeen = false}) async {
     if (_isCompleting) return;
-    _isCompleting = true;
+    setState(() {
+      _isCompleting = true;
+      _legalSaveFailed = false;
+    });
     try {
-      await sl<OnboardingRepository>().recordLegalAcceptance(
-        LegalAcceptanceVersion.current,
+      await sl<OnboardingRepository>().recordLegalNotice(
+        LegalNoticeRecord.current(
+          locale: Localizations.localeOf(context).toLanguageTag(),
+          recordedAtUtc: DateTime.now().toUtc(),
+          decision: !forceSeen && _legalAcknowledged
+              ? LegalNoticeDecision.acknowledged
+              : LegalNoticeDecision.seen,
+        ),
       );
     } catch (e, st) {
-      // Best-effort persistence — kullanıcının uygulamaya girişini engelleme.
       await sl<ErrorReporter>().report(
         e,
         st,
-        context: 'legal_acceptance_failed',
+        context: 'legal_notice_save_failed',
       );
-    } finally {
-      if (mounted) widget.onComplete();
+      if (!mounted) return;
+      setState(() {
+        _isCompleting = false;
+        _legalSaveFailed = true;
+      });
+      return;
     }
+    if (mounted) widget.onComplete();
   }
 
   void _openLegalDocument(LegalDocumentType type) {
@@ -218,221 +253,335 @@ class _OnboardingPageState extends State<OnboardingPage>
           ),
 
           SafeArea(
-            child: Column(
-              children: [
-                // Üst bar — logo + atla
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 12, 12, 0),
-                  child: Row(
-                    children: [
-                      Text(
-                        context.l10n.appTitle,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                            ),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        // Skip butonu da KVKK rıza kaydını yazar. Yasal metin
-                        // her sayfa boyunca CTA üstünde görünür değil; bu
-                        // nedenle skip kaydı yapmadan onboarding'i tamamlamak
-                        // PR #25'in KVKK consent disiplini ile çelişir. Skip
-                        // → "kullanıcı son sayfayı atladı ama implicit consent
-                        // yazıldı" akışı, hem kullanıcı deneyimini bozmaz hem
-                        // kayıtsız kullanımı engeller.
-                        onPressed: _completeWithLegalAcceptance,
-                        child: Text(
-                          l10n.onboardingSkip,
-                          style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant.withAlpha(180),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // İkon alanı
-                Expanded(
-                  flex: 5,
-                  child: PageView.builder(
-                    controller: _controller,
-                    onPageChanged: _onPageChanged,
-                    itemCount: _pageCount,
-                    itemBuilder: (context, index) {
-                      return _IconComposition(
-                        data: _pageData[index],
-                        pulseAnimation: _iconPulse,
-                      );
-                    },
-                  ),
-                ),
-
-                // İçerik alanı — başlık + açıklama
-                Expanded(
-                  flex: 4,
-                  child: FadeTransition(
-                    opacity: CurvedAnimation(
-                      parent: _contentEntrance,
-                      curve: Curves.easeOut,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final iconHeight = (constraints.maxHeight * 0.34).clamp(
+                  160.0,
+                  280.0,
+                );
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
                     ),
-                    child: SlideTransition(
-                      position:
-                          Tween<Offset>(
-                            begin: const Offset(0, 0.15),
-                            end: Offset.zero,
-                          ).animate(
-                            CurvedAnimation(
-                              parent: _contentEntrance,
-                              curve: Curves.easeOutCubic,
+                    child: IntrinsicHeight(
+                      child: Column(
+                        children: [
+                          // Üst bar — logo + atla
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 12, 12, 0),
+                            child: Row(
+                              children: [
+                                Text(
+                                  context.l10n.appTitle,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.5,
+                                      ),
+                                ),
+                                const Spacer(),
+                                TextButton(
+                                  onPressed: _skipOnboarding,
+                                  child: Text(
+                                    l10n.onboardingSkip,
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant
+                                          .withAlpha(180),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 36),
-                        child: Column(
-                          children: [
-                            Text(
-                              titles[_currentPage],
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.5,
-                                    height: 1.2,
-                                  ),
-                              textAlign: TextAlign.center,
+
+                          // Hukuki bildirim bağlantıları Atla dahil her aksiyon
+                          // öncesinde görünürdür. Böylece Atla yalnız gösterilmiş
+                          // bir bildirimi `seen` olarak kaydeder; kabul yazmaz.
+                          _LegalNoticeLinks(
+                            onOpenPrivacy: () => _openLegalDocument(
+                              LegalDocumentType.privacyPolicy,
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              bodies[_currentPage],
-                              style: Theme.of(context).textTheme.bodyLarge
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                    height: 1.6,
-                                    fontSize: 16,
-                                  ),
-                              textAlign: TextAlign.center,
+                            onOpenKvkk: () => _openLegalDocument(
+                              LegalDocumentType.kvkkDisclosure,
+                            ),
+                          ),
+                          if (_legalSaveFailed) ...[
+                            const SizedBox(height: 4),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Semantics(
+                                liveRegion: true,
+                                child: Text(
+                                  l10n.legalRecordSaveFailed,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.error,
+                                      ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                             ),
                           ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
 
-                // Alt kontroller — gösterge + buton
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                  child: Column(
-                    children: [
-                      // Sayfa göstergeleri
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(_pageCount, (index) {
-                          final isActive = index == _currentPage;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 350),
-                            curve: Curves.easeOutCubic,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: isActive ? 32 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? _pageData[_currentPage].gradientColors[0]
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.outlineVariant.withAlpha(100),
-                              borderRadius: BorderRadius.circular(4),
+                          // İkon alanı
+                          SizedBox(
+                            height: iconHeight,
+                            child: PageView.builder(
+                              controller: _controller,
+                              physics: widget.legalUpdateOnly
+                                  ? const NeverScrollableScrollPhysics()
+                                  : null,
+                              onPageChanged: _onPageChanged,
+                              itemCount: _pageCount,
+                              itemBuilder: (context, index) {
+                                return _IconComposition(
+                                  data: _pageData[index],
+                                  pulseAnimation: _iconPulse,
+                                );
+                              },
                             ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Yasal onay metni — sadece son sayfada (CTA = implicit consent)
-                      if (isLastPage) ...[
-                        _LegalConsentNote(
-                          onOpenPrivacy: () => _openLegalDocument(
-                            LegalDocumentType.privacyPolicy,
                           ),
-                          onOpenKvkk: () => _openLegalDocument(
-                            LegalDocumentType.kvkkDisclosure,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
 
-                      // Ana buton
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeInOut,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: LinearGradient(
-                              colors: _pageData[_currentPage].gradientColors,
+                          // İçerik alanı — başlık + açıklama
+                          FadeTransition(
+                            opacity: CurvedAnimation(
+                              parent: _contentEntrance,
+                              curve: Curves.easeOut,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _pageData[_currentPage].gradientColors[0]
-                                    .withAlpha(80),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _nextPage,
-                              borderRadius: BorderRadius.circular(16),
-                              child: Center(
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 250),
-                                  child: Row(
-                                    key: ValueKey(isLastPage),
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        isLastPage
-                                            ? l10n.onboardingGetStarted
-                                            : l10n.onboardingNext,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Icon(
-                                        isLastPage
-                                            ? Icons.arrow_forward_rounded
-                                            : Icons.chevron_right_rounded,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                    ],
+                            child: SlideTransition(
+                              position:
+                                  Tween<Offset>(
+                                    begin: const Offset(0, 0.15),
+                                    end: Offset.zero,
+                                  ).animate(
+                                    CurvedAnimation(
+                                      parent: _contentEntrance,
+                                      curve: Curves.easeOutCubic,
+                                    ),
                                   ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 36,
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      titles[_currentPage],
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: -0.5,
+                                            height: 1.2,
+                                          ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      bodies[_currentPage],
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                            height: 1.6,
+                                            fontSize: 16,
+                                          ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
                           ),
-                        ),
+
+                          const Spacer(),
+
+                          // Alt kontroller — gösterge + buton
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                            child: Column(
+                              children: [
+                                // Sayfa göstergeleri
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(_pageCount, (index) {
+                                    final isActive = index == _currentPage;
+                                    return AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 350,
+                                      ),
+                                      curve: Curves.easeOutCubic,
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      width: isActive ? 32 : 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: isActive
+                                            ? _pageData[_currentPage]
+                                                  .gradientColors[0]
+                                            : Theme.of(context)
+                                                  .colorScheme
+                                                  .outlineVariant
+                                                  .withAlpha(100),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 28),
+
+                                // Legal metinler son sayfada görünür; checkbox isteğe
+                                // bağlı açık acknowledgement'tır, CTA implicit kabul
+                                // yazmaz.
+                                if (isLastPage) ...[
+                                  _LegalConsentNote(
+                                    value: _legalAcknowledged,
+                                    onChanged: (value) {
+                                      setState(
+                                        () => _legalAcknowledged = value,
+                                      );
+                                    },
+                                    onOpenPrivacy: () => _openLegalDocument(
+                                      LegalDocumentType.privacyPolicy,
+                                    ),
+                                    onOpenKvkk: () => _openLegalDocument(
+                                      LegalDocumentType.kvkkDisclosure,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+
+                                // Ana buton
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 56,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 400),
+                                    curve: Curves.easeInOut,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      gradient: LinearGradient(
+                                        colors: _pageData[_currentPage]
+                                            .gradientColors,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _pageData[_currentPage]
+                                              .gradientColors[0]
+                                              .withAlpha(80),
+                                          blurRadius: 16,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: _isCompleting ? null : _nextPage,
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Center(
+                                          child: AnimatedSwitcher(
+                                            duration: const Duration(
+                                              milliseconds: 250,
+                                            ),
+                                            child: Row(
+                                              key: ValueKey(isLastPage),
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  isLastPage
+                                                      ? l10n.onboardingGetStarted
+                                                      : l10n.onboardingNext,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 17,
+                                                    fontWeight: FontWeight.w700,
+                                                    letterSpacing: 0.3,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Icon(
+                                                  isLastPage
+                                                      ? Icons
+                                                            .arrow_forward_rounded
+                                                      : Icons
+                                                            .chevron_right_rounded,
+                                                  color: Colors.white,
+                                                  size: 22,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Her sayfada gösterilen hukuki bildirim bağlantıları ──────────────────────
+
+class _LegalNoticeLinks extends StatelessWidget {
+  const _LegalNoticeLinks({
+    required this.onOpenPrivacy,
+    required this.onOpenKvkk,
+  });
+
+  final VoidCallback onOpenPrivacy;
+  final VoidCallback onOpenKvkk;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 4,
+        children: [
+          Semantics(
+            link: true,
+            child: TextButton(
+              key: const Key('onboarding-privacy-link'),
+              onPressed: onOpenPrivacy,
+              child: Text(l10n.onboardingPrivacyPolicyLink),
+            ),
+          ),
+          Semantics(
+            link: true,
+            child: TextButton(
+              key: const Key('onboarding-kvkk-link'),
+              onPressed: onOpenKvkk,
+              child: Text(l10n.onboardingKvkkLink),
             ),
           ),
         ],
@@ -445,10 +594,14 @@ class _OnboardingPageState extends State<OnboardingPage>
 
 class _LegalConsentNote extends StatelessWidget {
   const _LegalConsentNote({
+    required this.value,
+    required this.onChanged,
     required this.onOpenPrivacy,
     required this.onOpenKvkk,
   });
 
+  final bool value;
+  final ValueChanged<bool> onChanged;
   final VoidCallback onOpenPrivacy;
   final VoidCallback onOpenKvkk;
 
@@ -479,16 +632,22 @@ class _LegalConsentNote extends StatelessWidget {
       spans.add(
         WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: GestureDetector(
-            onTap: isPrivacy ? onOpenPrivacy : onOpenKvkk,
-            child: Text(
-              isPrivacy
-                  ? l10n.onboardingPrivacyPolicyLink
-                  : l10n.onboardingKvkkLink,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
+          child: Semantics(
+            link: true,
+            child: InkWell(
+              onTap: isPrivacy ? onOpenPrivacy : onOpenKvkk,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  isPrivacy
+                      ? l10n.onboardingPrivacyPolicyLink
+                      : l10n.onboardingKvkkLink,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
               ),
             ),
           ),
@@ -500,17 +659,35 @@ class _LegalConsentNote extends StatelessWidget {
       spans.add(TextSpan(text: template.substring(cursor)));
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text.rich(
-        TextSpan(
-          children: spans,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            height: 1.4,
+    return Semantics(
+      checked: value,
+      child: InkWell(
+        onTap: () => onChanged(!value),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: value,
+                onChanged: (next) => onChanged(next ?? false),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: spans,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        textAlign: TextAlign.center,
       ),
     );
   }

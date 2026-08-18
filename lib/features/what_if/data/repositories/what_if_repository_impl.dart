@@ -1,7 +1,10 @@
+import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:saydin/core/constants/api_endpoints.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
+import 'package:saydin/core/error/response_body_validator.dart';
+import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/what_if/data/models/asset_model.dart';
 import 'package:saydin/features/what_if/data/models/reverse_what_if_response_model.dart';
 import 'package:saydin/features/what_if/data/models/what_if_response_model.dart';
@@ -28,10 +31,15 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.assets,
       );
-      final list = (response.data?['assets'] as List<dynamic>?) ?? [];
-      return list
-          .map((e) => AssetModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final body = ResponseBodyValidator.requireMap(response.data);
+      final list = ResponseBodyValidator.requireListField(body, 'assets');
+      return ResponseBodyValidator.parse(
+        () => list
+            .map(
+              (e) => AssetModel.fromJson(ResponseBodyValidator.requireMap(e)),
+            )
+            .toList(growable: false),
+      );
     } on DioException catch (e) {
       throw _errorMapper.map(e);
     }
@@ -42,7 +50,7 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
     required String assetSymbol,
     required DateTime buyDate,
     DateTime? sellDate,
-    required num amount,
+    required Decimal amount,
     required String amountType,
     bool includeInflation = false,
   }) async {
@@ -53,19 +61,15 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
           'assetSymbol': assetSymbol,
           'buyDate': _formatDate(buyDate),
           if (sellDate != null) 'sellDate': _formatDate(sellDate),
-          'amount': amount,
+          'amount': MoneyParser.toJsonString(amount),
           'amountType': amountType,
           'includeInflation': includeInflation,
         },
       );
-      final data = response.data;
-      // 2xx + boş gövde sunucu sözleşme ihlalidir → MalformedResponseError
-      // (F-07-08). `ServerError(statusCode: 200)` anlamsal olarak tuhaftı;
-      // "başarı statüsü ama eksik gövde" durumu artık ayrı varyantla taşınır.
-      if (data == null) {
-        throw const MalformedResponseError();
-      }
-      return WhatIfResponseModel.fromJson(data);
+      final data = ResponseBodyValidator.requireMap(response.data);
+      return ResponseBodyValidator.parse(
+        () => WhatIfResponseModel.fromJson(data),
+      );
     } on DioException catch (e) {
       throw _errorMapper.map(e);
     }
@@ -76,7 +80,7 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
     required String assetSymbol,
     required DateTime buyDate,
     DateTime? sellDate,
-    required num targetAmount,
+    required Decimal targetAmount,
     required String targetAmountType,
     bool includeInflation = false,
   }) async {
@@ -87,16 +91,15 @@ class WhatIfRepositoryImpl implements WhatIfRepository {
           'assetSymbol': assetSymbol,
           'buyDate': _formatDate(buyDate),
           if (sellDate != null) 'sellDate': _formatDate(sellDate),
-          'targetAmount': targetAmount,
+          'targetAmount': MoneyParser.toJsonString(targetAmount),
           'targetAmountType': targetAmountType,
           'includeInflation': includeInflation,
         },
       );
-      final data = response.data;
-      if (data == null) {
-        throw const MalformedResponseError();
-      }
-      return ReverseWhatIfResponseModel.fromJson(data);
+      final data = ResponseBodyValidator.requireMap(response.data);
+      return ResponseBodyValidator.parse(
+        () => ReverseWhatIfResponseModel.fromJson(data),
+      );
     } on DioException catch (e) {
       throw _errorMapper.map(e);
     }

@@ -39,6 +39,30 @@ void main() {
       expect(model.isProfit, true);
     });
 
+    test('isProfit yoksa yönü profitLossTry işaretinden türetir', () {
+      final json = _baseJson(priceHistory: [])..remove('isProfit');
+
+      expect(WhatIfResponseModel.fromJson(json).isProfit, isTrue);
+    });
+
+    test('isProfit ile profitLossTry çelişirse payloadı reddeder', () {
+      final json = _baseJson(priceHistory: [])..['isProfit'] = false;
+
+      expect(
+        () => WhatIfResponseModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('isProfit bool değilse payloadı reddeder', () {
+      final json = _baseJson(priceHistory: [])..['isProfit'] = 'yes';
+
+      expect(
+        () => WhatIfResponseModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
     test('sellDate null olduğunda null döner', () {
       final model = WhatIfResponseModel.fromJson(
         _baseJson(priceHistory: [], sellDate: null),

@@ -20,5 +20,6 @@
 
 - [ ] Hardcoded string yok, lokalizasyon kullanıldı
 - [ ] Widget içinde doğrudan HTTP isteği yok (BLoC kullanıldı)
-- [ ] Para birimi `NumberFormat.currency(locale: 'tr_TR')` ile gösteriliyor
+- [ ] Para/tutar hesaplama ve request boundary'lerinde `Decimal`; gösterimde aktif locale kullanıldı
 - [ ] Katman sınırları ihlal edilmedi (CLAUDE.md)
+- [ ] Legal/release/security sözleşmesi değiştiyse ilgili insan owner review'u alındı (bot review'u insan onayı yerine geçmez)

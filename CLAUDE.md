@@ -128,8 +128,12 @@ sl.registerFactory(() => WhatIfBloc(sl()));
 - **BLoC test:** `bloc_test` paketinin `blocTest`'ı — state geçişlerini sıralı assert et
 - **Mocking:** `mocktail` ZORUNLU. `mockito` YASAK (code-gen istemiyoruz; ek dependency ve build-time maliyet)
 - **Konum:** `test/features/<feature>/{data,domain,presentation}/...` — `lib/` ile parallel
-- **Coverage hedefi:** baseline %60+; her PR'da düşürmemek hedef
-- **`flutter test --coverage`** CI'da çalışır; sonuç Codecov'a yüklenir
+- **Coverage hedefi:** %60+. Mevcut tam-kaynak baseline 2026-08-18'de
+  %49,16'dır; CI %47,8 project floor ve %50 patch gate uygular. Eşik test
+  dalgalarıyla monoton yükseltilir, keyfi olarak %60 ilan edilmez.
+- **`flutter test --coverage`** CI'da çalışır; generated l10n hariç tüm
+  production kütüphaneleri generated coverage manifest'iyle denominator'a
+  girer. Yerel fail-closed gate ve Codecov aynı policy'yi uygular.
 - **Üretilmiş mock dosyaları commit'lenmez** (zaten code-gen kullanılmadığı için ortaya çıkmaz)
 
 ```dart
@@ -244,15 +248,29 @@ Saydın **tag-driven** release modelini kullanır. `main`'e push tek başına st
 
 | Tag formatı | Kanal | Play Store | TestFlight | GitHub Environment |
 |---|---|---|---|---|
-| `v0.2.0-rc.1` | staging | `internal` (draft) | beta | `staging` (oto-onay) |
-| `v0.2.0` | production | `production` (%10 staged) | beta | `production` (**manuel approval**) |
+| `v0.2.0-rc.1` | staging | `internal` (draft) | beta | `staging` (koruma dış konfigürasyonuna bağlı) |
+| `v0.2.0` | production | `production` (%10 staged) | beta | `production` (**required reviewer kurulmadan güvenli değildir**) |
 
 Production rollout `userFraction: 0.1` ile başlar — Play Console'dan elle %25 → %50 → %100 promote edilir.
 
 ### Release Akışı
 
 1. `main` güncel ve [CI](https://github.com/cemililik/Saydin.Client/actions) yeşil olmalı.
-2. **Annotated** tag oluştur (lightweight tag YASAK — release notes tag mesajından alınır):
+2. Production için önce
+   [legal release sign-off](docs/legal/legal-release-signoff.md) sırası eksiksiz
+   uygulanır: dört metin nihai hale getirilir,
+   `--print-bundle-hash` ile runtime legal hash/version eşleştirilir,
+   `--print-runtime-surface-hash` ile production privacy/runtime yüzeyi
+   snapshot'lanır ve beş gerçek rol kanıtlarıyla `APPROVED` olur. Final
+   source/legal commit bundan sonra approved source SHA olarak sabitlenir.
+   Ardından schema v2
+   `docs/legal/legal-release-approval.json` bu SHA'ya bağlanır ve **yalnız bu
+   JSON'u değiştiren**, tek parent'lı ayrı bir approval commit'i oluşturulur.
+   Production tag bu approval commit'ine konur; RC kanalında approval artifact
+   zorunlu değildir.
+3. Approval-only commit main'de ve exact SHA CI'da yeşil olduktan sonra
+   **annotated** tag oluştur (lightweight tag YASAK — workflow fail-closed
+   reddeder):
 
    ```bash
    git tag -a v0.2.0 -m "v0.2.0
@@ -267,14 +285,24 @@ Production rollout `userFraction: 0.1` ile başlar — Play Console'dan elle %25
    "
    ```
 
-3. Tag'i push'la: `git push origin v0.2.0`
-4. [.github/workflows/release.yml](.github/workflows/release.yml) tetiklenir:
-   - **Guard** — tag main'in atası mı kontrol eder
+4. Tag'i push'la: `git push origin v0.2.0`
+5. [.github/workflows/release.yml](.github/workflows/release.yml) tetiklenir:
+   - **Guard** — annotated tag main'in atası mı ve exact SHA CI'da başarılı mı
+     kontrol eder
    - **Detect channel** — `-rc.*` suffix'ine bakar, tag mesajını TR/EN'e ayırır
+   - **Legal gate** — production tag'i content-bound hukuk onayı olmadan durur
    - **Release Android** — signed AAB → Play Store
    - **Release iOS** — signed IPA → TestFlight
-   - **GitHub Release** — AAB + IPA + tag mesajıyla
-5. Production tag ise GitHub Environment `production` manuel onay bekler.
+   - **GitHub Release** — AAB/IPA + checksum + SBOM + provenance; iki artifact
+     için GitHub/Sigstore attestation
+6. Workflow'da environment adı geçirmek tek başına manuel onay oluşturmaz.
+   Production secret'ları tanımlanmadan önce bağımsız required reviewer,
+   self-review yasağı ve tag deployment policy repo ayarlarında kurulup
+   doğrulanmalıdır.
+
+   Agent gerçek kişi, hukuk onayı veya kanıt uyduramaz. Makine gate'i hash,
+   biçim ve commit zincirini doğrular; approver yetkisi repository environment
+   ve dış kanıtla doğrulanır.
 
 ### Tag Mesajı Formatı
 
@@ -284,7 +312,8 @@ Production rollout `userFraction: 0.1` ile başlar — Play Console'dan elle %25
 - **Boş satır + `=====LANG_SEPARATOR=====` + boş satır**
 - **İngilizce release notes** — Play Store/TestFlight EN-US sekmesine yazılır (≤500 karakter)
 
-Separator yoksa TR ve EN için aynı metin kullanılır. Lightweight tag (`-a` olmadan) için son commit subject'i fallback'tir — önerilmez.
+Separator yoksa TR ve EN için aynı annotated tag body kullanılır. Lightweight
+tag (`-a` olmadan) için fallback yoktur; workflow release'i reddeder.
 
 ### Versiyon Numarası
 
@@ -292,12 +321,16 @@ Tag adı `vX.Y.Z` veya `vX.Y.Z-rc.N` olmalı. RC suffix'i otomatik strip edilir:
 - `v0.2.0-rc.1` → `version_name=0.2.0`, `is_rc=true`
 - `v0.2.0` → `version_name=0.2.0`, `is_rc=false`
 
-`build_number` her tetikte `github.run_number`'dan gelir (her zaman artan).
+`build_number`, retry/rerun çakışmasını önlemek için
+`github.run_number * 100 + github.run_attempt` olarak üretilir. Aynı tag için
+yeniden çalıştırmada yeni attempt benzersiz store build numarası verir.
 
 ### Yasak
 
 - Lightweight tag (`git tag v0.2.0` — `-a` olmadan) — annotated message yok
-- Tag silip yeniden push (`git push --delete` + yeni tag) — Play Console'da çift sürüm
+- Push'lanmış tag'i silme, force-update etme veya başka commit'e retarget etme
+  **kesinlikle yasaktır**. Hatalı pushed tag yerine yeni SemVer + production ise
+  yeni content-bound approval commit'i kullan.
 - Tag'i `main`'de olmayan bir commit'e koyma — guard job hata verir
 
 ---
@@ -417,8 +450,8 @@ Container(color: Colors.grey.shade100)
 // DOĞRU ✓ — semantic color
 Container(color: Theme.of(context).colorScheme.surfaceContainerHighest)
 
-// Domain-specific (kar/zarar gibi) için AppColors:
-Container(color: AppColors.profit)  // tema-bağımsız sabitler
+// Domain-specific (kar/zarar/grafik) için tema extension'ı:
+Container(color: context.financialColors.profit)
 ```
 
 ---
@@ -427,14 +460,18 @@ Container(color: AppColors.profit)  // tema-bağımsız sabitler
 
 - **Base URL:** `--dart-define=API_BASE_URL=<url>` ile geçilir — hardcode YASAK
   ```bash
-  flutter run --dart-define=API_BASE_URL=https://api-staging.saydin.app
+  flutter run --dart-define=API_BASE_URL=https://<approved-staging-origin>
   ```
-- **Aktif backend URL** dev cihazda değişken (ngrok tüneli) — güncel URL için takım ile eşgüdüm; URL'i burada listelemekten kaçınılır (commit history'sinde URL leak riski)
+- **Aktif backend URL** dev cihazda değişkendir — güncel HTTPS origin için
+  takım ile eşgüdüm; URL'i burada listelemekten kaçınılır. Profile/release
+  origin-only HTTPS ve default port ister. Kalıcı production/staging host
+  allowlist'i, ertelenen SEC-02 owner kararını bekler; hostname uydurulmaz.
 - **Interceptor zinciri** ([lib/core/network/](lib/core/network/)):
   1. `DeviceIdInterceptor` — `X-Device-ID` header (UUID v4, `FlutterSecureStorage`'dan)
   2. `DeviceInfoInterceptor` — `X-Device-Info` header (app version, build number, platform)
   3. `LanguageInterceptor` — `Accept-Language` header (kullanıcı seçimi)
-  4. `RetryInterceptor` — GET/HEAD için 2x exponential backoff
+  4. `RetryInterceptor` — GET/HEAD için cancellation-duyarlı exponential
+     backoff; `Retry-After` desteği ve 30 saniye üst sınırı
 - **Hata mapping:** `DioErrorMapper` → `AppError` (sealed class)
 - **Timeout:** 15s connect, 15s receive
 
@@ -450,7 +487,12 @@ Container(color: AppColors.profit)  // tema-bağımsız sabitler
 
 ### KVKK Madde 11/12 Uyumu
 
-- **Madde 11 (bilgi talebi):** Backend `/v1/account/data-export` üzerinden tetiklenir
+- **Madde 11 (bilgi talebi):** Bu istemcide in-app data-export endpoint'i,
+  repository'si veya indirme akışı yoktur. `/v1/account/data-export` varmış
+  gibi davranmayın ya da endpoint uydurmayın. Talep, güncel legal disclosure'da
+  belirtilen başvuru kanalı üzerinden operasyonel olarak ele alınır; backend
+  sözleşmesi (kimlik doğrulama, request/status, güvenli teslim, yetkilendirme)
+  doğrulanmadan in-app export eklenmez.
 - **Madde 12 (silme):** [lib/features/account/](lib/features/account/) — backend 200 OK olmadan **local cleanup başlamaz** (race condition önle)
 - **Cross-feature reset:** Hesap silindiğinde favorites, scenarios, portfolio cache'leri **tek transaction'da** temizlenir
 - **Device ID:** Sadece `FlutterSecureStorage` (`SharedPreferences`'a YASAK — şifrelenmez)
@@ -459,22 +501,29 @@ Container(color: AppColors.profit)  // tema-bağımsız sabitler
 
 ## Cihaza Deploy (KRİTİK)
 
-**Test cihazı:** iPhone "C.I." — `00008101-00013C6A02B9003A` (iOS 18.6)
+**Test cihazı:** Fiziksel cihaz kimliği committed dokümana yazılmaz.
+`flutter devices` ile oturumda seçilir veya ignore edilen yerel
+`SAYDIN_DEVICE_ID` ortam değişkeninden okunur.
 
 ```bash
-# Debug modda iPhone'a deploy (varsayılan)
+# Debug modda fiziksel cihaza deploy (varsayılan)
+SAYDIN_DEVICE_ID=<local-device-id> \
+SAYDIN_API_BASE_URL=https://<aktif-dev-origin> \
 flutter run \
-  --dart-define=API_BASE_URL=<aktif-staging-URL> \
-  --device-id 00008101-00013C6A02B9003A
+  --device-id "$SAYDIN_DEVICE_ID" \
+  --dart-define="API_BASE_URL=$SAYDIN_API_BASE_URL" \
+  --dart-define=APP_ENV=development
 
-# Release modda iPhone'a deploy
+# Profile modda test (yalnız kullanıcı açıkça isterse)
 flutter run \
-  --dart-define=API_BASE_URL=<aktif-staging-URL> \
-  --device-id 00008101-00013C6A02B9003A \
-  --release
+  --profile \
+  --device-id "$SAYDIN_DEVICE_ID" \
+  --dart-define="API_BASE_URL=$SAYDIN_API_BASE_URL" \
+  --dart-define=APP_ENV=staging
 ```
 
-> `<aktif-staging-URL>` placeholder'ı dev tüneline (ngrok / cloudflared) işaret eder. Tünel URL'i sık sık değişir — committed dosyada hardcode edilmez; güncel URL takım iletişim kanalından alınır.
+> Fiziksel cihaz origin'i HTTPS olmalıdır. Geçici tünel URL'si ve cihaz
+> kimliği committed dosyada tutulmaz; her oturumda güncel kaynaktan alınır.
 
 - Kullanıcı "iPhone'a gönder" veya "cihaza deploy et" dediğinde **debug mod** varsayılandır (aksi belirtilmezse)
 - Cihaz bağlı değilse önce `flutter devices` ile kontrol et
@@ -512,7 +561,8 @@ Tüm yasaklar tek bakışta. Her kategori için detay yukarıdaki ilgili bölüm
 ### Release
 - Lightweight tag (annotated kullan: `git tag -a vX.Y.Z -m "..."`)
 - `main`'de olmayan commit'e tag (guard job hata verir)
-- Tag silip yeniden push (Play Console çift sürüm — semver bump et)
+- Push'lanmış tag'i silme, force-update etme veya retarget etme (kesinlikle
+  yasak — yeni SemVer ve gerekiyorsa yeni approval commit'i kullan)
 - `=====LANG_SEPARATOR=====` ayracını unutma
 
 ### Güvenlik / KVKK
@@ -534,6 +584,7 @@ Tüm yasaklar tek bakışta. Her kategori için detay yukarıdaki ilgili bölüm
 |--------|-------|
 | Flutter'a özgü mimari, BLoC, hata yönetimi, DI, ağ katmanı | `docs/architecture.md` |
 | Flutter geliştirme iş akışı (komutlar, env, build, sorun giderme) | `docs/development-guide.md` |
+| Legal/privacy release envanteri, kanıt checklist'i ve production sign-off | `docs/legal/legal-release-signoff.md` |
 | Proje geneli mimari (istemci + servisler arası ilişki, API sözleşmesi) | Kök `docs/` dizini |
 | Mimari kararlar (ADR) | Kök `docs/decisions/` dizini |
 

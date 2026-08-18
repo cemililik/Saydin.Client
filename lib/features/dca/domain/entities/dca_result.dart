@@ -101,6 +101,29 @@ class DcaResult extends Equatable {
     this.chartData = const [],
   });
 
+  DcaResult withAssetDisplayName(String value) => DcaResult(
+    assetSymbol: assetSymbol,
+    assetDisplayName: value,
+    startDate: startDate,
+    endDate: endDate,
+    period: period,
+    periodicAmount: periodicAmount,
+    totalPurchases: totalPurchases,
+    totalInvestedTry: totalInvestedTry,
+    currentValueTry: currentValueTry,
+    profitLossTry: profitLossTry,
+    profitLossPercent: profitLossPercent,
+    isProfit: isProfit,
+    averageCostPerUnit: averageCostPerUnit,
+    totalUnitsAcquired: totalUnitsAcquired,
+    currentUnitPrice: currentUnitPrice,
+    cumulativeInflationPercent: cumulativeInflationPercent,
+    realProfitLossPercent: realProfitLossPercent,
+    inflationDataAsOf: inflationDataAsOf,
+    purchases: purchases,
+    chartData: chartData,
+  );
+
   @override
   List<Object?> get props => [
     assetSymbol,

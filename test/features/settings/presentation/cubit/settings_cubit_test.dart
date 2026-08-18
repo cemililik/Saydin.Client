@@ -99,9 +99,14 @@ void main() {
     when(() => repo.save(any())).thenThrow(Exception('disk full'));
 
     final cubit = SettingsCubit(repo, localeProvider, reporter: reporter);
+    final feedback = expectLater(
+      cubit.feedbacks,
+      emits(SettingsPersistenceFeedback.saveFailed),
+    );
     await cubit.setThemeMode(AppThemeMode.dark);
 
     expect(cubit.state.themeMode, const AppSettings().themeMode);
+    await feedback;
     verify(
       () => reporter.report(any(), any(), context: 'settings_set_theme'),
     ).called(1);

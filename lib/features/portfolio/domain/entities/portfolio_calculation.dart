@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 
 /// Tek bir portföy kaleminin hesaplama sonucu — **portföye ait** saf domain
@@ -45,17 +46,42 @@ class PortfolioCalculation extends Equatable {
 
 /// Bir kalemin hesaplama sonucu (girdi [item] + sonuç [calculation]).
 ///
-/// [calculation] `null` ise bu kalem hesaplanamadı (örn. backend geçici 503) —
-/// repository per-item izolasyonu sayesinde diğer kalemler etkilenmez; use
-/// case bu kalemi `failedItems`'a düşürür (partial-success akışı).
-class PortfolioItemOutcome extends Equatable {
+/// Sonuç yalnız iki production-safe varyanttan biridir: hesaplanan kalem
+/// [PortfolioItemCalculatedOutcome], başarısız kalem ise typed [AppError]
+/// taşıyan [PortfolioItemErrorOutcome]. Böylece partial-success nedeni data
+/// sınırında kaybolmaz.
+sealed class PortfolioItemOutcome extends Equatable {
   final PortfolioItem item;
-  final PortfolioCalculation? calculation;
+  const PortfolioItemOutcome({required this.item});
 
-  const PortfolioItemOutcome({required this.item, this.calculation});
+  PortfolioCalculation? get calculation;
+  AppError? get error;
 
   bool get isSuccess => calculation != null;
 
   @override
-  List<Object?> get props => [item, calculation];
+  List<Object?> get props => [item, calculation, error];
+}
+
+final class PortfolioItemCalculatedOutcome extends PortfolioItemOutcome {
+  @override
+  final PortfolioCalculation calculation;
+
+  const PortfolioItemCalculatedOutcome({
+    required super.item,
+    required this.calculation,
+  });
+
+  @override
+  AppError? get error => null;
+}
+
+final class PortfolioItemErrorOutcome extends PortfolioItemOutcome {
+  @override
+  final AppError error;
+
+  const PortfolioItemErrorOutcome({required super.item, required this.error});
+
+  @override
+  PortfolioCalculation? get calculation => null;
 }

@@ -21,6 +21,8 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.13.2" apply false
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    // 4.x, sentry_flutter 8.14.2'nin Android SDK 7.x hattıyla uyumludur.
+    id("io.sentry.android.gradle") version "4.14.1" apply false
 }
 
 include(":app")

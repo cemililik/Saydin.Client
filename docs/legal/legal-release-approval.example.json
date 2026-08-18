@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "status": "BLOCKED",
+  "release_tag": "v0.0.0",
+  "source_commit_sha": "PENDING",
+  "legal_bundle_sha256": "run: python3 tool/verify_legal_release_approval.py --print-bundle-hash",
+  "runtime_surface_sha256": "run: python3 tool/verify_legal_release_approval.py --print-runtime-surface-hash",
+  "legal_acceptance_version": 0,
+  "approved_at": "PENDING",
+  "controller": {
+    "legal_name": "PENDING",
+    "service_address": "PENDING",
+    "formal_request_channel": "PENDING"
+  },
+  "approvals": [
+    {"role": "product_owner", "name": "PENDING", "identity": "PENDING", "evidence": "PENDING", "approved_at": "PENDING"},
+    {"role": "backend_owner", "name": "PENDING", "identity": "PENDING", "evidence": "PENDING", "approved_at": "PENDING"},
+    {"role": "security_privacy", "name": "PENDING", "identity": "PENDING", "evidence": "PENDING", "approved_at": "PENDING"},
+    {"role": "legal_dpo", "name": "PENDING", "identity": "PENDING", "evidence": "PENDING", "approved_at": "PENDING"},
+    {"role": "release_owner", "name": "PENDING", "identity": "PENDING", "evidence": "PENDING", "approved_at": "PENDING"}
+  ]
+}

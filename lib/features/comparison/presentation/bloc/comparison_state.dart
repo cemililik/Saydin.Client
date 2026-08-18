@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
@@ -8,7 +9,7 @@ abstract class ComparisonState extends Equatable {
   final List<String> selectedSymbols;
   final DateTime? buyDate;
   final DateTime? sellDate;
-  final num? amount;
+  final Decimal? amount;
   final String amountType;
   final bool includeInflation;
 
@@ -56,18 +57,18 @@ class ComparisonAssetsLoaded extends ComparisonState {
   ComparisonAssetsLoaded copyWith({
     List<Asset>? assets,
     List<String>? selectedSymbols,
-    DateTime? buyDate,
+    Object? buyDate = _sentinel,
     Object? sellDate = _sentinel,
-    num? amount,
+    Object? amount = _sentinel,
     String? amountType,
     bool? includeInflation,
   }) {
     return ComparisonAssetsLoaded(
       assets: assets ?? this.assets,
       selectedSymbols: selectedSymbols ?? this.selectedSymbols,
-      buyDate: buyDate ?? this.buyDate,
+      buyDate: buyDate == _sentinel ? this.buyDate : buyDate as DateTime?,
       sellDate: sellDate == _sentinel ? this.sellDate : sellDate as DateTime?,
-      amount: amount ?? this.amount,
+      amount: amount == _sentinel ? this.amount : amount as Decimal?,
       amountType: amountType ?? this.amountType,
       includeInflation: includeInflation ?? this.includeInflation,
     );

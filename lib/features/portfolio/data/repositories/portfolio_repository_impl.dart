@@ -47,7 +47,7 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
             amountType: item.amountType,
             includeInflation: includeInflation,
           );
-          return PortfolioItemOutcome(
+          return PortfolioItemCalculatedOutcome(
             item: item,
             calculation: _toCalculation(result),
           );
@@ -67,7 +67,10 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
               _reporter.report(e, st, context: 'portfolio_item_calculate'),
             );
           }
-          return PortfolioItemOutcome(item: item);
+          return PortfolioItemErrorOutcome(
+            item: item,
+            error: e is AppError ? e : UnknownError(cause: e),
+          );
         }
       }),
     );

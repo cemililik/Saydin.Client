@@ -8,6 +8,7 @@ class DateInput extends StatefulWidget {
   final DateTime? firstDate;
   final DateTime? lastDate;
   final bool required;
+  final bool enabled;
   final ValueChanged<DateTime?> onChanged;
 
   const DateInput({
@@ -17,6 +18,7 @@ class DateInput extends StatefulWidget {
     this.firstDate,
     this.lastDate,
     this.required = true,
+    this.enabled = true,
     required this.onChanged,
   });
 
@@ -71,37 +73,41 @@ class _DateInputState extends State<DateInput> {
     // Date-only normalize: picker tarih bazlı, saat/tz bileşeni taşımasın.
     final effectiveLast =
         widget.lastDate ?? DateTime(now.year, now.month, now.day);
+    final hasValidRange = !effectiveFirst.isAfter(effectiveLast);
+    final isEnabled = widget.enabled && hasValidRange;
 
     return TextFormField(
+      enabled: isEnabled,
       readOnly: true,
       controller: _controller,
       decoration: InputDecoration(
         labelText: widget.label,
         border: const OutlineInputBorder(),
         prefixIcon: const Icon(Icons.calendar_today),
-        suffixIcon: !widget.required && widget.value != null
+        suffixIcon: isEnabled && !widget.required && widget.value != null
             ? IconButton(
                 icon: const Icon(Icons.clear),
                 onPressed: () => widget.onChanged(null),
               )
             : null,
       ),
-      onTap: () async {
-        // initialDate'i [firstDate, lastDate] aralığına sıkıştır — runtime exception önler
-        final initialDate = widget.value != null
-            ? widget.value!.clamp(effectiveFirst, effectiveLast)
-            : effectiveLast;
+      onTap: !isEnabled
+          ? null
+          : () async {
+              // initialDate'i [firstDate, lastDate] aralığına sıkıştır.
+              final initialDate = widget.value != null
+                  ? widget.value!.clamp(effectiveFirst, effectiveLast)
+                  : effectiveLast;
 
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: initialDate,
-          firstDate: effectiveFirst,
-          lastDate: effectiveLast,
-          // Takvim UI'ı (ay adları, hafta günleri) aktif dile uysun (F-15-21).
-          locale: Localizations.localeOf(context),
-        );
-        widget.onChanged(picked);
-      },
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: initialDate,
+                firstDate: effectiveFirst,
+                lastDate: effectiveLast,
+                locale: Localizations.localeOf(context),
+              );
+              if (picked != null) widget.onChanged(picked);
+            },
     );
   }
 }

@@ -5,6 +5,8 @@ description: Create a single new page with BLoC + Event + State + page widget + 
 
 Mevcut bir feature'ın `presentation/` altına yeni bir sayfa + BLoC + test üretir.
 
+Hata akışında kanonik [financial/error contract](../../../docs/engineering/financial-error-contract.md) zorunludur: use case `Future<T>` döndürür ve typed `AppError` fırlatır.
+
 > Sıfırdan yeni feature için bu skill DEĞİL — [feature-scaffold](../feature-scaffold/SKILL.md) kullan. Bu skill sadece mevcut feature'a yeni sayfa eklemek için.
 
 ## Önce sor
@@ -44,18 +46,24 @@ class PortfolioSummaryBloc extends Bloc<PortfolioSummaryEvent, PortfolioSummaryS
     Emitter<PortfolioSummaryState> emit,
   ) async {
     emit(state.copyWith(status: PortfolioSummaryStatus.loading));
-    final result = await _fetchSummary(event.params);
-    result.fold(
-      (failure) => emit(state.copyWith(
-        status: PortfolioSummaryStatus.failure,
-        error: failure,
-      )),
-      (data) => emit(state.copyWith(
+    try {
+      final data = await _fetchSummary(event.params);
+      emit(state.copyWith(
         status: PortfolioSummaryStatus.success,
         data: data,
         error: null,
-      )),
-    );
+      ));
+    } on AppError catch (error) {
+      emit(state.copyWith(
+        status: PortfolioSummaryStatus.failure,
+        error: error,
+      ));
+    } catch (error) {
+      emit(state.copyWith(
+        status: PortfolioSummaryStatus.failure,
+        error: UnknownError(cause: error),
+      ));
+    }
   }
 }
 ```
@@ -117,7 +125,9 @@ class PortfolioSummaryPage extends StatelessWidget {
               curr.status == PortfolioSummaryStatus.failure,
           listener: (context, state) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.error!.localized(context))),
+              SnackBar(
+                content: Text(state.error!.localizedMessage(context.l10n)),
+              ),
             );
           },
           builder: (context, state) => switch (state.status) {
@@ -151,7 +161,7 @@ void main() {
     'success: loading → success',
     setUp: () {
       when(() => mockUseCase(any())).thenAnswer(
-        (_) async => Result.ok(fixtureSummary),
+        (_) async => fixtureSummary,
       );
     },
     build: () => PortfolioSummaryBloc(mockUseCase),
@@ -169,7 +179,7 @@ void main() {
     'failure: loading → failure',
     setUp: () {
       when(() => mockUseCase(any())).thenAnswer(
-        (_) async => Result.err(const NoInternetError()),
+        (_) async => throw const NoInternetError(),
       );
     },
     build: () => PortfolioSummaryBloc(mockUseCase),
@@ -207,5 +217,7 @@ sl.registerFactory(() => PortfolioSummaryBloc(sl()));
 
 - `setState` — bu BLoC kullanan sayfa, asla
 - BLoC içinde HTTP — `final ApiClient _api;` YOK
-- Widget içinde `sl<XBloc>()` direkt çağrısı — `BlocProvider.value` ya da `context.read<XBloc>()` kullan
+- Descendant widget içinde `sl<XBloc>()` direkt çağrısı. Composition
+  root'taki `BlocProvider.create` callback'i `sl()` kullanabilir; alt widget'lar
+  `context.read<XBloc>()` / `BlocBuilder` kullanır.
 - State'in içinde fonksiyon alanı tutma — `Equatable` props'la uyumsuz

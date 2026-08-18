@@ -59,69 +59,89 @@ class _SharePreviewSheetState extends State<SharePreviewSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            Text(
-              l10n.sharePreviewTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 16),
-
-            // Kart önizlemesi — FittedBox ile genişliğe sığdırılır.
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final previewWidth = constraints.maxWidth - 16;
-                return SizedBox(
-                  width: previewWidth,
-                  child: FittedBox(
-                    fit: BoxFit.fitWidth,
-                    alignment: Alignment.topCenter,
-                    child: RepaintBoundary(
-                      key: _repaintKey,
-                      child: widget.cardWidget,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxHeight = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : MediaQuery.sizeOf(context).height * 0.9;
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle bar
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                );
-              },
-            ),
 
-            const SizedBox(height: 20),
+                  Text(
+                    l10n.sharePreviewTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 16),
 
-            FilledButton.icon(
-              onPressed: _isSharing ? null : _share,
-              icon: _isSharing
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                  // Kart önizlemesi — FittedBox ile genişliğe sığdırılır.
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final previewWidth = constraints.maxWidth - 16;
+                          return SizedBox(
+                            width: previewWidth,
+                            child: FittedBox(
+                              fit: BoxFit.fitWidth,
+                              alignment: Alignment.topCenter,
+                              child: RepaintBoundary(
+                                key: _repaintKey,
+                                // Capture yüzeyi sabit tasarlanır; sheet'in
+                                // başlık ve CTA'sı sistem text scale'ini
+                                // korurken görsel içeriği taşmaz.
+                                child: MediaQuery.withClampedTextScaling(
+                                  maxScaleFactor: 1,
+                                  child: widget.cardWidget,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    )
-                  : const Icon(Icons.share),
-              label: Text(
-                _isSharing ? l10n.sharingInProgress : l10n.shareResult,
-              ),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  FilledButton.icon(
+                    onPressed: _isSharing ? null : _share,
+                    icon: _isSharing
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          )
+                        : const Icon(Icons.share),
+                    label: Text(
+                      _isSharing ? l10n.sharingInProgress : l10n.shareResult,
+                    ),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

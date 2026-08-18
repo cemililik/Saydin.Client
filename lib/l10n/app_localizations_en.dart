@@ -42,6 +42,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calculating => 'Calculating...';
 
   @override
+  String get configLoading =>
+      'Settings are still loading. Please try again in a few seconds.';
+
+  @override
   String get initialValue => 'Initial Value';
 
   @override
@@ -150,12 +154,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scenarioDeleted => 'Scenario deleted.';
 
   @override
+  String get scenarioReplayInvalid =>
+      'This saved scenario can no longer be replayed.';
+
+  @override
   String scenarioSavedAtSnapshot(String date) {
     return 'Saved on $date — result as of that date';
   }
 
   @override
   String get deleteScenario => 'Delete';
+
+  @override
+  String get scenarioDeleteConfirmTitle => 'Delete scenario?';
+
+  @override
+  String scenarioDeleteConfirmMessage(String name) {
+    return 'The $name scenario will be permanently deleted.';
+  }
+
+  @override
+  String get cancel => 'Cancel';
 
   @override
   String get tabCalculate => 'Calculate';
@@ -466,6 +485,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsThemeSubtitle => 'Choose app appearance';
 
   @override
+  String get settingsSaveFailed =>
+      'Settings could not be saved. Please try again.';
+
+  @override
   String get themeLight => 'Light';
 
   @override
@@ -481,6 +504,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String favoritesMaxReached(int max) {
     return 'You can add up to $max favorites.';
   }
+
+  @override
+  String get favoritesSaveFailed =>
+      'The favorite change could not be saved. Please try again.';
 
   @override
   String get settingsLanguage => 'Language';
@@ -525,7 +552,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteAccountWarning =>
-      'This action cannot be undone. All your preferences, saved scenarios, and favorites on this device will be permanently deleted. Under KVKK Article 11 / GDPR Article 17, your data erasure request will be completed within 30 days.';
+      'This action cannot be undone. The deletion request is sent to the service first. Once the service confirms the result, preferences, favorites, and other local data on this device are permanently cleared. If the result cannot be verified, local data is retained so you can retry.';
 
   @override
   String deleteAccountConfirmHint(String word) {
@@ -539,19 +566,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccountConfirmButton => 'Permanently Delete My Account';
 
   @override
-  String get deleteAccountInProgress => 'Deleting your data...';
+  String get deleteAccountInProgress => 'Processing the deletion request...';
 
   @override
   String get deleteAccountSuccess =>
-      'Your account and all data have been deleted.';
+      'The service confirmed the deletion result, and local data on this device was cleared.';
 
   @override
   String get deleteAccountPartialSuccess =>
-      'All your local data has been deleted. However, our server deletion request could not be sent right now; please follow up via iletisim@saydin.app.';
+      'The service confirmed the deletion result, but not all local data on this device could be cleared. Please retry or contact support.';
 
   @override
   String get deleteAccountFailed =>
-      'Account deletion could not be completed. Please try again or contact support.';
+      'The deletion result could not be verified or device cleanup did not finish. Please retry or contact support.';
 
   @override
   String get shareCardInitialValue => 'Initial';
@@ -678,7 +705,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String onboardingLegalConsent(String privacy, String kvkk) {
-    return 'By continuing I confirm that I have read and accept the $privacy and $kvkk.';
+    return 'I reviewed the $privacy and $kvkk. (Optional)';
   }
 
   @override
@@ -686,6 +713,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingKvkkLink => 'KVKK Disclosure';
+
+  @override
+  String get legalRecordSaveFailed =>
+      'The legal notice record could not be saved. Please try again.';
 
   @override
   String get onboardingPage1Title => 'What If I Bought?';
@@ -858,6 +889,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scenarioTypeReverse => 'Reverse Calculation';
+
+  @override
+  String get portfolioPartialResult => 'Some assets could not be calculated';
+
+  @override
+  String get portfolioPartialResultDetail =>
+      'The displayed total includes only successfully calculated assets. An incomplete result cannot be saved or shared.';
+
+  @override
+  String get compareNoCommonDateRange =>
+      'The selected assets have no common price date. Choose a different asset.';
+
+  @override
+  String get chartDataShow => 'Show chart data';
+
+  @override
+  String get chartDataHide => 'Hide chart data';
+
+  @override
+  String priceChartSummary(
+    String startDate,
+    String startValue,
+    String endDate,
+    String endValue,
+    String trend,
+  ) {
+    return 'Price chart. From $startDate, $startValue to $endDate, $endValue. $trend.';
+  }
+
+  @override
+  String dcaChartSummary(
+    String startDate,
+    String endDate,
+    String cost,
+    String value,
+  ) {
+    return 'Recurring investment chart. From $startDate to $endDate. Total cost $cost, portfolio value $value.';
+  }
+
+  @override
+  String chartDataPoint(String date, String value) {
+    return '$date: $value';
+  }
+
+  @override
+  String dcaChartDataPoint(String date, String cost, String value) {
+    return '$date: cost $cost, value $value';
+  }
+
+  @override
+  String shareCardMoreAssets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count more assets',
+      one: '+1 more asset',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get compareHint =>

@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:intl/intl.dart';
 
 /// Kullanıcı girdisinden **locale-duyarlı** sayı ayrıştırma/biçimleme yardımcısı.
@@ -19,7 +20,7 @@ class LocaleNumberParser {
   /// Gruplama konumları katı doğrulanır. Böylece karşı-locale bir metin
   /// (`tr` için `"1234.5"`, `en` için `"1234,5"`) sessizce 10x/100x farklı
   /// bir değere dönüşmek yerine reddedilir.
-  static num? tryParse(String? text, String locale) {
+  static Decimal? tryParse(String? text, String locale) {
     if (text == null) return null;
     final trimmed = text.trim();
     if (trimmed.isEmpty) return null;
@@ -34,19 +35,25 @@ class LocaleNumberParser {
     );
     if (!strictPattern.hasMatch(trimmed)) return null;
 
-    final parsed = format.tryParse(trimmed);
-    return parsed != null && parsed.isFinite ? parsed : null;
+    final canonical = trimmed
+        .replaceAll(format.symbols.GROUP_SEP, '')
+        .replaceAll(format.symbols.DECIMAL_SEP, '.');
+    try {
+      return Decimal.parse(canonical);
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Düzenleme alanına ön-doldurma için [value]'yu aktif [locale]'in ondalık
   /// ayracıyla, binlik gruplama OLMADAN biçimler — gruplama düzenlemeyi
   /// zorlaştırır (F-07-24 / F-10-16). tr → "1234,5", en → "1234.5".
   /// [tryParse] ile AYNI locale verilince round-trip eder.
-  static String formatForInput(num value, String locale) {
-    final fmt = NumberFormat.decimalPattern(locale)
-      ..turnOffGrouping()
-      ..maximumFractionDigits = 8;
-    return fmt.format(value);
+  static String formatForInput(Decimal value, String locale) {
+    final decimalSeparator = NumberFormat.decimalPattern(
+      locale,
+    ).symbols.DECIMAL_SEP;
+    return value.toString().replaceFirst('.', decimalSeparator);
   }
 
   /// Form metnini [fromLocale]'den [toLocale]'e güvenli biçimde taşır.

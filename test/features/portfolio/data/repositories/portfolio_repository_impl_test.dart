@@ -44,7 +44,10 @@ void main() {
   late _FakeErrorReporter reporter;
   late PortfolioRepositoryImpl repo;
 
-  setUpAll(() => registerFallbackValue(DateTime(2020)));
+  setUpAll(() {
+    registerFallbackValue(DateTime(2020));
+    registerFallbackValue(Decimal.zero);
+  });
 
   setUp(() {
     whatIf = MockWhatIfRepository();
@@ -56,7 +59,7 @@ void main() {
     id: symbol,
     assetSymbol: symbol,
     assetDisplayName: symbol,
-    amount: 1000,
+    amount: Decimal.fromInt(1000),
     amountType: 'try',
   );
 
@@ -137,6 +140,7 @@ void main() {
       expect(aaa.isSuccess, isTrue);
       expect(bbb.isSuccess, isFalse);
       expect(bbb.calculation, isNull);
+      expect(bbb.error, isA<ServerError>());
     },
   );
 
@@ -150,6 +154,7 @@ void main() {
     );
 
     expect(outcomes.single.calculation, isNull);
+    expect(outcomes.single.error, isA<ServerError>());
     // Rapor fire-and-forget olsaydı bile microtask'i boşaltalım — yine de boş.
     await Future<void>.delayed(Duration.zero);
     expect(
@@ -171,6 +176,7 @@ void main() {
     );
 
     expect(outcomes.single.calculation, isNull, reason: 'izolasyon korunur');
+    expect(outcomes.single.error, isA<UnknownError>());
     await Future<void>.delayed(Duration.zero);
     expect(reporter.reports, hasLength(1));
     expect(reporter.reports.single, isA<ArgumentError>());

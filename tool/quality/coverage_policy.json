@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "project_min_line_percent": 47.8,
+  "patch_min_line_percent": 50.0,
+  "target_line_percent": 60.0,
+  "excluded_paths": [
+    "lib/l10n/app_localizations.dart",
+    "lib/l10n/app_localizations_*.dart"
+  ],
+  "allowed_zero_executable_sources": [
+    "lib/features/account/domain/repositories/account_data_repository.dart",
+    "lib/features/comparison/domain/repositories/comparison_repository.dart",
+    "lib/features/config/domain/entities/subscription_tier.dart",
+    "lib/features/config/domain/repositories/app_config_repository.dart",
+    "lib/features/dca/domain/repositories/dca_repository.dart",
+    "lib/features/favorites/domain/repositories/favorites_repository.dart",
+    "lib/features/legal/domain/repositories/legal_repository.dart",
+    "lib/features/portfolio/domain/repositories/portfolio_repository.dart",
+    "lib/features/scenarios/domain/repositories/scenarios_repository.dart",
+    "lib/features/settings/domain/repositories/settings_repository.dart",
+    "lib/features/what_if/domain/repositories/what_if_repository.dart"
+  ]
+}

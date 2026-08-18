@@ -54,7 +54,7 @@ class AppConfigModel extends AppConfig {
   }
 
   // Map key'leri non-String olabilir → `Map.from` yerine toString ile güvenle çevir.
-  static Map<String, dynamic> _map(Object? v) => v is Map
+  static Map<String, dynamic> _map(Object? v) => v is Map<Object?, Object?>
       ? v.map((key, val) => MapEntry(key.toString(), val))
       : <String, dynamic>{};
 }

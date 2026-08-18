@@ -1,5 +1,27 @@
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+/// [months] takvim ayını çıkarır ve kaynak gün hedef ayda yoksa ayın son
+/// gününe clamp eder. Dart'ın `DateTime(y, m, day)` taşma davranışının
+/// 31 Mart - 1 ayı Mart'a geri taşımasını engeller.
+DateTime subtractCalendarMonthsClamped(DateTime value, int months) {
+  if (months < 0) {
+    throw ArgumentError.value(months, 'months', 'negatif olamaz');
+  }
+  final source = _dateOnly(value);
+  final zeroBasedTargetMonth = source.year * 12 + source.month - 1 - months;
+  final targetYear = zeroBasedTargetMonth ~/ 12;
+  final targetMonth = zeroBasedTargetMonth % 12 + 1;
+  final lastDay = DateTime(targetYear, targetMonth + 1, 0).day;
+  final targetDay = source.day > lastDay ? lastDay : source.day;
+  return DateTime(targetYear, targetMonth, targetDay);
+}
+
+bool isValidFinancialDateRange(DateTime start, DateTime? end) =>
+    end == null || !_dateOnly(end).isBefore(_dateOnly(start));
+
 /// Asset'e ait geçerli tarih aralığını döner.
 /// [priceHistoryMonths] == 0 → sınırsız; [asset.firstDate]'den itibaren.
 /// [priceHistoryMonths] > 0 → en erken seçilebilir tarih = lastDate - N ay.
@@ -8,7 +30,7 @@ import 'package:saydin/features/what_if/domain/entities/asset.dart';
   required DateTime? assetLastDate,
   required int priceHistoryMonths,
 }) {
-  final lastDate = assetLastDate ?? DateTime.now();
+  final lastDate = _dateOnly(assetLastDate ?? DateTime.now());
 
   if (priceHistoryMonths == 0) {
     if (assetFirstDate != null && assetFirstDate.isAfter(lastDate)) {
@@ -17,11 +39,10 @@ import 'package:saydin/features/what_if/domain/entities/asset.dart';
     return (firstDate: assetFirstDate, lastDate: lastDate);
   }
 
-  final cutoff = DateTime(
-    lastDate.year,
-    lastDate.month - priceHistoryMonths,
-    lastDate.day,
-  );
+  if (priceHistoryMonths < 0) {
+    return (firstDate: null, lastDate: null);
+  }
+  final cutoff = subtractCalendarMonthsClamped(lastDate, priceHistoryMonths);
 
   final firstDate = assetFirstDate == null || cutoff.isAfter(assetFirstDate)
       ? cutoff
@@ -42,20 +63,44 @@ import 'package:saydin/features/what_if/domain/entities/asset.dart';
 /// İki ayrı varlığın aralıkları örtüşmüyorsa (örn BTC: 2021-01..2024-01,
 /// XYZ: 2024-06..2024-09), kesişim başlangıcı (`firstDate`) bitişinden
 /// (`lastDate`) sonra düşer. `showDatePicker` `firstDate > lastDate`
-/// durumunda assertion fırlatır ve sayfa çöker. Bu yüzden invalid
-/// kesişimde `(null, null)` dönülür — caller "aralık yok" mesajı veya
-/// disable edilmiş DateInput göstermelidir.
-({DateTime? firstDate, DateTime? lastDate}) comparisonDateRange({
+/// durumunda assertion fırlatır ve sayfa çöker. Bu yüzden invalid kesişim
+/// [ComparisonDateRange.hasOverlap] ile açıkça temsil edilir; caller tarih
+/// alanlarını disable edip kullanıcıya nedenini göstermelidir.
+class ComparisonDateRange {
+  final DateTime? firstDate;
+  final DateTime? lastDate;
+  final bool hasOverlap;
+
+  const ComparisonDateRange({
+    required this.firstDate,
+    required this.lastDate,
+    required this.hasOverlap,
+  });
+}
+
+ComparisonDateRange comparisonDateRange({
   required List<Asset> assets,
   required List<String> selectedSymbols,
   required int priceHistoryMonths,
 }) {
-  if (selectedSymbols.isEmpty) return (firstDate: null, lastDate: null);
+  if (selectedSymbols.isEmpty) {
+    return const ComparisonDateRange(
+      firstDate: null,
+      lastDate: null,
+      hasOverlap: false,
+    );
+  }
 
   final selected = assets
       .where((a) => selectedSymbols.contains(a.symbol))
       .toList();
-  if (selected.isEmpty) return (firstDate: null, lastDate: null);
+  if (selected.length != selectedSymbols.length) {
+    return const ComparisonDateRange(
+      firstDate: null,
+      lastDate: null,
+      hasOverlap: false,
+    );
+  }
 
   // Kesişim başlangıcı: firstDate'lerin maksimumu
   DateTime? firstDate;
@@ -79,16 +124,30 @@ import 'package:saydin/features/what_if/domain/entities/asset.dart';
 
   if (priceHistoryMonths == 0) {
     if (firstDate != null && lastDate != null && firstDate.isAfter(lastDate)) {
-      return (firstDate: null, lastDate: null);
+      return const ComparisonDateRange(
+        firstDate: null,
+        lastDate: null,
+        hasOverlap: false,
+      );
     }
-    return (firstDate: firstDate, lastDate: lastDate);
+    return ComparisonDateRange(
+      firstDate: firstDate,
+      lastDate: lastDate,
+      hasOverlap: true,
+    );
   }
 
-  final effectiveLast = lastDate ?? DateTime.now();
-  final cutoff = DateTime(
-    effectiveLast.year,
-    effectiveLast.month - priceHistoryMonths,
-    effectiveLast.day,
+  if (priceHistoryMonths < 0) {
+    return const ComparisonDateRange(
+      firstDate: null,
+      lastDate: null,
+      hasOverlap: false,
+    );
+  }
+  final effectiveLast = _dateOnly(lastDate ?? DateTime.now());
+  final cutoff = subtractCalendarMonthsClamped(
+    effectiveLast,
+    priceHistoryMonths,
   );
 
   if (firstDate == null || cutoff.isAfter(firstDate)) {
@@ -97,8 +156,16 @@ import 'package:saydin/features/what_if/domain/entities/asset.dart';
 
   // Son guard: cutoff lastDate'ten sonra olabilir (lastDate çok eskiyse).
   if (lastDate != null && firstDate.isAfter(lastDate)) {
-    return (firstDate: null, lastDate: null);
+    return const ComparisonDateRange(
+      firstDate: null,
+      lastDate: null,
+      hasOverlap: false,
+    );
   }
 
-  return (firstDate: firstDate, lastDate: lastDate);
+  return ComparisonDateRange(
+    firstDate: firstDate,
+    lastDate: lastDate,
+    hasOverlap: true,
+  );
 }

@@ -1,4 +1,5 @@
 import 'package:saydin/core/utils/money_parser.dart';
+import 'package:saydin/core/utils/profit_direction_validator.dart';
 import '../../domain/entities/reverse_what_if_result.dart';
 import '../../domain/entities/what_if_result.dart';
 
@@ -25,10 +26,19 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
   });
 
   factory ReverseWhatIfResponseModel.fromJson(Map<String, dynamic> json) {
+    final profitLossTry = MoneyParser.requireDecimal(
+      json['profitLossTry'],
+      'profitLossTry',
+    );
+    final isProfit = ProfitDirectionValidator.derive(
+      rawIsProfit: json['isProfit'],
+      profitLossTry: profitLossTry,
+      context: 'reverse what-if response',
+    );
     final rawHistory = json['priceHistory'];
-    final priceHistory = rawHistory is List
+    final priceHistory = rawHistory is List<dynamic>
         ? rawHistory.map((e) {
-            if (e is! Map) {
+            if (e is! Map<Object?, Object?>) {
               throw const FormatException('reverse what-if chart: map değil');
             }
             return ChartPoint(
@@ -63,15 +73,12 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
         json['targetValueTry'],
         'targetValueTry',
       ),
-      profitLossTry: MoneyParser.requireDecimal(
-        json['profitLossTry'],
-        'profitLossTry',
-      ),
+      profitLossTry: profitLossTry,
       profitLossPercent: _requireNum(
         json['profitLossPercent'],
         'profitLossPercent',
       ).toDouble(),
-      isProfit: json['isProfit'] is bool ? json['isProfit'] as bool : false,
+      isProfit: isProfit,
       priceHistory: priceHistory,
       cumulativeInflationPercent: _optionalNum(
         json['cumulativeInflationPercent'],

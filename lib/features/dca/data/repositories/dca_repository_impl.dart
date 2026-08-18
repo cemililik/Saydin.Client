@@ -1,7 +1,10 @@
+import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:saydin/core/constants/api_endpoints.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
+import 'package:saydin/core/error/response_body_validator.dart';
+import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/dca/data/models/dca_response_model.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 import 'package:saydin/features/dca/domain/repositories/dca_repository.dart';
@@ -21,7 +24,7 @@ class DcaRepositoryImpl implements DcaRepository {
     required String assetSymbol,
     required DateTime startDate,
     DateTime? endDate,
-    required num periodicAmount,
+    required Decimal periodicAmount,
     required String period,
     required String amountType,
     bool includeInflation = false,
@@ -33,19 +36,14 @@ class DcaRepositoryImpl implements DcaRepository {
           'assetSymbol': assetSymbol,
           'startDate': _formatDate(startDate),
           if (endDate != null) 'endDate': _formatDate(endDate),
-          'periodicAmount': periodicAmount,
+          'periodicAmount': MoneyParser.toJsonString(periodicAmount),
           'period': period,
           'amountType': amountType,
           'includeInflation': includeInflation,
         },
       );
-      final data = response.data;
-      // 2xx + boş gövde → MalformedResponseError (F-07-08; tip-güvenli, "başarı
-      // statüsü ama eksik gövde" anlamı `ServerError`'dan ayrı taşınır).
-      if (data == null) {
-        throw const MalformedResponseError();
-      }
-      return DcaResponseModel.fromJson(data);
+      final data = ResponseBodyValidator.requireMap(response.data);
+      return ResponseBodyValidator.parse(() => DcaResponseModel.fromJson(data));
     } on DioException catch (e) {
       throw _errorMapper.map(e);
     }

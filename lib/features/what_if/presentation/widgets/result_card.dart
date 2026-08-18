@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_colors.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
@@ -139,17 +139,18 @@ class _ResultCardState extends State<ResultCard>
   // Ortak [DurationLabel]'a delege (F-07-20) — sonuç kartı ile paylaşım kartı
   // artık aynı (takvim-ayı) algoritmayı kullanır.
   String _formatDuration(AppLocalizations l10n) =>
-      DurationLabel.format(l10n, result.buyDate, result.sellDate);
+      DurationLabel.format(l10n, result.buyDate, result.effectiveSellDate);
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final color = result.isProfit ? AppColors.profit : AppColors.loss;
+    final financialColors = context.financialColors;
+    final color = result.isProfit
+        ? financialColors.profit
+        : financialColors.loss;
     final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
 
-    final sellLabel = result.sellDate != null
-        ? _dateFormatter.format(result.sellDate!)
-        : l10n.today;
+    final sellLabel = _dateFormatter.format(result.effectiveSellDate);
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -255,7 +256,7 @@ class _ResultCardState extends State<ResultCard>
                   _buildDateNote(
                     l10n,
                     context,
-                    requested: result.sellDate ?? DateTime.now(),
+                    requested: result.effectiveSellDate,
                     actual: result.actualSellDate!,
                     label: l10n.labelSellDate,
                   )!,
@@ -285,8 +286,8 @@ class _ResultCardState extends State<ResultCard>
                     result.realProfitLossPercent!.toDouble(),
                     formatter: _pctSignedFormatter,
                     valueColor: result.realProfitLossPercent! >= 0
-                        ? AppColors.profit
-                        : AppColors.loss,
+                        ? financialColors.profit
+                        : financialColors.loss,
                     bold: true,
                   ),
                   _AnimatedRow(
@@ -302,8 +303,8 @@ class _ResultCardState extends State<ResultCard>
                         100,
                     formatter: _trySignedFormatter,
                     valueColor: result.realProfitLossPercent! >= 0
-                        ? AppColors.profit
-                        : AppColors.loss,
+                        ? financialColors.profit
+                        : financialColors.loss,
                   ),
                   if (result.inflationDataAsOf != null)
                     Padding(

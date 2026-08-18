@@ -26,9 +26,8 @@ class ReverseShareCardWidget extends StatelessWidget {
         ? Icons.trending_up
         : Icons.trending_down;
     final nominalSign = result.profitLossPercent >= 0 ? '+' : '';
-    final sellLabel = result.sellDate != null
-        ? dateFmt.format(result.sellDate!)
-        : dateFmt.format(DateTime.now());
+    final effectiveSellDate = result.effectiveSellDate;
+    final sellLabel = dateFmt.format(effectiveSellDate);
 
     final hasInflation =
         result.cumulativeInflationPercent != null &&
@@ -97,7 +96,7 @@ class ReverseShareCardWidget extends StatelessWidget {
                           ShareCardWidget.durationLabel(
                             l10n,
                             result.buyDate,
-                            result.sellDate,
+                            effectiveSellDate,
                           ),
                           style: const TextStyle(
                             fontSize: 13,

@@ -10,7 +10,8 @@ reviews:
     enabled: true
     drafts: false
     base_branches:
-      - master
+      - main
+      - development
 
   path_filters:
     - "!**/.dart_tool/**"
@@ -18,16 +19,37 @@ reviews:
     - "!**/*.g.dart"
     - "!**/*.freezed.dart"
     - "!**/generated/**"
-    - "!docs/**"
-
   path_instructions:
     - path: "lib/**"
       instructions: |
         Bu proje Flutter ile Clean Architecture + BLoC pattern kullanır.
         Widget içinde doğrudan HTTP isteği YASAKTIR, BLoC/Cubit kullanılmalı.
         Hardcoded Türkçe/İngilizce string YASAKTIR, lokalizasyon dosyası kullanılmalı.
-        Para birimi gösteriminde NumberFormat.currency(locale: 'tr_TR') kullanılmalı.
+        Para/tutar domain ve request boundary'lerinde Decimal kullanılmalı; display boundary'de locale context'ten gelmeli.
         Katman sınırları: presentation → domain → data. Atlamak yasak.
+
+    - path: "docs/**"
+      instructions: |
+        Dokümanlar kod ve workflow sözleşmeleriyle tutarlı olmalı; örnek komutlarda API_BASE_URL ve APP_ENV açık verilmelidir.
+
+    - path: "docs/legal/**"
+      instructions: |
+        Legal/KVKK metnini uygulamanın gerçek network, storage, telemetry,
+        sharing ve account-deletion davranışıyla karşılaştır. Placeholder,
+        draft marker, eksik TR/EN parity veya kanıtsız retention/anonimlik
+        iddiasını işaretle. Bot incelemesi hukuk/DPO insan onayı yerine geçmez.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        Fail-open adım, event/ref karışıklığı, interpolated untrusted input,
+        eksik permissions/needs ve dokümante edilen release kapılarıyla drift
+        açısından incele. Repo-dışı branch/environment korumasını varsayma.
+
+    - path: ".claude/**"
+      instructions: |
+        Agent/skill örneklerini kanonik Decimal/AppError sözleşmesine,
+        gerçek dosya yollarına ve runtime-neutral yeteneklere göre incele.
+        Hardcoded cihaz kimliği, geçici origin veya tanımsız API üretme.
 
     - path: "test/**"
       instructions: |

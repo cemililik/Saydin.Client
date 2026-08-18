@@ -5,24 +5,67 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:saydin/core/constants/api_endpoints.dart';
 import 'package:saydin/core/network/device_id_interceptor.dart';
 import 'package:saydin/features/account/domain/repositories/account_data_repository.dart';
 
 class AccountDataRepositoryImpl implements AccountDataRepository {
+  static const _localCleanupMarkerName =
+      'saydin_account_deletion_cleanup_pending_v1';
+
   AccountDataRepositoryImpl({
     required SharedPreferencesAsync prefs,
     required FlutterSecureStorage secureStorage,
     required Dio dio,
     required DeviceIdInterceptor deviceIdInterceptor,
+    Future<Directory> Function()? temporaryDirectoryProvider,
+    Future<Directory> Function()? deletionStateDirectoryProvider,
   }) : _prefs = prefs,
        _secureStorage = secureStorage,
        _dio = dio,
-       _deviceIdInterceptor = deviceIdInterceptor;
+       _deviceIdInterceptor = deviceIdInterceptor,
+       _temporaryDirectoryProvider =
+           temporaryDirectoryProvider ?? getTemporaryDirectory,
+       _deletionStateDirectoryProvider =
+           deletionStateDirectoryProvider ?? getApplicationSupportDirectory;
 
   final SharedPreferencesAsync _prefs;
   final FlutterSecureStorage _secureStorage;
   final Dio _dio;
   final DeviceIdInterceptor _deviceIdInterceptor;
+  final Future<Directory> Function() _temporaryDirectoryProvider;
+  final Future<Directory> Function() _deletionStateDirectoryProvider;
+
+  Future<File> _localCleanupMarker() async {
+    // OS tarafından purge edilebilen temporary/cache dizini kullanılmaz.
+    // Marker, cleanup tamamlanana kadar application-support alanında kalır.
+    final directory = await _deletionStateDirectoryProvider();
+    if (!await directory.exists()) {
+      await directory.create(recursive: true);
+    }
+    return File('${directory.path}/$_localCleanupMarkerName');
+  }
+
+  @override
+  Future<void> markLocalCleanupPending() async {
+    final marker = await _localCleanupMarker();
+    await marker.writeAsString('backend-confirmed-v1\n', flush: true);
+  }
+
+  @override
+  Future<bool> hasPendingLocalCleanup() async {
+    final marker = await _localCleanupMarker();
+    // İçerik yarım kalmış olsa bile dosyanın varlığı backend-confirmed yazma
+    // fazının başladığını gösterir. Fail-safe seçim backend DELETE'i tekrar
+    // etmek yerine idempotent local cleanup'ı sürdürmektir.
+    return marker.exists();
+  }
+
+  @override
+  Future<void> clearPendingLocalCleanup() async {
+    final marker = await _localCleanupMarker();
+    if (await marker.exists()) await marker.delete();
+  }
 
   /// Bilinmeyen depo başarısızlığını yutmamak için tek bir collector kullanıyoruz:
   /// SharedPreferences/SecureStorage/cache'in bir kısmı düşse bile diğer
@@ -67,7 +110,7 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
   /// veya birden çok dosya başarısız olduysa toplu `AccountWipeException`
   /// fırlatılır ki `wipeLocalData` partial-failure'ı kullanıcıya bildirebilsin.
   Future<void> _wipeShareCardCache() async {
-    final tempDir = await getTemporaryDirectory();
+    final tempDir = await _temporaryDirectoryProvider();
     if (!tempDir.existsSync()) return;
     final fileErrors = <Object>[];
     await for (final entry in tempDir.list(followLinks: false)) {
@@ -89,20 +132,22 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
   @override
   Future<bool> requestBackendDeletion() async {
     try {
-      final response = await _dio.delete<void>('/v1/account');
+      final response = await _dio.delete<void>(ApiEndpoints.account);
       final status = response.statusCode ?? 0;
-      // Sadece 2xx → gerçekten silindi. 404 ("endpoint yok / kullanıcı yok"),
-      // 501 ("not implemented") veya başka non-2xx durumlarda backend hiçbir
+      // Yalnız 200/204 → gerçekten silindi. 202 Accepted için silmenin son
+      // durumunu doğrulayan ayrı bir endpoint olmadığından local wipe'a izin
+      // vermeyiz. 404 ("endpoint yok / kullanıcı yok"), 501 ("not implemented")
+      // veya başka durumlarda backend hiçbir
       // şey kaydetmediği için kullanıcıya "Success" demek KVKK Madde 7
       // ("silme talebi 30 gün içinde sonuçlandırılmalı") ile uyumsuz olur.
       // Kullanıcı PartialSuccess mesajı görmeli ve iletisim@saydin.app
       // üzerinden takip etmeli.
-      return status >= 200 && status < 300;
+      return status == 200 || status == 204;
     } on DioException catch (e) {
       // Dio response döndüyse status'a bak (interceptor/non-2xx exception'a
-      // çevirebilir). Yine sadece 2xx başarı sayılır.
+      // çevirebilir). Yine yalnız 200/204 başarı sayılır.
       final status = e.response?.statusCode ?? 0;
-      return status >= 200 && status < 300;
+      return status == 200 || status == 204;
     } catch (_) {
       return false;
     }

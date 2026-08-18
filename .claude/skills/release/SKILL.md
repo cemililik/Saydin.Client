@@ -1,128 +1,166 @@
 ---
 name: release
-description: Create an annotated git tag with TR/EN release notes (separator format) and push it to trigger the tag-driven release workflow. RC tags (v0.2.0-rc.1) deploy to staging, plain tags (v0.2.0) require GitHub Environment approval for production %10 staged rollout. Use when user says "release çıkar", "tag at", "yeni sürüm", "release oluştur", or "tag yarat".
+description: Create and push an immutable annotated release tag with TR/EN notes. Production releases require an approved source commit followed by a single-purpose legal approval JSON commit; RC releases use the same immutable-tag and exact-SHA rules without the production legal gate. Use when the user says "release çıkar", "tag at", "yeni sürüm", "release oluştur", or "tag yarat".
 ---
 
-Tag-driven release sürecini başlatır. `.github/workflows/release.yml` sadece `v*` formatında annotated tag push'ları dinler — bu skill o tag'i CLAUDE.md'ye uygun şekilde oluşturup gönderir.
+Saydın'ın `.github/workflows/release.yml` tag-driven release akışını
+başlatır. Release tag'i bir kez remote'a push'landıktan sonra immutable'dır.
 
-> Pre-flight: `main` güncel ve [CI](https://github.com/cemililik/Saydin.Client/actions) yeşil olmalı. Aksi halde release iptal et — guard job zaten engelleyecek ama vakit kaybı.
+## Önce sor
 
-## Önce sor (sırayla)
+1. Kanal: production (`vX.Y.Z`) mı, staging RC (`vX.Y.Z-rc.N`) mi?
+2. Versiyon: son tag'leri ve commit'leri inceleyip SemVer bump öner:
+   - `feat:` → MINOR
+   - yalnız `fix:` / `perf:` → PATCH
+   - `feat!:` / `BREAKING CHANGE:` → MAJOR
+3. Türkçe ve İngilizce kullanıcı-dostu release notes (her dil ≤500
+   karakter).
+4. Production ise approval artifact'ine yazılacak gerçek sign-off bilgileri.
+   Placeholder veya agent tarafından uydurulmuş onay kullanma.
 
-1. **Kanal**: production (`v0.2.0`) mı, staging RC (`v0.2.0-rc.1`) mı?
-   - Hangisini önerirsin: Eğer kullanıcı yeni özelliği QA'dan geçirmemişse RC; geçirmişse production.
-2. **Versiyon numarası**: Son tag ne? (`git tag -l 'v*' --sort=-v:refname | head -3`) Önerilen bump:
-   - `feat:` commitler varsa → MINOR (`0.1.0` → `0.2.0`)
-   - Sadece `fix:` / `perf:` → PATCH (`0.1.0` → `0.1.1`)
-   - `feat!:` veya `BREAKING CHANGE:` → MAJOR (`0.1.0` → `1.0.0`)
-3. **Türkçe release notes**: ≤500 karakter, kullanıcı dostu — teknik terim yok. Emoji önerilir:
-   - Yeni özellik: ✨
-   - Hata düzeltme: 🐛
-   - İyileştirme: ⚡
-4. **İngilizce release notes**: TR'ın çevirisi, aynı format
+## Ortak pre-flight
 
-## Tag formatı (KESINLIKLE bu format)
-
+```bash
+git fetch origin main --tags
+git status --short
+git tag -l 'v*' --sort=-v:refname | head -5
+git log "$(git tag -l 'v*' --sort=-v:refname | head -1)"..HEAD --oneline
+git merge-base --is-ancestor HEAD origin/main
 ```
-<tag-adı>
 
-<Türkçe satır 1>
-<Türkçe satır 2>
-...
+Working tree temiz, hedef commit `origin/main` üzerinde ve exact commit için CI
+yeşil değilse tag oluşturma. Aynı tag remote'da varsa dur; onu yeniden kullanma,
+silme veya taşıma.
+
+## Production protocol — sıra zorunlu
+
+### 0. Legal metin, hash ve insan onayını tamamla
+
+Önce [legal release sign-off](../../../docs/legal/legal-release-signoff.md)
+belgesindeki production sırasını uygula. Dört legal kaynaktaki bütün taslak
+ifadeleri kaldır; bundle hash'i hesaplayıp
+`LegalAcceptanceVersion.bundleSha256` ile eşleştir. Önceki production metni
+değiştiyse acceptance version/document ID/tarihi artır. Runtime/privacy yüzeyini
+de ayrıca snapshot'la:
+
+```bash
+python3 tool/verify_legal_release_approval.py --print-bundle-hash
+python3 tool/verify_legal_release_approval.py --print-runtime-surface-hash
+```
+
+Beş gerçek ve birbirinden bağımsız rolün kanıtlarını tamamla; sign-off üst ve
+nihai durumlarını tam `APPROVED` yap. Agent onayı, isim, identity veya evidence
+uyduramaz. Approval JSON bu aşamada source commit SHA bilinmediği için henüz
+commit edilmez.
+
+### 1. Approved source commit'i sabitle
+
+Final kod, legal metin, verifier/test/workflow ve yetkili sign-off'un bulunduğu
+commit'i tam SHA ile sabitle. Bu commit approval JSON delta'sını henüz
+içermemelidir:
+
+```bash
+APPROVED_SOURCE_SHA=$(git rev-parse HEAD)
+git merge-base --is-ancestor "$APPROVED_SOURCE_SHA" origin/main
+```
+
+`docs/legal/legal-release-approval.json` schema v2 kullanmalı;
+`source_commit_sha` tam bu SHA, `legal_bundle_sha256` ve
+`runtime_surface_sha256` adım 0'daki güncel değerler olmalıdır. Acceptance
+version, release tag, gerçek approver identity ve kalıcı evidence URL/URN'leri
+aynı approved source'a bağlanır.
+
+### 2. Yalnız approval JSON delta commit'ini oluştur
+
+Approved source'tan sonra sadece
+`docs/legal/legal-release-approval.json` değiştirilir. Stage ettikten sonra
+delta'yı fail-closed doğrula:
+
+```bash
+git add docs/legal/legal-release-approval.json
+APPROVAL_DIFF=$(git diff --cached --name-only "$APPROVED_SOURCE_SHA")
+test "$APPROVAL_DIFF" = "docs/legal/legal-release-approval.json"
+python3 tool/verify_legal_release_approval.py \
+  --approval docs/legal/legal-release-approval.json \
+  --release-tag v0.2.0 \
+  --source-sha "$APPROVED_SOURCE_SHA"
+git commit -m "chore(release): approve v0.2.0"
+```
+
+Bu single-purpose commit normal korumalı main/PR akışından geçer. Main'e
+geldikten sonra release commit'inin tam olarak bir parent'ı olduğunu, parent'ın
+approved source olduğunu ve tek farkın approval JSON olduğunu yeniden doğrula:
+
+```bash
+RELEASE_COMMIT_SHA=$(git rev-parse HEAD)
+test "$(git rev-parse "${RELEASE_COMMIT_SHA}^")" = "$APPROVED_SOURCE_SHA"
+test "$(git diff --name-only "$APPROVED_SOURCE_SHA" "$RELEASE_COMMIT_SHA")" = \
+  "docs/legal/legal-release-approval.json"
+```
+
+Merge commit veya approval JSON yanında başka delta varsa production tag basma.
+
+### 3. Annotated tag'i approval commit'ine koy
+
+Production tag yalnız yukarıdaki `RELEASE_COMMIT_SHA` üzerine konur. RC kanalında
+production approval delta'sı gerekmez; tag doğrudan yeşil `main` commit'ine konur.
+
+```bash
+git tag -a v0.2.0 "$RELEASE_COMMIT_SHA" -m "v0.2.0
+
+✨ Portföy ekranı eklendi.
+🐛 Grafik hatası düzeltildi.
 
 =====LANG_SEPARATOR=====
 
-<English line 1>
-<English line 2>
-...
+✨ New portfolio screen.
+🐛 Fixed the chart issue.
+"
 ```
 
-İlk satır tag adı (örn. `v0.2.0`) — GitHub Release başlığı olur. Sonra boş satır, sonra Türkçe gövde, sonra ayraç, sonra İngilizce gövde.
+RC örneği aynı annotated formatla `v0.2.0-rc.1` adını kullanır.
+RC legal gate'i atlar ve TestFlight/internal track'e yüklenebilir; yalnız
+yetkili, sınırlı tester grubu içindir ve production hukuk onayı sayılmaz.
 
-## İş akışı
+## Push öncesi ve sonrası
 
-1. **Son commit'in main'de olduğunu doğrula:**
-   ```bash
-   git fetch origin main
-   git merge-base --is-ancestor HEAD origin/main && echo "✅ main'de" || echo "❌ main'de değil"
-   ```
-   Değilse: önce PR merge et, sonra release. Guard job aksini engeller.
+Tag object tipini, hedef commit'i ve mesajı lokal doğrula:
 
-2. **Versiyon planla:**
-   ```bash
-   git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -5
-   git log $(git tag -l 'v*' --sort=-v:refname | head -1)..HEAD --oneline
-   ```
-   Önerilen versiyonu kullanıcıya sun.
+```bash
+test "$(git cat-file -t v0.2.0)" = "tag"
+git rev-parse v0.2.0^{commit}
+git tag -l --format='%(contents)' v0.2.0
+```
 
-3. **Annotated tag oluştur** (heredoc ile çok satırlı mesaj):
-   ```bash
-   git tag -a v0.2.0 -m "v0.2.0
+Push'tan hemen önce kullanıcıdan açık onay al. Ardından yalnız hedef tag'i
+push'la ve workflow'u izle:
 
-   ✨ Portföy ekranı eklendi.
-   🐛 Grafik render hatası düzeltildi.
-   ⚡ Liste scroll performansı iyileştirildi.
+```bash
+git push origin v0.2.0
+gh run watch "$(gh run list --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+```
 
-   =====LANG_SEPARATOR=====
+Production environment required reviewer onayı repository ayarlarında gerçekten
+kurulu olmalıdır; workflow'daki `environment` alanı tek başına onay sağlamaz.
 
-   ✨ New portfolio screen.
-   🐛 Fixed chart rendering bug.
-   ⚡ Improved list scroll performance.
-   "
-   ```
+Store build number her attempt için
+`github.run_number * 100 + github.run_attempt` formülüyle üretilir. Aynı
+immutable tag için workflow rerun yapılabilir; tag yeniden yaratılmaz.
 
-4. **Tag'i lokal doğrula:**
-   ```bash
-   git tag -l --format='%(contents)' v0.2.0
-   ```
-   Format doğru görünüyor mu? Ayraç var mı?
+## Hata ve kurtarma
 
-5. **Kullanıcıdan onay al** push öncesi. Push'ladıktan sonra geri dönüş zor (Play Console'da çift sürüm olur).
-
-6. **Push:**
-   ```bash
-   git push origin v0.2.0
-   ```
-
-7. **Workflow'u izle:**
-   ```bash
-   gh run watch $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId')
-   ```
-   Veya: https://github.com/cemililik/Saydin.Client/actions
-
-8. **Production tag ise:** GitHub Environment `production` onayı gerekecek — onay verecek kişiye haber et.
-
-9. **Staged rollout (production):** Workflow başarılı tamamlandıktan sonra Play Console → Production → Manage release ekranından 24-48h sonra crash-free rate kontrol edip %25 → %50 → %100 elle promote et.
-
-## Hatalı senaryolar
-
-**Lightweight tag attım, ne yaparım?**
-- Çek geri: `git tag -d v0.2.0 && git push origin :refs/tags/v0.2.0`
-- Annotated olarak yeniden at (yukarıdaki adımlar)
-- NOT: Eğer remote tag tetiklenmişse ve store upload başladıysa hareket etme — Play Console'da çift sürüm çıkar; bir sonraki versiyona geç (`v0.2.1`).
-
-**Yanlış versiyon attım (e.g. v0.3.0 yerine v0.20.0):**
-- Tag push'lanmadıysa: yukarıdaki gibi sil ve yeniden at
-- Push'landıysa ve workflow başladıysa: workflow'un GitHub Environment onay aşamasında "Reject"  → sonra `v0.3.0` olarak yeniden at
-
-**RC ile başladım, prod'a geçmek istiyorum:**
-- Aynı versiyonu non-RC olarak yeniden at: `v0.2.0-rc.1` → `v0.2.0`
-- Build number `github.run_number`'dan geleceği için çakışma olmaz
-
-## Bitirmeden önce kontroller
-
-- [ ] `main` güncel ve CI yeşil
-- [ ] Tag formatı: subject + boş satır + TR + boş + separator + boş + EN
-- [ ] TR ve EN ≤500 karakter (Play Store limiti)
-- [ ] Versiyon SemVer doğru bump'lanmış
-- [ ] Annotated (`-a` veya `-m` flag), lightweight DEĞİL
-- [ ] Push öncesi kullanıcı onayı alındı
-- [ ] Production ise Environment onayı verecek kişi haberdar
+- Push'lanmamış lokal tag hatalıysa düzeltmeden önce durumu tekrar göster ve
+  kullanıcıdan onay al.
+- Push'lanmış tag'i silmek, force-push etmek veya başka commit'e retarget
+  etmek **KESİNLİKLE YASAKTIR**. Workflow'u gerekiyorsa reject/cancel et ve yeni
+  bir SemVer tag'i için baştan protocol uygula. Production'da yeni tag adı yeni
+  content-bound approval JSON delta commit'i gerektirir.
+- Store upload başladıysa aynı version/tag'i yeniden üretme. Yeni SemVer kullan.
 
 ## Yasak
 
-- **Lightweight tag** (`git tag v0.2.0`) — annotated message yok, fallback son commit subject'i, release notes anlamsız
-- **Tag'i `main`'de olmayan commit'e koymak** — guard job hata verir
-- **Aynı versiyonu yeniden push** — Play Console çift sürüm görür; semver bump et
-- **`git push --tags`** — TÜM tag'leri push'lar, sadece istediğin tag'i push'la: `git push origin v0.2.0`
-- **`=====LANG_SEPARATOR=====` ayracını unutmak** — TR ve EN aynı metni alır
+- Lightweight tag (`git tag v0.2.0`): workflow bunu fail-closed reddeder.
+- Main'de olmayan veya exact SHA için CI kanıtı bulunmayan commit'i tag'lemek.
+- Approval JSON ile birlikte başka dosya değiştiren production approval commit'i.
+- Pushed tag delete, force update veya retarget.
+- `git push --tags`: yalnız tek, açıkça onaylanmış tag push'lanır.

@@ -1,4 +1,5 @@
 import 'package:saydin/core/utils/money_parser.dart';
+import 'package:saydin/core/utils/profit_direction_validator.dart';
 import '../../domain/entities/dca_result.dart';
 
 class DcaResponseModel extends DcaResult {
@@ -26,10 +27,19 @@ class DcaResponseModel extends DcaResult {
   });
 
   factory DcaResponseModel.fromJson(Map<String, dynamic> json) {
+    final profitLossTry = MoneyParser.requireDecimal(
+      json['profitLossTry'],
+      'profitLossTry',
+    );
+    final isProfit = ProfitDirectionValidator.derive(
+      rawIsProfit: json['isProfit'],
+      profitLossTry: profitLossTry,
+      context: 'dca response',
+    );
     final rawPurchases = json['purchases'];
-    final purchases = rawPurchases is List
+    final purchases = rawPurchases is List<dynamic>
         ? rawPurchases.map((e) {
-            if (e is! Map) {
+            if (e is! Map<Object?, Object?>) {
               throw const FormatException('dca purchase: map değil');
             }
             return DcaPurchase(
@@ -56,9 +66,9 @@ class DcaResponseModel extends DcaResult {
         : <DcaPurchase>[];
 
     final rawChart = json['chartData'];
-    final chartData = rawChart is List
+    final chartData = rawChart is List<dynamic>
         ? rawChart.map((e) {
-            if (e is! Map) {
+            if (e is! Map<Object?, Object?>) {
               throw const FormatException('dca chart point: map değil');
             }
             return DcaChartPoint(
@@ -100,15 +110,12 @@ class DcaResponseModel extends DcaResult {
         json['currentValueTry'],
         'currentValueTry',
       ),
-      profitLossTry: MoneyParser.requireDecimal(
-        json['profitLossTry'],
-        'profitLossTry',
-      ),
+      profitLossTry: profitLossTry,
       profitLossPercent: _requireNum(
         json['profitLossPercent'],
         'profitLossPercent',
       ).toDouble(),
-      isProfit: json['isProfit'] is bool ? json['isProfit'] as bool : false,
+      isProfit: isProfit,
       averageCostPerUnit: MoneyParser.requireDecimal(
         json['averageCostPerUnit'],
         'averageCostPerUnit',

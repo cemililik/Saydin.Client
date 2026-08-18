@@ -6,18 +6,18 @@ class CompareResultModel extends CompareResult {
 
   factory CompareResultModel.fromJson(Map<String, dynamic> json) {
     final rawResults = json['results'];
-    if (rawResults is! List) {
+    if (rawResults is! List<dynamic>) {
       throw const FormatException(
         'compare result: "results" alanı liste değil',
       );
     }
     final items = rawResults.map((e) {
-      if (e is! Map) {
+      if (e is! Map<Object?, Object?>) {
         throw const FormatException('compare result item: map değil');
       }
       final rank = e['rank'];
       final calc = e['calculation'];
-      if (rank is! num || calc is! Map) {
+      if (rank is! num || calc is! Map<Object?, Object?>) {
         throw const FormatException(
           'compare result item: rank int veya calculation map değil',
         );

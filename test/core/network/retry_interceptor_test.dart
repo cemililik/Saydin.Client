@@ -1,3 +1,5 @@
+import 'dart:io' show HttpDate;
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -10,9 +12,13 @@ class _MockDio extends Mock implements Dio {}
 class _FakeErrorHandler extends ErrorInterceptorHandler {
   bool nextCalled = false;
   bool resolveCalled = false;
+  DioException? nextError;
 
   @override
-  void next(DioException err) => nextCalled = true;
+  void next(DioException err) {
+    nextCalled = true;
+    nextError = err;
+  }
 
   @override
   void resolve(Response<dynamic> response) => resolveCalled = true;
@@ -28,7 +34,11 @@ void main() {
 
   setUp(() {
     dio = _MockDio();
-    interceptor = RetryInterceptor(dio: dio, maxRetries: 2);
+    interceptor = RetryInterceptor(
+      dio: dio,
+      maxRetries: 2,
+      backoff: (_) => Duration.zero,
+    );
   });
 
   late RequestOptions lastOptions;
@@ -38,15 +48,25 @@ void main() {
     String method = 'GET',
     int? statusCode,
     int? retryCount,
+    Headers? headers,
+    CancelToken? cancelToken,
   }) {
-    final options = RequestOptions(path: '/v1/assets', method: method);
+    final options = RequestOptions(
+      path: '/v1/assets',
+      method: method,
+      cancelToken: cancelToken,
+    );
     if (retryCount != null) options.extra['_retryCount'] = retryCount;
     lastOptions = options;
     return DioException(
       requestOptions: options,
       type: type,
       response: statusCode != null
-          ? Response<dynamic>(requestOptions: options, statusCode: statusCode)
+          ? Response<dynamic>(
+              requestOptions: options,
+              statusCode: statusCode,
+              headers: headers ?? Headers(),
+            )
           : null,
     );
   }
@@ -64,6 +84,7 @@ void main() {
     // L-5: bağlantı + timeout sınıfının tamamı yeniden denenir.
     for (final type in [
       DioExceptionType.connectionError,
+      DioExceptionType.sendTimeout,
       DioExceptionType.receiveTimeout,
       DioExceptionType.connectionTimeout,
     ]) {
@@ -164,5 +185,118 @@ void main() {
       );
       expect(lastOptions.extra['_retryCount'], 1);
     });
+
+    test('Retry-After seconds normal backofftan uzunsa uygulanır', () async {
+      Duration? observedDelay;
+      interceptor = RetryInterceptor(
+        dio: dio,
+        backoff: (_) => const Duration(milliseconds: 100),
+        delay: (delay, _) async {
+          observedDelay = delay;
+          return true;
+        },
+      );
+      stubFetchSuccess();
+
+      await interceptor.onError(
+        error(
+          type: DioExceptionType.badResponse,
+          statusCode: 503,
+          headers: Headers.fromMap({
+            'retry-after': ['3'],
+          }),
+        ),
+        _FakeErrorHandler(),
+      );
+
+      expect(observedDelay, const Duration(seconds: 3));
+    });
+
+    test(
+      'HTTP-date Retry-After parse edilir ve güvenli üst sınıra kesilir',
+      () async {
+        Duration? observedDelay;
+        final now = DateTime.utc(2026, 8, 18, 12);
+        interceptor = RetryInterceptor(
+          dio: dio,
+          backoff: (_) => Duration.zero,
+          clock: () => now,
+          delay: (delay, _) async {
+            observedDelay = delay;
+            return true;
+          },
+        );
+        stubFetchSuccess();
+
+        await interceptor.onError(
+          error(
+            type: DioExceptionType.badResponse,
+            statusCode: 503,
+            headers: Headers.fromMap({
+              'retry-after': [
+                HttpDate.format(now.add(const Duration(days: 1))),
+              ],
+            }),
+          ),
+          _FakeErrorHandler(),
+        );
+
+        expect(observedDelay, const Duration(seconds: 30));
+      },
+    );
+
+    test(
+      'geçersiz Retry-After enjekte edilmiş normal backoffa düşer',
+      () async {
+        Duration? observedDelay;
+        const backoff = Duration(milliseconds: 250);
+        interceptor = RetryInterceptor(
+          dio: dio,
+          backoff: (_) => backoff,
+          delay: (delay, _) async {
+            observedDelay = delay;
+            return true;
+          },
+        );
+        stubFetchSuccess();
+
+        await interceptor.onError(
+          error(
+            type: DioExceptionType.badResponse,
+            statusCode: 503,
+            headers: Headers.fromMap({
+              'retry-after': ['invalid'],
+            }),
+          ),
+          _FakeErrorHandler(),
+        );
+
+        expect(observedDelay, backoff);
+      },
+    );
+
+    test(
+      'CancelToken retry beklemesini keser ve yeni request başlatmaz',
+      () async {
+        final token = CancelToken();
+        interceptor = RetryInterceptor(
+          dio: dio,
+          backoff: (_) => const Duration(seconds: 1),
+          delay: (_, cancelToken) => cancelToken!.whenCancel.then((_) => false),
+        );
+        final handler = _FakeErrorHandler();
+
+        final retry = interceptor.onError(
+          error(type: DioExceptionType.connectionError, cancelToken: token),
+          handler,
+        );
+        token.cancel('route disposed');
+        await retry;
+
+        verifyNever(() => dio.fetch<dynamic>(any()));
+        expect(handler.nextCalled, isTrue);
+        expect(handler.nextError?.type, DioExceptionType.cancel);
+      },
+    );
   });
 }

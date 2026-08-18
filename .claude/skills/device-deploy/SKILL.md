@@ -1,89 +1,88 @@
 ---
 name: device-deploy
-description: Deploy the Flutter app to the physical test iPhone "C.I." (device ID 00008101-00013C6A02B9003A) with the correct ngrok API URL, defaulting to debug mode unless user explicitly requests release. Verifies device connectivity first. Use when user says "iPhone'a gönder", "cihaza deploy", "deploy iphone", "telefonda çalıştır", "cihaza yükle".
+description: Deploy the Flutter app to an explicitly selected physical iOS device with a session-provided API origin. Defaults to debug unless the user explicitly requests another mode; verifies device discovery and endpoint inputs before running.
 ---
 
-Saydın'ın test iPhone'una (C.I., iOS 18.6) doğru `--dart-define` ve `--device-id` parametreleriyle deploy eder.
+Saydın'ı fiziksel iOS cihaza deploy eder. Committed dosyada cihaz kimliği,
+kişisel cihaz adı veya geçici backend/tünel URL'si tutulmaz.
 
-## Sabitler (CLAUDE.md'den)
+## Zorunlu girdiler
 
-| | |
-|---|---|
-| Cihaz adı | iPhone "C.I." |
-| Device ID | `00008101-00013C6A02B9003A` |
-| API URL (aktif backend) | `https://fumed-cleverishly-moses.ngrok-free.dev/` |
-| Varsayılan mod | **Debug** (kullanıcı açıkça "release" demedikçe) |
+1. **Mod:** Kullanıcı açıkça istemedikçe `debug`.
+2. **Device ID:** O oturumdaki `flutter devices` çıktısından seçilir veya
+   ignore edilen yerel `SAYDIN_DEVICE_ID` ortam değişkeninden okunur.
+3. **API origin:** Kullanıcının bu oturum için verdiği değer veya ignore
+   edilen yerel `SAYDIN_API_BASE_URL` ortam değişkeni. Default yoktur.
+4. **APP_ENV:** `development` veya onaylı test ortamı; API origin ile aynı
+   ortama ait olduğu doğrulanır.
 
-## Önce sor
+Bir girdi eksikse fail-closed dur ve yalnız eksik girdiyi iste. Log veya rapora
+origin'in query/credential parçasını yazma.
 
-1. **Mod**: Debug (varsayılan) mı, Release mı? Performans testi gerekiyorsa Release; aksi halde Debug.
-2. **API URL** (opsiyonel): Yukarıdaki ngrok URL'i mi, başka bir endpoint mi? (Genelde aynı kalır.)
-3. **Hot reload izlemesi gerekiyor mu?** Foreground'da çalışsın yoksa arkaplana mı atsın?
+## Preflight
 
-## İş akışı
+```bash
+flutter devices
 
-1. **Cihaz bağlı mı kontrol et:**
-   ```bash
-   flutter devices
-   ```
-   `00008101-00013C6A02B9003A` listede yoksa:
-   - USB bağlantısını kontrol et
-   - Xcode'da "Trust this computer" onayı gerekebilir
-   - `idevice_id -l` ile alternatif kontrol
+DEVICE_ID_ARG="${SAYDIN_DEVICE_ID:?SAYDIN_DEVICE_ID must be set locally}"
+API_BASE_URL_ARG="${SAYDIN_API_BASE_URL:?SAYDIN_API_BASE_URL must be set locally}"
+APP_ENV_ARG="${SAYDIN_APP_ENV:-development}"
 
-2. **Çalıştır (debug — varsayılan):**
-   ```bash
-   flutter run \
-     --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ \
-     --device-id 00008101-00013C6A02B9003A
-   ```
+case "$API_BASE_URL_ARG" in
+  https://*) ;;
+  *) echo "Physical-device API origin must use HTTPS" >&2; exit 1 ;;
+esac
 
-3. **Çalıştır (release — performans testi):**
-   ```bash
-   flutter run \
-     --dart-define=API_BASE_URL=https://fumed-cleverishly-moses.ngrok-free.dev/ \
-     --device-id 00008101-00013C6A02B9003A \
-     --release
-   ```
+case "$APP_ENV_ARG" in
+  development|staging) ;;
+  *) echo "Unapproved deploy environment" >&2; exit 1 ;;
+esac
+```
 
-4. **Background'da çalıştırma:** Eğer hot reload izlemek istemiyorsan ve sadece deploy edip kapatmak istiyorsan komuta `&` ekleme — Flutter run terminale bağlı kalır. `run_in_background: true` ile Bash tool kullanmak en pratiği.
+- `flutter devices` sonucunda `DEVICE_ID_ARG` tam olarak bir bağlı cihazla
+  eşleşmelidir. Eşleşmiyorsa komutu çalıştırma.
+- Geçici tünel kullanılıyorsa origin oturumda yeniden doğrulanır ve HTTPS
+  olmalıdır. Eski session/commit değeri tekrar kullanılmaz.
+- Backend'in belgelenmiş health/environment identity endpoint'i varsa deploy
+  öncesi `curl --fail` ile kontrol et. Repoda olmayan endpoint'i uydurma.
+- Release/profile için geçici tünel kabul etme; maintainer tarafından onaylı,
+  sahipliği doğrulanmış test origin'i gerekir.
+
+## Çalıştırma
+
+Debug:
+
+```bash
+flutter run \
+  --device-id "$DEVICE_ID_ARG" \
+  --dart-define="API_BASE_URL=$API_BASE_URL_ARG" \
+  --dart-define="APP_ENV=$APP_ENV_ARG"
+```
+
+Kullanıcı açıkça profile/release isterse aynı doğrulanmış argümanlara
+ilgili Flutter flag'i eklenir. Komut arka plana shell `&` ile atılmaz; runtime
+foreground/background yönetimi sağlıyorsa onun kontrollü mekanizması kullanılır.
+
+## Simulator/emulator ayrımı
+
+- iOS Simulator yerel backend için `http://localhost:<port>` kullanabilir.
+- Android emulator host loopback'i `http://10.0.2.2:<port>` kullanabilir.
+- Fiziksel cihazda `localhost` cihazın kendisidir; fiziksel cihaz origin'i HTTPS
+  olmalıdır.
 
 ## Sorun giderme
 
-**"Multiple devices found" hatası:** `--device-id` parametresi olmadan çalıştırıyorsun, ekle.
-
-**"Device not found":** USB bağlantısını sök/tak, Xcode'u aç ve "Window → Devices and Simulators" altında cihazın güvenildiğinden emin ol.
-
-**iOS code signing hatası (debug'da bile):**
-- Xcode → `ios/Runner.xcworkspace` aç
-- "Signing & Capabilities" → Team seç
-- Bir kez Xcode üzerinden build alıp sonra `flutter run` ile devam
-
-**Ngrok URL süresi dolmuş / değişmiş:** CLAUDE.md'deki URL'i güncel olmayabilir; aktif URL için backend ekibine sor veya `https://dashboard.ngrok.com` kontrol et. Geçici çözüm: emülatör için `http://10.0.2.2:5080`, simulator için `http://localhost:5080`.
-
-**Hot reload çalışmıyor / hot restart gerekiyor:** Hot reload `r`, hot restart `R` (büyük). Native değişiklik yaptıysan `R` gerekir.
-
-## Alternatif cihazlar
-
-Başka cihaza deploy gerekirse:
-
-```bash
-# Tüm cihazları gör (id'leriyle)
-flutter devices
-
-# Belirli cihaza deploy
-flutter run --device-id <DEVICE_ID> --dart-define=API_BASE_URL=<URL>
-
-# iOS simulator
-flutter run -d "iPhone 16" --dart-define=API_BASE_URL=http://localhost:5080
-
-# Android emulator (host: 10.0.2.2)
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5080
-```
+- **Device not found:** USB/Wi-Fi pairing, trust onayı ve Xcode Devices and
+  Simulators ekranını kontrol et; başka bir cihaza otomatik fallback yapma.
+- **Code signing:** `ios/Runner.xcworkspace` için doğru development team'i
+  seç; signing kontrolünü bypass etme.
+- **Endpoint erişilemiyor:** Oturum değerini kaynağından yeniden al. Repo
+  dosyasına güncel URL veya cihaz ID'si yazma.
 
 ## Yasak
 
-- **`--release` modu varsayılan kabul etme** — kullanıcı açıkça istemedi mi debug çalıştır
-- **Hardcoded API URL'i içeride bırakma** — `--dart-define` ile geç, koddan okuma
-- **Local backend URL kullanma** (`localhost`, `127.0.0.1`) iPhone'da — fiziksel cihaz host makineye `localhost` ile ulaşamaz; ngrok zorunlu
-- **Cihaz onayını atlamak için `--device-id` argümanını silmek** — başka cihaza yanlışlıkla deploy riski
+- Hardcoded/varsayılan device ID, cihaz adı veya tünel URL'si
+- Kullanıcı istemeden release/profile modu
+- Fiziksel cihazda localhost/127.0.0.1
+- Device/API preflight başarısızken deploy
+- Secret, query string veya credential içeren origin'i loglamak

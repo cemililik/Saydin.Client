@@ -4,8 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/utils/date_range_utils.dart';
+import 'package:saydin/core/utils/financial_amount_validator.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
+import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/skeleton_card.dart';
@@ -73,6 +75,13 @@ class _DcaPageState extends State<DcaPage> {
   void _onCalculate() {
     FocusScope.of(context).unfocus();
     final l10n = context.l10n;
+    final config = context.read<AppConfigCubit>().state;
+    if (!config.isReady) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.configLoading)));
+      return;
+    }
     if (_formKey.currentState?.validate() != true) return;
 
     final formInput = context.read<DcaBloc>().state.formInput;
@@ -95,7 +104,7 @@ class _DcaPageState extends State<DcaPage> {
     // başlangıcı ileriye taşırsa eski bitiş başlangıçtan önce kalabilir.
     // Ters aralığı backend'e göndermeden inline reddet.
     final endDate = formInput.endDate;
-    if (endDate != null && endDate.isBefore(startDate)) {
+    if (!isValidFinancialDateRange(startDate, endDate)) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.dcaEndBeforeStart)));
@@ -106,7 +115,22 @@ class _DcaPageState extends State<DcaPage> {
       _amountController.text,
       context.localeName,
     );
-    if (amount == null || amount <= 0) {
+    final selectedAsset = context.read<DcaBloc>().state;
+    final asset = switch (selectedAsset) {
+      DcaAssetsLoaded(:final assets) ||
+      DcaCalculating(:final assets) ||
+      DcaSuccess(:final assets) ||
+      DcaFailure(
+        :final assets,
+      ) => assets.where((a) => a.symbol == symbol).firstOrNull,
+      _ => null,
+    };
+    if (amount == null ||
+        !FinancialAmountValidator.isValid(
+          value: amount,
+          amountType: formInput.amountType,
+          allowedAmountTypes: asset?.allowedAmountTypes,
+        )) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.validAmountRequired)));
@@ -198,18 +222,14 @@ class _DcaPageState extends State<DcaPage> {
           final selectedAsset = assets
               .where((a) => a.symbol == formInput.selectedSymbol)
               .firstOrNull;
-          final priceHistoryMonths = context
-              .read<AppConfigCubit>()
-              .state
-              .features
-              .priceHistoryMonths;
+          final config = context.watch<AppConfigCubit>().state;
+          final priceHistoryMonths = config.features.priceHistoryMonths;
           final dateRange = assetDateRange(
             assetFirstDate: selectedAsset?.firstDate,
             assetLastDate: selectedAsset?.lastDate,
             priceHistoryMonths: priceHistoryMonths,
           );
 
-          final config = context.read<AppConfigCubit>().state;
           final l10n = context.l10n;
 
           return GestureDetector(
@@ -235,8 +255,11 @@ class _DcaPageState extends State<DcaPage> {
                       value: formInput.startDate,
                       firstDate: dateRange.firstDate,
                       lastDate: dateRange.lastDate ?? DateTime.now(),
-                      onChanged: (v) =>
-                          context.read<DcaBloc>().add(DcaStartDateChanged(v!)),
+                      onChanged: (v) {
+                        if (v != null) {
+                          context.read<DcaBloc>().add(DcaStartDateChanged(v));
+                        }
+                      },
                     ),
                     const SizedBox(height: 16),
                     DateInput(
@@ -274,11 +297,22 @@ class _DcaPageState extends State<DcaPage> {
                           v,
                           context.localeName,
                         );
-                        if (parsed == null || parsed <= 0) {
+                        if (parsed == null ||
+                            !FinancialAmountValidator.isValid(
+                              value: parsed,
+                              amountType: formInput.amountType,
+                              allowedAmountTypes:
+                                  selectedAsset?.allowedAmountTypes,
+                            )) {
                           return l10n.validAmountRequired;
                         }
                         return null;
                       },
+                      onChanged: (text) => context.read<DcaBloc>().add(
+                        DcaPeriodicAmountChanged(
+                          LocaleNumberParser.tryParse(text, context.localeName),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     InflationToggle(
@@ -353,20 +387,17 @@ class _DcaPageState extends State<DcaPage> {
                                     assetDisplayName: result.assetDisplayName,
                                     buyDate: result.startDate,
                                     sellDate: result.endDate,
-                                    // ScenarioSaveRequested.amount num bekliyor.
-                                    // periodicAmount Decimal (backend'den parse);
-                                    // .toDouble() display/save köprüsü. Tam
-                                    // precision için backend string amount
-                                    // kontratı + MoneyParser.toJsonString (Faz 4).
-                                    amount: result.periodicAmount.toDouble(),
+                                    amount: result.periodicAmount,
                                     amountType: 'try',
                                     type: ScenarioType.dca,
                                     extraData: {
+                                      'schemaVersion': ScenarioReplayParser
+                                          .currentSchemaVersion,
                                       'includeInflation':
                                           formInput.includeInflation,
                                       'period': result.period,
                                       'periodicAmount': result.periodicAmount
-                                          .toDouble(),
+                                          .toString(),
                                     },
                                   ),
                                 );

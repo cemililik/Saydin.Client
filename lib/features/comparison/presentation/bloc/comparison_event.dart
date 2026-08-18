@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class ComparisonEvent extends Equatable {
@@ -32,7 +33,7 @@ class ComparisonSellDateChanged extends ComparisonEvent {
 }
 
 class ComparisonAmountChanged extends ComparisonEvent {
-  final num amount;
+  final Decimal? amount;
   const ComparisonAmountChanged(this.amount);
   @override
   List<Object?> get props => [amount];
@@ -53,8 +54,7 @@ class ComparisonCalculateRequested extends ComparisonEvent {
   const ComparisonCalculateRequested();
 }
 
-/// Dil değiştiğinde asset listesini yeniler, form state'i korur,
-/// eğer önceden hesaplama yapılmışsa otomatik yeniden hesaplar.
+/// Dil değiştiğinde yalnız asset listesini yeniler; finansal sonuç korunur.
 class ComparisonLanguageChanged extends ComparisonEvent {
   const ComparisonLanguageChanged();
 }
@@ -63,7 +63,8 @@ class ComparisonReplayRequested extends ComparisonEvent {
   final List<String> symbols;
   final DateTime buyDate;
   final DateTime? sellDate;
-  final num amount;
+  final Decimal amount;
+  final String amountType;
   final bool includeInflation;
 
   const ComparisonReplayRequested({
@@ -71,6 +72,7 @@ class ComparisonReplayRequested extends ComparisonEvent {
     required this.buyDate,
     this.sellDate,
     required this.amount,
+    this.amountType = 'try',
     this.includeInflation = false,
   });
 
@@ -80,6 +82,7 @@ class ComparisonReplayRequested extends ComparisonEvent {
     buyDate,
     sellDate,
     amount,
+    amountType,
     includeInflation,
   ];
 }

@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -62,7 +63,7 @@ void main() {
     assetSymbols: const ['USDTRY', 'EURTRY'],
     buyDate: DateTime(2020, 1, 1),
     sellDate: DateTime(2021, 1, 1),
-    amount: 10000,
+    amount: Decimal.fromInt(10000),
     amountType: 'try',
   );
 
@@ -77,15 +78,10 @@ void main() {
       expect(result.results.single.calculation.assetSymbol, 'USDTRY');
     });
 
-    test('compare_nullBody_throwsServerError', () async {
+    test('compare_nullBody_throwsMalformedResponse', () async {
       stubPost(okResponse(null));
 
-      await expectLater(
-        compare(),
-        throwsA(
-          isA<ServerError>().having((e) => e.statusCode, 'statusCode', 200),
-        ),
-      );
+      await expectLater(compare(), throwsA(isA<MalformedResponseError>()));
     });
 
     test('compare_connectionError_throwsNoInternet', () async {
@@ -99,7 +95,7 @@ void main() {
       expect(compare(), throwsA(isA<NoInternetError>()));
     });
 
-    test('compare_status404_throwsPriceNotFound', () async {
+    test('compare_unknownStatus404_throwsEndpointNeutralNotFound', () async {
       stubPost(
         DioException(
           requestOptions: RequestOptions(path: '/x'),
@@ -111,18 +107,45 @@ void main() {
         ),
       );
 
-      expect(compare(), throwsA(isA<PriceNotFoundError>()));
+      expect(compare(), throwsA(isA<NotFoundError>()));
     });
 
-    test('compare_parseError_propagatesNotSwallowed', () async {
-      // "results" liste değil → CompareResultModel.fromJson FormatException
-      // fırlatır; `on DioException` yakalamaz, ham hata propagate olur.
+    test('compare_parseError_throwsMalformedResponse', () async {
       stubPost(okResponse({'results': 'not-a-list'}));
 
-      await expectLater(
-        compare(),
-        throwsA(allOf(isA<FormatException>(), isNot(isA<AppError>()))),
+      await expectLater(compare(), throwsA(isA<MalformedResponseError>()));
+    });
+
+    test('compare_profitDirectionConflict_throwsMalformedResponse', () async {
+      final payload = compareJson();
+      final calculation =
+          (payload['results'] as List<dynamic>).single['calculation']
+              as Map<String, dynamic>;
+      calculation['isProfit'] = false;
+      stubPost(okResponse(payload));
+
+      await expectLater(compare(), throwsA(isA<MalformedResponseError>()));
+    });
+
+    test('compare_decimalAmount_serializesCanonicalString', () async {
+      stubPost(okResponse(compareJson()));
+
+      await repo.compare(
+        assetSymbols: const ['USDTRY', 'EURTRY'],
+        buyDate: DateTime(2020),
+        amount: Decimal.parse('10000.01'),
+        amountType: 'try',
       );
+
+      final captured =
+          verify(
+                () => dio.post<Map<String, dynamic>>(
+                  any(),
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(captured['amount'], '10000.01');
     });
   });
 }

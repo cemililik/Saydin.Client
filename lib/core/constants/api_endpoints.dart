@@ -15,6 +15,7 @@ class ApiEndpoints {
   static const whatIfReverse = '/v1/what-if/reverse';
   static const assets = '/v1/assets';
   static const scenarios = '/v1/scenarios';
+  static const account = '/v1/account';
 
   /// Bkz. sınıf docstring'i — DCA backend'de what-if namespace'i altında.
   static const dcaCalculate = '/v1/what-if/dca';
