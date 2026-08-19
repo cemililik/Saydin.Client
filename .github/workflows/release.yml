@@ -466,6 +466,8 @@ jobs:
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         run: |
+          set -euo pipefail
+
           if [ "$IS_RC" = "true" ]; then
             app_env="staging"
             api_url="$API_URL_STAGING"
@@ -478,12 +480,37 @@ jobs:
             echo "❌ Release API URL boş veya origin-only HTTPS URL değil."
             exit 1
           fi
-          if [ -z "$SENTRY_DSN" ] || [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
-            echo "❌ Sentry DSN/auth/org/project eksik; release event ve symbolication zinciri kapalı olamaz."
+
+          sentry_value_count=0
+          for value in "$SENTRY_DSN" "$SENTRY_AUTH_TOKEN" "$SENTRY_ORG" "$SENTRY_PROJECT"; do
+            if [ -n "$value" ]; then
+              sentry_value_count=$((sentry_value_count + 1))
+            fi
+          done
+
+          if [ "$sentry_value_count" -eq 4 ]; then
+            sentry_enabled=true
+          elif [ "$sentry_value_count" -ne 0 ]; then
+            echo "❌ Kısmi Sentry yapılandırması kabul edilmez; dört değer birlikte tanımlanmalıdır."
+            exit 1
+          elif [ "$IS_RC" = "true" ]; then
+            sentry_enabled=false
+            echo "⚠️ RC build — Sentry yapılandırılmadı; telemetry ve symbol upload devre dışı."
+          else
+            echo "❌ Production release için Sentry DSN/auth/org/project zorunludur."
             exit 1
           fi
-          export SENTRY_RELEASE="com.saydin.saydin@$BUILD_NAME+$BUILD_NUMBER"
-          export SENTRY_DIST="$BUILD_NUMBER"
+
+          sentry_build_args=()
+          if [ "$sentry_enabled" = "true" ]; then
+            export SENTRY_RELEASE="com.saydin.saydin@$BUILD_NAME+$BUILD_NUMBER"
+            export SENTRY_DIST="$BUILD_NUMBER"
+            sentry_build_args+=(
+              --dart-define=SENTRY_DSN="$SENTRY_DSN"
+              --dart-define=SENTRY_RELEASE="$SENTRY_RELEASE"
+              --dart-define=SENTRY_DIST="$SENTRY_DIST"
+            )
+          fi
 
           flutter build appbundle --release \
             --build-name="$BUILD_NAME" \
@@ -493,13 +520,13 @@ jobs:
             --extra-gen-snapshot-options=--save-obfuscation-map=build/symbols/obfuscation.map.json \
             --dart-define=API_BASE_URL="$api_url" \
             --dart-define=APP_ENV="$app_env" \
-            --dart-define=SENTRY_DSN="$SENTRY_DSN" \
-            --dart-define=SENTRY_RELEASE="$SENTRY_RELEASE" \
-            --dart-define=SENTRY_DIST="$SENTRY_DIST"
+            "${sentry_build_args[@]}"
 
           # Dart/native symbols. Android R8 mapping aynı build sırasında
           # Sentry Gradle plugin'i tarafından UUID ile yüklenir.
-          dart run sentry_dart_plugin
+          if [ "$sentry_enabled" = "true" ]; then
+            dart run sentry_dart_plugin
+          fi
 
       - name: Attest Android build provenance
         uses: actions/attest@v4
@@ -626,6 +653,8 @@ jobs:
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         run: |
+          set -euo pipefail
+
           if [ "$IS_RC" = "true" ]; then
             app_env="staging"
             api_url="$API_URL_STAGING"
@@ -638,12 +667,37 @@ jobs:
             echo "❌ Release API URL boş veya origin-only HTTPS URL değil."
             exit 1
           fi
-          if [ -z "$SENTRY_DSN" ] || [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
-            echo "❌ Sentry DSN/auth/org/project eksik; release event ve symbolication zinciri kapalı olamaz."
+
+          sentry_value_count=0
+          for value in "$SENTRY_DSN" "$SENTRY_AUTH_TOKEN" "$SENTRY_ORG" "$SENTRY_PROJECT"; do
+            if [ -n "$value" ]; then
+              sentry_value_count=$((sentry_value_count + 1))
+            fi
+          done
+
+          if [ "$sentry_value_count" -eq 4 ]; then
+            sentry_enabled=true
+          elif [ "$sentry_value_count" -ne 0 ]; then
+            echo "❌ Kısmi Sentry yapılandırması kabul edilmez; dört değer birlikte tanımlanmalıdır."
+            exit 1
+          elif [ "$IS_RC" = "true" ]; then
+            sentry_enabled=false
+            echo "⚠️ RC build — Sentry yapılandırılmadı; telemetry ve symbol upload devre dışı."
+          else
+            echo "❌ Production release için Sentry DSN/auth/org/project zorunludur."
             exit 1
           fi
-          export SENTRY_RELEASE="com.saydin.saydin@$BUILD_NAME+$BUILD_NUMBER"
-          export SENTRY_DIST="$BUILD_NUMBER"
+
+          sentry_build_args=()
+          if [ "$sentry_enabled" = "true" ]; then
+            export SENTRY_RELEASE="com.saydin.saydin@$BUILD_NAME+$BUILD_NUMBER"
+            export SENTRY_DIST="$BUILD_NUMBER"
+            sentry_build_args+=(
+              --dart-define=SENTRY_DSN="$SENTRY_DSN"
+              --dart-define=SENTRY_RELEASE="$SENTRY_RELEASE"
+              --dart-define=SENTRY_DIST="$SENTRY_DIST"
+            )
+          fi
 
           flutter build ipa --release \
             --build-name="$BUILD_NAME" \
@@ -653,12 +707,12 @@ jobs:
             --extra-gen-snapshot-options=--save-obfuscation-map=build/symbols/obfuscation.map.json \
             --dart-define=API_BASE_URL="$api_url" \
             --dart-define=APP_ENV="$app_env" \
-            --dart-define=SENTRY_DSN="$SENTRY_DSN" \
-            --dart-define=SENTRY_RELEASE="$SENTRY_RELEASE" \
-            --dart-define=SENTRY_DIST="$SENTRY_DIST" \
+            "${sentry_build_args[@]}" \
             --export-options-plist=ios/ExportOptions.plist
 
-          dart run sentry_dart_plugin
+          if [ "$sentry_enabled" = "true" ]; then
+            dart run sentry_dart_plugin
+          fi
 
       - name: Find IPA path
         id: ipa
