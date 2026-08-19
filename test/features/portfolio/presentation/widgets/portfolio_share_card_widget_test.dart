@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:saydin/core/constants/app_branding.dart';
 import 'package:saydin/core/theme/app_theme.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_calculation.dart';
@@ -63,6 +64,7 @@ void main() {
         ),
         home: Scaffold(
           body: SharePreviewSheet(
+            canExecuteShare: () => true,
             cardWidget: PortfolioShareCardWidget(
               result: result(),
               buyDate: DateTime(2020, 1, 1),
@@ -132,6 +134,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await precacheImage(
+      const AssetImage(AppBranding.horizontalLogoOnLightAsset),
+      tester.element(find.byType(PortfolioShareCardWidget)),
+    );
+    await tester.pump();
 
     // Flutter'ın metin rasterizasyonu host işletim sistemine göre farklılaşır.
     // CI Linux referansını ayrı tutmak gerçek UI regresyonlarını toleransla

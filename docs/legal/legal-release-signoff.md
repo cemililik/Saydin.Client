@@ -2,7 +2,7 @@
 
 **Durum:** BLOCKED
 **Blokaj:** Zorunlu hukuk, altyapı, store ve yönetişim kanıtları tamamlanmadı.
-**Teknik envanter tarihi:** 2026-08-18
+**Teknik envanter tarihi:** 2026-08-19
 **Kapsam:** iOS/Android istemci, API veri akışları, cihaz depolaması, Sentry,
 paylaşım yüzeyi ve store beyanları
 
@@ -50,10 +50,10 @@ Legal bundle'ın tek kaynak listesi `LEGAL_FILES` sabitidir:
 | Kaydedilmiş senaryo | Hesaplama girdileri, ad/sembol, tür, `extraData`; sunucudan ID/zaman döner | Saydın API; POST/GET/DELETE | `lib/features/scenarios/data/repositories/scenarios_repository_impl.dart`, `lib/features/scenarios/data/models/saved_scenario_model.dart` | GET isteği `plan` query parametresi gönderir; sunucu saklama/yedek süresi bilinmiyor |
 | Yerel tercihler ve legal bildirim kaydı | Tema, dil, favoriler, onboarding; legal bundle sürümü/hash'i, belge kimlikleri, locale, UTC gösterim zamanı ve `seen`/isteğe bağlı `acknowledged` kararı | SharedPreferences | `lib/features/settings/data/repositories/settings_repository_impl.dart`, `lib/features/favorites/data/repositories/favorites_repository_impl.dart`, `lib/features/onboarding/data/repositories/onboarding_repository_impl.dart` | `seen` kabul/rıza değildir. Hesap silme doğrulanırsa temizlenir; bunun dışında cihaz/OS depolama yaşam döngüsü geçerlidir |
 | Hesap-silme cleanup marker'ı | Backend 200/204 doğrulandıktan sonra, destructive local wipe'tan önce oluşturulur | Application Support içinde `saydin_account_deletion_cleanup_pending_v1` | `lib/features/account/data/repositories/account_data_repository_impl.dart`, `lib/features/account/presentation/cubit/account_deletion_cubit.dart` | PII içermez; restart-safe faz kaydıdır. Cleanup tüm zorunlu adımlarla tamamlanana kadar kalır. iOS backup dışlama durumu ayrıca doğrulanmalıdır |
-| Paylaşım görseli ve metni | Önizleme açıldığında dosya yazılmaz; kullanıcı **Paylaş** dediğinde What-if, Karşılaştırma, Portföy veya DCA sonucu PNG'ye çevrilir | Geçici uygulama dizini, ardından sistem share sheet'te kullanıcının seçtiği hedef | `lib/core/widgets/share_preview_sheet.dart`, `lib/core/utils/share_card_renderer.dart`, ilgili dört feature entry point | Share sheet kapanınca `finally` ile silinir; açılışta 1 saatten eski veya 20 dosya üstü kalıntılar temizlenir; hesap silme de cache'i temizler. Seçilen hedef ayrı alıcıdır |
+| Paylaşım görseli ve metni | Önizleme açıldığında dosya yazılmaz; kullanıcı **Paylaş** dediğinde What-if, Karşılaştırma, Portföy veya DCA sonucu PNG'ye çevrilir | Uygulamanın geçici cache dizini; Android'de ayrıca `share_plus` tarafından exact `cacheDir/share_plus/` altına aynı adlı kopya; ardından sistem share sheet'te kullanıcının seçtiği hedef | `lib/core/widgets/share_preview_sheet.dart`, `lib/core/utils/share_card_renderer.dart`, `lib/core/storage/share_card_cache.dart`, ilgili dört feature entry point | Kaynak PNG share sheet sonucu döndüğünde `finally` ile silinir. Startup, kaynak ve Android plugin kopyalarında 1 saatten eski dosyaları ve dizin başına 20 üstü LRU kalıntıları temizler; hesap silme exact canonical dizinlerdeki tüm eşleşen kopyaları fail-visible siler. Bir saatten genç son Android plugin kopyası sonraki startup retention pass'ine veya sonraki `share_plus` paylaşımına kadar kalabilir. Seçilen hedef ayrı alıcıdır; hedefin kendi kopyası uygulama kontrolünde değildir |
 | Fotoğraflar'a ekleme | Kullanıcı sistem paylaşım seçeneklerinden Fotoğraflar'a kaydetmeyi seçerse iOS add-only izin istemi gösterebilir | Kullanıcının sistem Fotoğraflar kitaplığı; iCloud Fotoğraflar açıksa sonraki senkronizasyon kullanıcının Apple ayarlarına bağlıdır | `ios/Runner/Info.plist`, `ios/Runner/tr.lproj/InfoPlist.strings`, `ios/Runner/en.lproj/InfoPlist.strings` | `NSPhotoLibraryAddUsageDescription` yalnız ekleme amacını beyan eder; uygulama mevcut fotoğrafları okuma izni istemez. Sistem hedefi ve olası cloud sync cihaz/RC'de doğrulanmalıdır |
 | Sentry telemetrisi | Store release workflow'u boş olmayan DSN zorunlu kılar; Sentry `runApp` ve legal bildirimden önce başlatılır, dolayısıyla başlangıç/legal kayıt hataları pre-notice gönderilebilir | Yapılandırılmış Sentry projesi | `lib/main.dart`, `.github/workflows/release.yml`, `lib/core/observability/sentry_pii_scrubber.dart`, `lib/core/observability/sentry_device_context.dart` | Screenshot/default PII/performance tracing/session replay/auto session tracking kapalıdır; Dart event ekleri de scrubber tarafından temizlenir. Dart event ve breadcrumb'ları scrubber'dan geçer; native crash envelope, region, retention, IP, processor ve gerçek serialized payload production-like RC'de ayrıca doğrulanmalıdır |
-| Hesap/veri silme | `/v1/account` DELETE; yalnız 200/204 sonrasında durable marker ve local wipe | API + prefs/secure storage/share cache/in-memory session | `lib/features/account/presentation/cubit/account_deletion_cubit.dart`, `lib/features/account/data/repositories/account_data_repository_impl.dart` | 200/204 yoksa identity korunur. Partial local failure marker üzerinden backend'i tekrarlamadan retry edilir. Backend completion, lost-response ve yedek silme sözleşmesi doğrulanmadı |
+| Hesap/veri silme | `/v1/account` DELETE; yalnız 200/204 sonrasında durable marker ve local wipe | API + prefs/secure storage/share source cache/Android `share_plus` cache/in-memory session | `lib/features/account/presentation/cubit/account_deletion_cubit.dart`, `lib/features/account/data/repositories/account_data_repository_impl.dart`, `lib/core/storage/share_card_cache.dart` | 200/204 yoksa identity korunur. Share cache cleanup yalnız canonical root ve exact Android `share_plus` dizininde, symlink takip etmeden eşleşen PNG'leri siler; hata partial wipe olarak raporlanır. Partial local failure marker üzerinden backend'i tekrarlamadan retry edilir. Backend completion, lost-response ve yedek silme sözleşmesi doğrulanmadı |
 
 ### Platform backup gerçeği
 
@@ -112,6 +112,8 @@ edilmez. Açık zorunlu maddeler `- [ ]` kalır ve production gate'i bloke eder.
 - [ ] iOS uninstall/reinstall testinde Keychain UUID davranışı, ephemeral storage fallback'i ve yeni kurulum politikası
 - [ ] iOS SharedPreferences/Application Support backup kapsamı ve gerekiyorsa backup exclusion uygulaması/testi
 - [ ] Fotoğraflar add-only sistem hedefi için cihaz testi; gereksiz izin beyanı olmadığının doğrulanması
+- [ ] Android gerçek cihazda source/plugin cache retention: hedef seçimi, dismiss, force-quit, bir saat eşiği, sonraki startup ve hesap silme sonrası dosya sistemi kanıtı
+- [ ] iPad portrait/landscape/Split View gerçek cihaz smoke: CTA origin ile success/dismiss/error yollarında crash, hang ve yanlış popover konumu olmadığının kanıtı
 - [ ] Gizlilik/KVKK metni ↔ App Store App Privacy ↔ Google Play Data Safety ↔ Google Play account-deletion declaration alan bazlı eşleştirmesi
 - [ ] GDPR/AB storefront uygulanabilirlik kararı ve gerekiyorsa privacy notice/hak kanalları
 - [ ] TR/EN nihai metin hukuk/DPO ve dil kontrolü; veri sorumlusu/işleyen/ülke/saklama bilgilerinin tamamlanması
@@ -249,6 +251,7 @@ onaylanmalıdır.
 |---|---|---|---|
 | 2026-08-18 | 1 | İstemci envanteri, fail-closed legal gate ve dış hukuk girdileri | BLOCKED |
 | 2026-08-18 | 2 | Runtime/privacy hash, approval schema v2, Sentry/pre-notice, paylaşım/Photos, marker/backup ve production sıra sertleştirmesi | BLOCKED |
+| 2026-08-19 | 3 | Android `share_plus` nested cache retention/account-wipe ve iPad popover origin teknik sözleşmesi | BLOCKED |
 
 Kapsam dışı: backend kaynak kodu/veritabanı, production cloud ve Sentry console
 ayarları, Apple/Google hesap beyanları, şirketin resmî sicil/VERBİS kayıtları,

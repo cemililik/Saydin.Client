@@ -188,6 +188,42 @@ void main() {
       expect(model.realProfitLossPercent, closeTo(-22.7, 0.001));
     });
 
+    test('zorunlu ve opsiyonel yüzde alanları non-finite olamaz', () {
+      for (final field in [
+        'profitLossPercent',
+        'cumulativeInflationPercent',
+        'realProfitLossPercent',
+      ]) {
+        for (final value in [
+          double.nan,
+          double.infinity,
+          double.negativeInfinity,
+        ]) {
+          expect(
+            () => WhatIfResponseModel.fromJson({
+              ..._baseJson(priceHistory: []),
+              field: value,
+            }),
+            throwsFormatException,
+            reason: '$field=$value reddedilmeli',
+          );
+        }
+      }
+    });
+
+    test('yüzde alanlarında sıfır ve çok büyük finite değerler geçerlidir', () {
+      final model = WhatIfResponseModel.fromJson({
+        ..._baseJson(priceHistory: []),
+        'profitLossPercent': double.maxFinite,
+        'cumulativeInflationPercent': 0.0,
+        'realProfitLossPercent': -double.maxFinite,
+      });
+
+      expect(model.profitLossPercent, double.maxFinite);
+      expect(model.cumulativeInflationPercent, 0.0);
+      expect(model.realProfitLossPercent, -double.maxFinite);
+    });
+
     test('inflationDataAsOf null gelince null döner', () {
       final model = WhatIfResponseModel.fromJson(_baseJson(priceHistory: []));
 

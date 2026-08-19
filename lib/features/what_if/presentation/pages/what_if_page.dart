@@ -12,6 +12,8 @@ import 'package:saydin/core/utils/locale_number_parser.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
+import 'package:saydin/features/config/domain/policies/share_policy.dart';
+import 'package:saydin/features/config/presentation/widgets/share_result_button.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_bloc.dart';
 import 'package:saydin/features/scenarios/presentation/bloc/scenarios_event.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
@@ -142,6 +144,57 @@ class _WhatIfPageState extends State<WhatIfPage> {
     }
   }
 
+  void _showShare({WhatIfResult? result, ReverseWhatIfResult? reverseResult}) {
+    SharePolicy.runIfAllowed(context.read<AppConfigCubit>().state, () {
+      final fmt = AppFormat.tryCurrency(context.localeName, decimalDigits: 0);
+      if (reverseResult != null) {
+        final r = reverseResult;
+        // `NumberFormat.format(Decimal)` runtime'da NoSuchMethodError
+        // fırlatır; Decimal → double dönüşümü display'de tek noktada.
+        final text = context.l10n.shareTextReverse(
+          r.assetDisplayName,
+          fmt.format(r.targetValueTry.toDouble()),
+          fmt.format(r.requiredInvestmentTry.toDouble()),
+          PercentageFormatter.signed(
+            r.profitLossPercent,
+            locale: context.localeName,
+          ),
+        );
+        showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => ShareCardPreviewSheet.custom(
+            cardWidget: ReverseShareCardWidget(result: r),
+            shareText: text,
+            canExecuteShare: () =>
+                SharePolicy.canShare(context.read<AppConfigCubit>().state),
+          ),
+        );
+      } else if (result != null) {
+        final r = result;
+        final text = context.l10n.shareTextWhatIf(
+          r.assetDisplayName,
+          fmt.format(r.initialValueTry.toDouble()),
+          fmt.format(r.finalValueTry.toDouble()),
+          PercentageFormatter.signed(
+            r.profitLossPercent,
+            locale: context.localeName,
+          ),
+        );
+        showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => ShareCardPreviewSheet.normal(
+            result: r,
+            shareText: text,
+            canExecuteShare: () =>
+                SharePolicy.canShare(context.read<AppConfigCubit>().state),
+          ),
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -264,56 +317,10 @@ class _WhatIfPageState extends State<WhatIfPage> {
                 context.read<WhatIfBloc>().add(WhatIfModeChanged(mode)),
             onCalculate: _onCalculate,
             onShare: hasResult
-                ? () {
-                    final fmt = AppFormat.tryCurrency(
-                      context.localeName,
-                      decimalDigits: 0,
-                    );
-                    if (reverseResult != null) {
-                      final r = reverseResult;
-                      // `NumberFormat.format(Decimal)` runtime'da
-                      // NoSuchMethodError fırlatır (intl içerideki
-                      // `.isNegative` getter Decimal'da yok). Decimal
-                      // → double dönüşümü display'de tek noktada.
-                      final text = context.l10n.shareTextReverse(
-                        r.assetDisplayName,
-                        fmt.format(r.targetValueTry.toDouble()),
-                        fmt.format(r.requiredInvestmentTry.toDouble()),
-                        PercentageFormatter.signed(
-                          r.profitLossPercent,
-                          locale: context.localeName,
-                        ),
-                      );
-                      showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => ShareCardPreviewSheet(
-                          cardWidgetOverride: ReverseShareCardWidget(result: r),
-                          shareText: text,
-                        ),
-                      );
-                    } else if (successResult != null) {
-                      final r = successResult;
-                      // Bkz. yukarıdaki Decimal → double notu.
-                      final text = context.l10n.shareTextWhatIf(
-                        r.assetDisplayName,
-                        fmt.format(r.initialValueTry.toDouble()),
-                        fmt.format(r.finalValueTry.toDouble()),
-                        PercentageFormatter.signed(
-                          r.profitLossPercent,
-                          locale: context.localeName,
-                        ),
-                      );
-                      showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => ShareCardPreviewSheet(
-                          result: successResult,
-                          shareText: text,
-                        ),
-                      );
-                    }
-                  }
+                ? () => _showShare(
+                    result: successResult,
+                    reverseResult: reverseResult,
+                  )
                 : null,
             onSave: hasResult
                 ? () {
@@ -605,17 +612,7 @@ class _ActionButtons extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onShare,
-            icon: const Icon(Icons.share_outlined),
-            label: Text(l10n.shareResult),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
-        ),
+        if (onShare != null) ShareResultButton(onPressed: onShare!),
       ],
     );
   }

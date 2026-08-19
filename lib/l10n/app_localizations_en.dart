@@ -361,6 +361,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sharePreviewTitle => 'Share Preview';
 
   @override
+  String get sharePreviewClose => 'Close share preview';
+
+  @override
+  String get sharePreviewCardLabel => 'Preview of the card that will be shared';
+
+  @override
+  String get sharePreviewZoomHint =>
+      'You can zoom and pan the card. The full sharing text is below.';
+
+  @override
+  String get shareCaptionTitle => 'Sharing text';
+
+  @override
+  String get shareCopyText => 'Copy text';
+
+  @override
+  String get shareCopied => 'Sharing text copied.';
+
+  @override
+  String get shareUnavailable =>
+      'Sharing isn\'t available on this device. You can copy the text instead.';
+
+  @override
+  String get shareCopyError =>
+      'Couldn\'t copy the sharing text. Please try again.';
+
+  @override
   String get sharingInProgress => 'Preparing...';
 
   @override

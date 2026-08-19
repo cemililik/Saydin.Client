@@ -1,3 +1,4 @@
+import 'package:saydin/core/error/response_body_validator.dart';
 import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/core/utils/profit_direction_validator.dart';
 import '../../domain/entities/reverse_what_if_result.dart';
@@ -74,18 +75,20 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
         'targetValueTry',
       ),
       profitLossTry: profitLossTry,
-      profitLossPercent: _requireNum(
+      profitLossPercent: ResponseBodyValidator.requireFiniteDouble(
         json['profitLossPercent'],
         'profitLossPercent',
-      ).toDouble(),
+      ),
       isProfit: isProfit,
       priceHistory: priceHistory,
-      cumulativeInflationPercent: _optionalNum(
+      cumulativeInflationPercent: ResponseBodyValidator.optionalFiniteDouble(
         json['cumulativeInflationPercent'],
-      )?.toDouble(),
-      realProfitLossPercent: _optionalNum(
+        'cumulativeInflationPercent',
+      ),
+      realProfitLossPercent: ResponseBodyValidator.optionalFiniteDouble(
         json['realProfitLossPercent'],
-      )?.toDouble(),
+        'realProfitLossPercent',
+      ),
       inflationDataAsOf: _optionalDate(json['inflationDataAsOf']),
       actualBuyDate: _optionalDate(json['actualBuyDate']),
       actualSellDate: _optionalDate(json['actualSellDate']),
@@ -93,13 +96,6 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
   }
 
   // ── Defensive parse yardımcıları ────────────────────────────────────────
-
-  static num _requireNum(Object? value, String field) {
-    if (value is num) return value;
-    throw FormatException('reverse what-if: $field sayı değil ($value)');
-  }
-
-  static num? _optionalNum(Object? value) => value is num ? value : null;
 
   static String _requireString(Object? value, String field) {
     if (value is String) return value;

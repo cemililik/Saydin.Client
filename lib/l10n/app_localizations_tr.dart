@@ -359,6 +359,33 @@ class AppLocalizationsTr extends AppLocalizations {
   String get sharePreviewTitle => 'Paylaşım Önizlemesi';
 
   @override
+  String get sharePreviewClose => 'Paylaşım önizlemesini kapat';
+
+  @override
+  String get sharePreviewCardLabel => 'Paylaşılacak kartın görsel önizlemesi';
+
+  @override
+  String get sharePreviewZoomHint =>
+      'Kartı yakınlaştırabilir ve kaydırabilirsiniz. Paylaşım metninin tamamı aşağıdadır.';
+
+  @override
+  String get shareCaptionTitle => 'Paylaşım metni';
+
+  @override
+  String get shareCopyText => 'Metni kopyala';
+
+  @override
+  String get shareCopied => 'Paylaşım metni kopyalandı.';
+
+  @override
+  String get shareUnavailable =>
+      'Bu cihazda paylaşım kullanılamıyor. Metni kopyalayarak devam edebilirsiniz.';
+
+  @override
+  String get shareCopyError =>
+      'Paylaşım metni kopyalanamadı. Lütfen tekrar deneyin.';
+
+  @override
   String get sharingInProgress => 'Hazırlanıyor...';
 
   @override

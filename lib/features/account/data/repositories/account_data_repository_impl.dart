@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:saydin/core/constants/api_endpoints.dart';
 import 'package:saydin/core/network/device_id_interceptor.dart';
+import 'package:saydin/core/storage/share_card_cache.dart';
 import 'package:saydin/features/account/domain/repositories/account_data_repository.dart';
 
 class AccountDataRepositoryImpl implements AccountDataRepository {
@@ -20,6 +21,7 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
     required DeviceIdInterceptor deviceIdInterceptor,
     Future<Directory> Function()? temporaryDirectoryProvider,
     Future<Directory> Function()? deletionStateDirectoryProvider,
+    bool? cleanupAndroidPluginCache,
   }) : _prefs = prefs,
        _secureStorage = secureStorage,
        _dio = dio,
@@ -27,7 +29,9 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
        _temporaryDirectoryProvider =
            temporaryDirectoryProvider ?? getTemporaryDirectory,
        _deletionStateDirectoryProvider =
-           deletionStateDirectoryProvider ?? getApplicationSupportDirectory;
+           deletionStateDirectoryProvider ?? getApplicationSupportDirectory,
+       _cleanupAndroidPluginCache =
+           cleanupAndroidPluginCache ?? Platform.isAndroid;
 
   final SharedPreferencesAsync _prefs;
   final FlutterSecureStorage _secureStorage;
@@ -35,6 +39,7 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
   final DeviceIdInterceptor _deviceIdInterceptor;
   final Future<Directory> Function() _temporaryDirectoryProvider;
   final Future<Directory> Function() _deletionStateDirectoryProvider;
+  final bool _cleanupAndroidPluginCache;
 
   Future<File> _localCleanupMarker() async {
     // OS tarafından purge edilebilen temporary/cache dizini kullanılmaz.
@@ -101,9 +106,10 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
     }
   }
 
-  /// `ShareCardRenderer`'ın `getTemporaryDirectory()/saydin_share_*.png`
-  /// dosyalarını siler. Paylaşım kartları finansal sonuç ekranının görsel
-  /// kopyası olduğu için cihazda kalmamalıdır.
+  /// Uygulamanın `getTemporaryDirectory()/saydin_share_*.png` kaynaklarını ve
+  /// Android'deki `cacheDir/share_plus/saydin_share_*.png` plugin kopyalarını
+  /// siler. Paylaşım kartları finansal sonuç ekranının görsel kopyası olduğu
+  /// için hesap silme tamamlandıktan sonra cihazda kalmamalıdır.
   ///
   /// "Attempt all deletes" politikası: bir dosya silinemese de geri kalanı
   /// silmeye devam edilir. Ancak son raporlama dürüst olmak zorunda — bir
@@ -111,22 +117,10 @@ class AccountDataRepositoryImpl implements AccountDataRepository {
   /// fırlatılır ki `wipeLocalData` partial-failure'ı kullanıcıya bildirebilsin.
   Future<void> _wipeShareCardCache() async {
     final tempDir = await _temporaryDirectoryProvider();
-    if (!tempDir.existsSync()) return;
-    final fileErrors = <Object>[];
-    await for (final entry in tempDir.list(followLinks: false)) {
-      if (entry is! File) continue;
-      final name = entry.uri.pathSegments.last;
-      if (name.startsWith('saydin_share_') && name.endsWith('.png')) {
-        try {
-          await entry.delete();
-        } catch (e) {
-          fileErrors.add(e);
-        }
-      }
-    }
-    if (fileErrors.isNotEmpty) {
-      throw AccountWipeException(fileErrors);
-    }
+    await ShareCardCache.wipeAll(
+      temporaryDirectory: tempDir,
+      includeAndroidPluginCache: _cleanupAndroidPluginCache,
+    );
   }
 
   @override

@@ -6,11 +6,13 @@ import 'package:saydin/features/dca/presentation/widgets/dca_share_card_widget.d
 class DcaShareCardPreviewSheet extends StatelessWidget {
   final DcaResult result;
   final String? shareText;
+  final ShareAuthorization canExecuteShare;
 
   const DcaShareCardPreviewSheet({
     super.key,
     required this.result,
     this.shareText,
+    required this.canExecuteShare,
   });
 
   @override
@@ -18,6 +20,7 @@ class DcaShareCardPreviewSheet extends StatelessWidget {
     return SharePreviewSheet(
       shareText: shareText,
       cardWidget: DcaShareCardWidget(result: result),
+      canExecuteShare: canExecuteShare,
     );
   }
 }

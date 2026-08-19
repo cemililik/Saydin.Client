@@ -11,7 +11,9 @@ import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/skeleton_card.dart';
+import 'package:saydin/features/config/domain/policies/share_policy.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
+import 'package:saydin/features/config/presentation/widgets/share_result_button.dart';
 import 'package:saydin/features/dca/presentation/bloc/dca_bloc.dart';
 import 'package:saydin/features/dca/presentation/bloc/dca_event.dart';
 import 'package:saydin/features/dca/presentation/bloc/dca_state.dart';
@@ -411,39 +413,30 @@ class _DcaPageState extends State<DcaPage> {
                               ),
                             ),
                           ),
-                          if (config.features.share) ...[
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  final pct = result.profitLossPercent;
-                                  final text = l10n.shareTextDca(
-                                    result.assetDisplayName,
-                                    result.totalPurchases,
-                                    PercentageFormatter.signed(
-                                      pct,
-                                      locale: context.localeName,
-                                    ),
-                                  );
-                                  showModalBottomSheet<void>(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    builder: (_) => DcaShareCardPreviewSheet(
-                                      result: result,
-                                      shareText: text,
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.share_outlined),
-                                label: Text(l10n.shareResult),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
+                          ShareResultButton(
+                            onPressed: () {
+                              final pct = result.profitLossPercent;
+                              final text = l10n.shareTextDca(
+                                result.assetDisplayName,
+                                result.totalPurchases,
+                                PercentageFormatter.signed(
+                                  pct,
+                                  locale: context.localeName,
+                                ),
+                              );
+                              showModalBottomSheet<void>(
+                                context: context,
+                                isScrollControlled: true,
+                                builder: (_) => DcaShareCardPreviewSheet(
+                                  result: result,
+                                  shareText: text,
+                                  canExecuteShare: () => SharePolicy.canShare(
+                                    context.read<AppConfigCubit>().state,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ],
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ],

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/error_reporter.dart';
+import 'package:saydin/core/error/response_body_validator.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_calculation.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/repositories/portfolio_repository.dart';
@@ -79,12 +80,46 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
   /// What-If domain entity'sini portföye ait entity'ye indirger (yalnızca
   /// portföyün kullandığı alanlar). Bu eşleme data katmanının sınırıdır —
   /// `WhatIfResult` import'u burada izole edilir.
-  PortfolioCalculation _toCalculation(WhatIfResult r) => PortfolioCalculation(
-    initialValueTry: r.initialValueTry,
-    finalValueTry: r.finalValueTry,
-    profitLossPercent: r.profitLossPercent,
-    isProfit: r.isProfit,
-    cumulativeInflationPercent: r.cumulativeInflationPercent,
-    realProfitLossPercent: r.realProfitLossPercent,
-  );
+  PortfolioCalculation _toCalculation(WhatIfResult r) =>
+      ResponseBodyValidator.parse(
+        () => PortfolioCalculation(
+          initialValueTry: r.initialValueTry,
+          finalValueTry: r.finalValueTry,
+          profitLossPercent: ResponseBodyValidator.requireFiniteDouble(
+            r.profitLossPercent,
+            'profitLossPercent',
+          ),
+          isProfit: r.isProfit,
+          cumulativeInflationPercent:
+              ResponseBodyValidator.optionalFiniteDouble(
+                r.cumulativeInflationPercent,
+                'cumulativeInflationPercent',
+              ),
+          realProfitLossPercent: ResponseBodyValidator.optionalFiniteDouble(
+            r.realProfitLossPercent,
+            'realProfitLossPercent',
+          ),
+          requestedBuyDate: r.buyDate,
+          effectiveBuyDate: r.actualBuyDate ?? r.buyDate,
+          requestedSellDate: r.sellDate,
+          effectiveSellDate: _effectiveSellDate(r),
+          calculatedAt: r.calculatedAt,
+          inflationDataAsOf: r.inflationDataAsOf,
+        ),
+      );
+
+  static DateTime _effectiveSellDate(WhatIfResult result) {
+    if (result.actualSellDate != null) return result.actualSellDate!;
+    if (result.sellDate != null) return result.sellDate!;
+    if (result.priceHistory.isNotEmpty) {
+      return result.priceHistory
+          .map((point) => point.date)
+          .reduce((left, right) => right.isAfter(left) ? right : left);
+    }
+    if (result.calculatedAt != null) {
+      final value = result.calculatedAt!;
+      return DateTime(value.year, value.month, value.day);
+    }
+    return result.buyDate;
+  }
 }

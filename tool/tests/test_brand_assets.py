@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ANDROID_RES = ROOT / "android/app/src/main/res"
 IOS_ASSETS = ROOT / "ios/Runner/Assets.xcassets"
 BRAND = ROOT / "assets/branding"
+INTER = ROOT / "assets/fonts/inter"
 
 
 def png_size(path: Path) -> tuple[int, int]:
@@ -44,6 +45,43 @@ class BrandAssetsTest(unittest.TestCase):
         }
         for filename, digest in expected.items():
             self.assertEqual(sha256(BRAND / filename), digest, filename)
+
+    def test_runtime_brand_lockups_are_approved_transparent_exports(self) -> None:
+        expected = {
+            "saydin-logo-horizontal-light-h512.png": (
+                (1396, 512),
+                "3261604ef7b8c387f54a499f1247c1bdb2459e8c95912b44b3950dd85738686d",
+            ),
+            "saydin-logo-horizontal-dark-h512.png": (
+                (1396, 512),
+                "e59984e1070189c79f09aa9d2829223bcda81878513ed3c05f3b81e10aba90fb",
+            ),
+            "saydin-symbol-fullcolor-256.png": (
+                (256, 256),
+                "f2efcb46dd1b36801e0a0dd677045872918384e17228d39cb91cb45550beeb9d",
+            ),
+        }
+        for filename, (dimensions, digest) in expected.items():
+            asset = BRAND / filename
+            self.assertEqual(png_size(asset), dimensions, filename)
+            self.assertFalse(png_is_opaque(asset), filename)
+            self.assertEqual(sha256(asset), digest, filename)
+
+    def test_bundled_inter_fonts_and_license_are_pinned(self) -> None:
+        expected = {
+            "Inter-Regular.ttf":
+                "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82",
+            "Inter-Medium.ttf":
+                "97ad806f526e41546d46365bb3a393145f75b7b1568913db74549ad8b8dba872",
+            "Inter-SemiBold.ttf":
+                "78a843fade9d4612a5567302fb595b56976eb5fcebf4fea5a5912d638bafcde3",
+            "Inter-Bold.ttf":
+                "288316099b1e0a47a4716d159098005eef7c0066921f34e3200393dbdb01947f",
+            "OFL.txt":
+                "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+        }
+        for filename, digest in expected.items():
+            self.assertEqual(sha256(INTER / filename), digest, filename)
 
     def test_ios_icon_catalog_has_all_expected_dimensions(self) -> None:
         catalog = IOS_ASSETS / "AppIcon.appiconset"

@@ -97,9 +97,10 @@ Future<void> main() async {
       // EN tarafını kırıyordu.
       await initializeDateFormatting();
       await configureDependencies();
-      // 1 saatten eski paylaşım kart PNG'lerini temizle. Önceki oturumda share
-      // iletişim kutusu kapanmadan uygulama kapatıldıysa renderer'ın finally
-      // bloğu çalışmaz — startup pass ikinci savunma hattı (KVKK Madde 12).
+      // 1 saatten eski kaynak PNG'leri ve Android share_plus cache kopyalarını
+      // temizle. Önceki oturumda share iletişim kutusu kapanmadan uygulama
+      // kapatıldıysa renderer'ın finally bloğu çalışmaz — startup pass ikinci
+      // savunma hattı (KVKK Madde 12).
       unawaited(ShareCardRenderer.cleanupStaleShareFiles());
       // PII olmayan cihaz/uygulama etiketlerini Sentry scope'una ekle (F-05-07).
       // M-5: bu KRİTİK OLMAYAN telemetri adımı `runApp`'i bloke etmemeli — aksi

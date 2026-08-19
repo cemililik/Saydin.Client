@@ -1,3 +1,4 @@
+import 'package:saydin/core/error/response_body_validator.dart';
 import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/core/utils/profit_direction_validator.dart';
 import '../../domain/entities/dca_result.dart';
@@ -22,6 +23,7 @@ class DcaResponseModel extends DcaResult {
     super.cumulativeInflationPercent,
     super.realProfitLossPercent,
     super.inflationDataAsOf,
+    super.calculatedAt,
     super.purchases,
     super.chartData,
   });
@@ -111,10 +113,10 @@ class DcaResponseModel extends DcaResult {
         'currentValueTry',
       ),
       profitLossTry: profitLossTry,
-      profitLossPercent: _requireNum(
+      profitLossPercent: ResponseBodyValidator.requireFiniteDouble(
         json['profitLossPercent'],
         'profitLossPercent',
-      ).toDouble(),
+      ),
       isProfit: isProfit,
       averageCostPerUnit: MoneyParser.requireDecimal(
         json['averageCostPerUnit'],
@@ -128,12 +130,14 @@ class DcaResponseModel extends DcaResult {
         json['currentUnitPrice'],
         'currentUnitPrice',
       ),
-      cumulativeInflationPercent: _optionalNum(
+      cumulativeInflationPercent: ResponseBodyValidator.optionalFiniteDouble(
         json['cumulativeInflationPercent'],
-      )?.toDouble(),
-      realProfitLossPercent: _optionalNum(
+        'cumulativeInflationPercent',
+      ),
+      realProfitLossPercent: ResponseBodyValidator.optionalFiniteDouble(
         json['realProfitLossPercent'],
-      )?.toDouble(),
+        'realProfitLossPercent',
+      ),
       inflationDataAsOf: _optionalDate(json['inflationDataAsOf']),
       purchases: purchases,
       chartData: chartData,
@@ -149,8 +153,6 @@ class DcaResponseModel extends DcaResult {
     if (value is num) return value;
     throw FormatException('dca response: $field sayı değil ($value)');
   }
-
-  static num? _optionalNum(Object? value) => value is num ? value : null;
 
   static String _requireString(Object? value, String field) {
     if (value is String) return value;

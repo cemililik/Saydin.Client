@@ -680,6 +680,54 @@ abstract class AppLocalizations {
   /// **'Paylaşım Önizlemesi'**
   String get sharePreviewTitle;
 
+  /// Paylaşım önizlemesi kapatma düğmesinin erişilebilir etiketi
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaşım önizlemesini kapat'**
+  String get sharePreviewClose;
+
+  /// Yakınlaştırılabilir paylaşım kartı önizlemesinin erişilebilir etiketi
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaşılacak kartın görsel önizlemesi'**
+  String get sharePreviewCardLabel;
+
+  /// Paylaşım kartı önizlemesi için erişilebilir etkileşim ipucu
+  ///
+  /// In tr, this message translates to:
+  /// **'Kartı yakınlaştırabilir ve kaydırabilirsiniz. Paylaşım metninin tamamı aşağıdadır.'**
+  String get sharePreviewZoomHint;
+
+  /// Native paylaşım hedeflerine gönderilecek son metnin başlığı
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaşım metni'**
+  String get shareCaptionTitle;
+
+  /// Dondurulmuş son paylaşım metnini panoya kopyalayan düğme
+  ///
+  /// In tr, this message translates to:
+  /// **'Metni kopyala'**
+  String get shareCopyText;
+
+  /// Paylaşım metni başarıyla panoya kopyalandığında gösterilen geri bildirim
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaşım metni kopyalandı.'**
+  String get shareCopied;
+
+  /// Native paylaşım kullanılamadığında kopyalama kurtarma yolunu açıklayan geri bildirim
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu cihazda paylaşım kullanılamıyor. Metni kopyalayarak devam edebilirsiniz.'**
+  String get shareUnavailable;
+
+  /// Paylaşım metni panoya kopyalanamadığında gösterilen hata
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaşım metni kopyalanamadı. Lütfen tekrar deneyin.'**
+  String get shareCopyError;
+
   /// No description provided for @sharingInProgress.
   ///
   /// In tr, this message translates to:

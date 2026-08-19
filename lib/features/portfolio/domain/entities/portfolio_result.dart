@@ -63,9 +63,17 @@ class PortfolioResult extends Equatable {
   final double totalProfitLossPercent;
   final bool isProfit;
 
-  /// Hesabın üretildiği etkili bitiş günü. Açık uçlu isteklerde paylaşım
-  /// kartının render anında değişmemesi için use case sınırında snapshot alınır.
+  /// Legacy single-date fallback used by existing presentation. Open-ended
+  /// requests are snapshotted at the use-case boundary. This value must not be
+  /// treated as aggregate transaction evidence: per-item effective dates can
+  /// differ and are preserved on [PortfolioCalculation].
   final DateTime? effectiveSellDate;
+
+  /// Portfolio-level request/calculation snapshot. Per-item effective dates
+  /// live on [PortfolioCalculation] and can legitimately form a mixed range.
+  final DateTime? requestedBuyDate;
+  final DateTime? requestedSellDate;
+  final DateTime? calculatedAt;
 
   // Enflasyon düzeltmesi — null ise hesaplanmadı / aktif değil
   final Decimal? totalRealProfitLossTry;
@@ -80,6 +88,9 @@ class PortfolioResult extends Equatable {
     required this.totalProfitLossPercent,
     required this.isProfit,
     this.effectiveSellDate,
+    this.requestedBuyDate,
+    this.requestedSellDate,
+    this.calculatedAt,
     this.failures = const [],
     this.totalRealProfitLossTry,
     this.totalRealProfitLossPercent,
@@ -106,6 +117,9 @@ class PortfolioResult extends Equatable {
     totalProfitLossPercent,
     isProfit,
     effectiveSellDate,
+    requestedBuyDate,
+    requestedSellDate,
+    calculatedAt,
     totalRealProfitLossTry,
     totalRealProfitLossPercent,
     totalCumulativeInflationPercent,

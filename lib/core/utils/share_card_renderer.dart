@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/storage/share_card_cache.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// Paylaşım kartı render edilemediğinde fırlatılır (F-05-22). Eskiden bu
@@ -16,7 +16,8 @@ import 'package:share_plus/share_plus.dart';
 class ShareCardException implements Exception {
   /// Makine-okunur sebep (PII içermez — Sentry'ye güvenle gider):
   /// `boundary_null` (RepaintBoundary context'i yok) veya
-  /// `encode_failed` (PNG byte kodlaması başarısız).
+  /// `encode_failed` (PNG byte kodlaması başarısız) ya da
+  /// `share_origin_invalid` (iPad popover anchor'ı güvenli değil).
   final String reason;
   const ShareCardException(this.reason);
 
@@ -24,11 +25,59 @@ class ShareCardException implements Exception {
   String toString() => 'ShareCardException($reason)';
 }
 
+/// Native paylaşım sağlayıcısını renderer'dan ayıran test seam'i.
+///
+/// iPad popover anchor'ı interface seviyesinde zorunludur; yeni bir sağlayıcı
+/// eklenirse origin'i sessizce düşüremez.
+abstract interface class ShareGateway {
+  Future<ShareGatewayResult> shareFile({
+    required String filePath,
+    required String mimeType,
+    required String text,
+    required Rect sharePositionOrigin,
+  });
+}
+
+/// Platform plugin sonucunun uygulama-içi, plugin bağımsız karşılığı.
+enum ShareGatewayResult { success, dismissed, unavailable }
+
+/// Paylaşım hattının platform eklentisinden bağımsız sonucu.
+///
+/// [denied], paylaşım yetkisinin render başlamadan önce veya native ekran
+/// açılmadan hemen önce geri çekildiğini ifade eder.
+enum ShareDeliveryResult { completed, dismissed, unavailable, denied }
+
+class SharePlusGateway implements ShareGateway {
+  const SharePlusGateway();
+
+  @override
+  Future<ShareGatewayResult> shareFile({
+    required String filePath,
+    required String mimeType,
+    required String text,
+    required Rect sharePositionOrigin,
+  }) async {
+    if (!ShareCardRenderer.isValidSharePositionOrigin(sharePositionOrigin)) {
+      throw const ShareCardException('share_origin_invalid');
+    }
+    final result = await Share.shareXFiles(
+      [XFile(filePath, mimeType: mimeType)],
+      text: text,
+      sharePositionOrigin: sharePositionOrigin,
+    );
+    return switch (result.status) {
+      ShareResultStatus.success => ShareGatewayResult.success,
+      ShareResultStatus.dismissed => ShareGatewayResult.dismissed,
+      ShareResultStatus.unavailable => ShareGatewayResult.unavailable,
+    };
+  }
+}
+
 /// [RepaintBoundary] ile işaretlenmiş widget'ı PNG olarak yakalar ve
 /// platform paylaşım sayfasını açar.
 ///
-/// [shareText]: WhatsApp / Twitter gibi uygulamalarda görünecek metin.
-/// Belirtilmezse varsayılan marka metni kullanılır.
+/// [caption], native hedefe gönderilecek önceden tamamlanmış metindir. Renderer
+/// yerelleştirme çözmez, CTA eklemez ve metni hiçbir biçimde değiştirmez.
 ///
 /// Render başarısız olursa [ShareCardException] fırlatır — çağıran katman
 /// yakalayıp kullanıcıya geri bildirir ve raporlar.
@@ -36,16 +85,97 @@ class ShareCardRenderer {
   ShareCardRenderer._();
 
   static const _targetPx = 1080.0;
+  static const _defaultGateway = SharePlusGateway();
 
-  /// Geçici share kart dosyaları için sabit prefix. `account_data_repository`
-  /// ve [cleanupStaleShareFiles] bu prefix'i bekler — değiştirilmemeli.
-  static const String filePrefix = 'saydin_share_';
+  /// Geçici share kart dosyaları için merkezi cache sözleşmesindeki prefix.
+  static const String filePrefix = ShareCardCache.filePrefix;
 
-  static Future<void> shareFromKey(
+  /// Native share popover'ını CTA'ya bağlayan global rect'i üretir.
+  ///
+  /// `share_plus` bu alanı iPad'de zorunlu tutar. Sıfır boyutlu, finite olmayan
+  /// veya görünür viewport'la kesişmeyen bir rect ile native çağrı yapılmaz.
+  static Rect sharePositionOriginFromKey(
     GlobalKey key, {
-    String? shareText,
-    required BuildContext context,
+    required Rect viewport,
+  }) {
+    final renderObject = key.currentContext?.findRenderObject();
+    if (renderObject is! RenderBox ||
+        !renderObject.attached ||
+        !renderObject.hasSize) {
+      throw const ShareCardException('share_origin_invalid');
+    }
+
+    final origin = renderObject.localToGlobal(Offset.zero) & renderObject.size;
+    return validatedSharePositionOrigin(origin, viewport: viewport);
+  }
+
+  @visibleForTesting
+  static Rect validatedSharePositionOrigin(
+    Rect? origin, {
+    required Rect viewport,
+  }) {
+    if (origin == null ||
+        !isValidSharePositionOrigin(origin) ||
+        !isValidSharePositionOrigin(viewport) ||
+        !origin.overlaps(viewport)) {
+      throw const ShareCardException('share_origin_invalid');
+    }
+    return origin;
+  }
+
+  @visibleForTesting
+  static bool isValidSharePositionOrigin(Rect origin) =>
+      origin.isFinite &&
+      !origin.isEmpty &&
+      origin.width > 0 &&
+      origin.height > 0;
+
+  /// Renderer ile native plugin arasındaki typed seam'i tek yerde uygular.
+  /// Testler platform channel açmadan origin ve request aktarımını doğrular.
+  @visibleForTesting
+  static Future<ShareDeliveryResult> distributeShareFile({
+    required String filePath,
+    required String mimeType,
+    required String caption,
+    required Rect sharePositionOrigin,
+    required ShareGateway gateway,
+    required bool Function() canExecuteShare,
   }) async {
+    if (!isValidSharePositionOrigin(sharePositionOrigin)) {
+      throw const ShareCardException('share_origin_invalid');
+    }
+    // Yetki kontrolüyle native gateway arasında başka async iş bırakma.
+    if (!canExecuteShare()) return ShareDeliveryResult.denied;
+
+    final result = await gateway.shareFile(
+      filePath: filePath,
+      mimeType: mimeType,
+      text: caption,
+      sharePositionOrigin: sharePositionOrigin,
+    );
+    return switch (result) {
+      ShareGatewayResult.success => ShareDeliveryResult.completed,
+      ShareGatewayResult.dismissed => ShareDeliveryResult.dismissed,
+      ShareGatewayResult.unavailable => ShareDeliveryResult.unavailable,
+    };
+  }
+
+  static Future<ShareDeliveryResult> shareFromKey(
+    GlobalKey key, {
+    required String caption,
+    required Rect viewport,
+    required Rect sharePositionOrigin,
+    required bool Function() canExecuteShare,
+    ShareGateway gateway = _defaultGateway,
+    Future<Directory> Function() temporaryDirectoryProvider =
+        getTemporaryDirectory,
+  }) async {
+    // Yetki yoksa origin, boundary, encoder, dosya sistemi ve gateway dahil
+    // paylaşım hattında hiçbir aksiyon alma.
+    if (!canExecuteShare()) return ShareDeliveryResult.denied;
+
+    validatedSharePositionOrigin(sharePositionOrigin, viewport: viewport);
+
     final boundary =
         key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     // F-05-22: sessiz `return` yerine tipli hata — kullanıcı "Paylaş"a basıp
@@ -53,10 +183,6 @@ class ShareCardRenderer {
     if (boundary == null) {
       throw const ShareCardException('boundary_null');
     }
-
-    // Resolve l10n before async gap.
-    final l10n = context.l10n;
-    final text = (shareText ?? l10n.shareDefaultText) + l10n.shareCta;
 
     // Ekranda hangi boyutta render edildiğine bakmaksızın 1080px çıktı üret.
     final displayWidth = boundary.size.width;
@@ -69,23 +195,50 @@ class ShareCardRenderer {
     }
 
     final bytes = byteData.buffer.asUint8List();
-    final tempDir = await getTemporaryDirectory();
+    return deliverRenderedBytes(
+      bytes: bytes,
+      caption: caption,
+      sharePositionOrigin: sharePositionOrigin,
+      canExecuteShare: canExecuteShare,
+      gateway: gateway,
+      temporaryDirectoryProvider: temporaryDirectoryProvider,
+    );
+  }
+
+  /// Render tamamlandıktan sonraki dosya ve native teslimat sınırı.
+  ///
+  /// Ayrı tutulması, native gateway öncesi canlı yetki kontrolü ile kaynak
+  /// dosyanın bütün sonuçlarda temizlenmesini platform kanalı olmadan sınar.
+  @visibleForTesting
+  static Future<ShareDeliveryResult> deliverRenderedBytes({
+    required Uint8List bytes,
+    required String caption,
+    required Rect sharePositionOrigin,
+    required bool Function() canExecuteShare,
+    required ShareGateway gateway,
+    required Future<Directory> Function() temporaryDirectoryProvider,
+  }) async {
+    final tempDir = await temporaryDirectoryProvider();
     final file = File(
       '${tempDir.path}/$filePrefix${DateTime.now().millisecondsSinceEpoch}.png',
     );
     await file.writeAsBytes(bytes);
 
     try {
-      await Share.shareXFiles([
-        XFile(file.path, mimeType: 'image/png'),
-      ], text: text);
+      return await distributeShareFile(
+        filePath: file.path,
+        mimeType: 'image/png',
+        caption: caption,
+        sharePositionOrigin: sharePositionOrigin,
+        gateway: gateway,
+        canExecuteShare: canExecuteShare,
+      );
     } finally {
-      // Paylaşım iletişim kutusu kapandıktan sonra geçici PNG'yi sil.
-      // Hedef uygulama (WhatsApp/Twitter) dosya içeriğini zaten kendi
-      // sandbox'ına kopyalamıştır; bizim temp'te tutmamızın yararı yok ve
-      // finansal görseli diskte bırakmak KVKK Madde 12 minimizasyon
-      // ilkesine aykırı. Silme başarısız olursa sessizce geç — startup
-      // cleanup ikinci savunma hattı.
+      // Share sonucu döndüğünde uygulamanın kaynak PNG'sini sil. Android'de
+      // share_plus native intent'i açmadan önce bu kaynağı kendi provider
+      // cache'ine kopyalar; o kopyanın ayrı retention sözleşmesini
+      // ShareCardCache yönetir. Kaynak silme başarısız olursa sessizce geç —
+      // startup cleanup ikinci savunma hattı.
       try {
         if (await file.exists()) await file.delete();
       } catch (_) {
@@ -106,9 +259,10 @@ class ShareCardRenderer {
   }
 
   /// Uygulama açılışında çağrılır: 1 saatten eski `saydin_share_*.png`
-  /// dosyalarını siler. Önceki oturumda paylaşım iletişim kutusu kapanmadan
-  /// uygulama kapatılırsa [shareFromKey] finally bloğu çalışmaz — startup
-  /// cleanup ikinci savunma hattıdır.
+  /// kaynaklarını ve Android'deki aynı adlı `share_plus` kopyalarını siler.
+  /// Önceki oturumda paylaşım iletişim kutusu kapanmadan uygulama kapatılırsa
+  /// [shareFromKey] finally bloğu çalışmaz — startup cleanup ikinci savunma
+  /// hattıdır.
   ///
   /// Eşik 1 saat: bir paylaşım hedef uygulaması (WhatsApp vb.) henüz
   /// dosyayı tüketmediği için aktif iletişim kutusu kapanmadan bekleyen
@@ -121,49 +275,21 @@ class ShareCardRenderer {
   static Future<void> cleanupStaleShareFiles({
     Duration olderThan = const Duration(hours: 1),
     int maxKept = 20,
+    Future<Directory> Function() temporaryDirectoryProvider =
+        getTemporaryDirectory,
+    bool? includeAndroidPluginCache,
   }) async {
     try {
-      final tempDir = await getTemporaryDirectory();
-      if (!tempDir.existsSync()) return;
-      final cutoff = DateTime.now().subtract(olderThan);
-
-      // İki geçiş: önce yaşa göre tara + sil, sonra LRU cap uygula.
-      final survivors = <_DatedFile>[];
-      await for (final entry in tempDir.list(followLinks: false)) {
-        if (entry is! File) continue;
-        final name = entry.uri.pathSegments.last;
-        if (!name.startsWith(filePrefix) || !name.endsWith('.png')) continue;
-        try {
-          final stat = await entry.stat();
-          if (stat.modified.isBefore(cutoff)) {
-            await entry.delete();
-          } else {
-            survivors.add(_DatedFile(file: entry, modified: stat.modified));
-          }
-        } catch (_) {
-          /* best-effort per file */
-        }
-      }
-
-      if (survivors.length <= maxKept) return;
-
-      survivors.sort((a, b) => a.modified.compareTo(b.modified));
-      final toRemove = survivors.length - maxKept;
-      for (var i = 0; i < toRemove; i++) {
-        try {
-          await survivors[i].file.delete();
-        } catch (_) {
-          /* best-effort */
-        }
-      }
+      final tempDir = await temporaryDirectoryProvider();
+      await ShareCardCache.cleanupStale(
+        temporaryDirectory: tempDir,
+        olderThan: olderThan,
+        maxKept: maxKept,
+        includeAndroidPluginCache:
+            includeAndroidPluginCache ?? Platform.isAndroid,
+      );
     } catch (_) {
       /* best-effort overall */
     }
   }
-}
-
-class _DatedFile {
-  final File file;
-  final DateTime modified;
-  const _DatedFile({required this.file, required this.modified});
 }

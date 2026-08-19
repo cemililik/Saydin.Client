@@ -148,6 +148,38 @@
 
   "shareResult": "Share",
   "sharePreviewTitle": "Share Preview",
+  "sharePreviewClose": "Close share preview",
+  "@sharePreviewClose": {
+    "description": "Accessible label for the close share preview button"
+  },
+  "sharePreviewCardLabel": "Preview of the card that will be shared",
+  "@sharePreviewCardLabel": {
+    "description": "Accessible label for the zoomable share card preview"
+  },
+  "sharePreviewZoomHint": "You can zoom and pan the card. The full sharing text is below.",
+  "@sharePreviewZoomHint": {
+    "description": "Accessible interaction hint for the share card preview"
+  },
+  "shareCaptionTitle": "Sharing text",
+  "@shareCaptionTitle": {
+    "description": "Heading for the final text sent to native sharing targets"
+  },
+  "shareCopyText": "Copy text",
+  "@shareCopyText": {
+    "description": "Button that copies the exact frozen final sharing text"
+  },
+  "shareCopied": "Sharing text copied.",
+  "@shareCopied": {
+    "description": "Feedback shown after the sharing text is copied successfully"
+  },
+  "shareUnavailable": "Sharing isn't available on this device. You can copy the text instead.",
+  "@shareUnavailable": {
+    "description": "Feedback explaining the copy recovery path when native sharing is unavailable"
+  },
+  "shareCopyError": "Couldn't copy the sharing text. Please try again.",
+  "@shareCopyError": {
+    "description": "Error shown when the sharing text cannot be copied"
+  },
   "sharingInProgress": "Preparing...",
   "shareError": "Couldn't create the share card. Please try again.",
 

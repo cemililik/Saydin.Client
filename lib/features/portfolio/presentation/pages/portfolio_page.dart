@@ -13,6 +13,8 @@ import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
 import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
+import 'package:saydin/features/config/domain/policies/share_policy.dart';
+import 'package:saydin/features/config/presentation/widgets/share_result_button.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/portfolio_constants.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
@@ -153,6 +155,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   void _showPortfolioShare(PortfolioSuccess state) {
+    if (!SharePolicy.canShare(context.read<AppConfigCubit>().state)) return;
     if (state.result.hasPartialFailure) return;
     final shareText = context.l10n.shareTextPortfolio(
       state.result.items.length,
@@ -166,6 +169,8 @@ class _PortfolioPageState extends State<PortfolioPage> {
       isScrollControlled: true,
       builder: (_) => SharePreviewSheet(
         shareText: shareText,
+        canExecuteShare: () =>
+            SharePolicy.canShare(context.read<AppConfigCubit>().state),
         cardWidget: PortfolioShareCardWidget(
           result: state.result,
           buyDate: state.buyDate!,
@@ -473,20 +478,11 @@ class _PortfolioPageState extends State<PortfolioPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed:
-                              state.buyDate != null &&
-                                  !state.result.hasPartialFailure
-                              ? () => _showPortfolioShare(state)
-                              : null,
-                          icon: const Icon(Icons.share_outlined),
-                          label: Text(l10n.shareResult),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                        ),
+                      ShareResultButton(
+                        enabled:
+                            state.buyDate != null &&
+                            !state.result.hasPartialFailure,
+                        onPressed: () => _showPortfolioShare(state),
                       ),
                     ],
                   ),

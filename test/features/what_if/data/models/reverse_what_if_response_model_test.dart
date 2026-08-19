@@ -33,4 +33,37 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('zorunlu ve opsiyonel yüzde alanları non-finite olamaz', () {
+    for (final field in [
+      'profitLossPercent',
+      'cumulativeInflationPercent',
+      'realProfitLossPercent',
+    ]) {
+      for (final value in [
+        double.nan,
+        double.infinity,
+        double.negativeInfinity,
+      ]) {
+        expect(
+          () => ReverseWhatIfResponseModel.fromJson({...json(), field: value}),
+          throwsFormatException,
+          reason: '$field=$value reddedilmeli',
+        );
+      }
+    }
+  });
+
+  test('sıfır ve çok büyük finite yüzde değerleri geçerlidir', () {
+    final model = ReverseWhatIfResponseModel.fromJson({
+      ...json(),
+      'profitLossPercent': 0.0,
+      'cumulativeInflationPercent': double.maxFinite,
+      'realProfitLossPercent': -double.maxFinite,
+    });
+
+    expect(model.profitLossPercent, 0.0);
+    expect(model.cumulativeInflationPercent, double.maxFinite);
+    expect(model.realProfitLossPercent, -double.maxFinite);
+  });
 }

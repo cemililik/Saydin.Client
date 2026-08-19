@@ -54,6 +54,21 @@ class CalculatePortfolio {
         .toList(growable: false);
     final keptItems = successful.map((o) => o.item).toList(growable: false);
 
+    // Repository sözleşmesi yüzde/oran değerlerini finite olarak garanti eder.
+    // Domain sınırında da doğrulamak, alternatif repository implementasyonunun
+    // NaN/Infinity'yi formatter veya aggregasyon hesabına sızdırmasını önler.
+    for (final result in results) {
+      _requireFinite(result.profitLossPercent, 'profitLossPercent');
+      _requireFiniteNullable(
+        result.cumulativeInflationPercent,
+        'cumulativeInflationPercent',
+      );
+      _requireFiniteNullable(
+        result.realProfitLossPercent,
+        'realProfitLossPercent',
+      );
+    }
+
     final totalInitial = results.fold<Decimal>(
       Decimal.zero,
       (sum, r) => sum + r.initialValueTry,
@@ -63,15 +78,17 @@ class CalculatePortfolio {
       (sum, r) => sum + r.finalValueTry,
     );
     final totalPnL = totalFinal - totalInitial;
-    // Yüzde display-only, double yeterli; Decimal / Decimal Rational
-    // dönüyor — `.toDouble()` ile floor cast.
+    final hundred = Decimal.fromInt(100);
+    // Yüzde display-only, double yeterli. Yüz ile çarpma Decimal/Rational
+    // aşamasında yapılır; finite bir ara double'ı `* 100` ile Infinity'ye
+    // taşımayız.
     final totalPct = totalInitial > Decimal.zero
-        ? (totalPnL / totalInitial).toDouble() * 100
+        ? _ratioPercent(totalPnL, totalInitial, 'totalProfitLossPercent')
         : 0.0;
 
     final itemResults = List.generate(keptItems.length, (i) {
       final share = totalFinal > Decimal.zero
-          ? (results[i].finalValueTry / totalFinal).toDouble() * 100
+          ? _ratioPercent(results[i].finalValueTry, totalFinal, 'sharePercent')
           : 0.0;
       return PortfolioItemResult(
         item: keptItems[i],
@@ -94,7 +111,6 @@ class CalculatePortfolio {
       // yok ama 33.333% (1/3) gibi case'lerde double precision (17. ondalık)
       // kaybı Decimal'a sızdırıyordu. Şimdi (100 + realPct) / 100 Decimal
       // aritmetiğinde hesaplanır; intermediate double yok.
-      final hundred = Decimal.fromInt(100);
       var totalRealFinal = Decimal.zero;
       for (final r in results) {
         final rateDecimal = Decimal.parse(r.realProfitLossPercent!.toString());
@@ -108,23 +124,31 @@ class CalculatePortfolio {
       }
       totalRealPnL = totalRealFinal - totalInitial;
       totalRealPct = totalInitial > Decimal.zero
-          ? (totalRealPnL / totalInitial).toDouble() * 100
+          ? _ratioPercent(
+              totalRealPnL,
+              totalInitial,
+              'totalRealProfitLossPercent',
+            )
           : 0.0;
 
       // Ağırlıklı ortalama birikimli enflasyon (başlangıç değeri ağırlıklı)
       if (results.every((r) => r.cumulativeInflationPercent != null) &&
           totalInitial > Decimal.zero) {
-        double weightedInfl = 0;
-        final totalInitialDouble = totalInitial.toDouble();
+        var weightedInflationNumerator = Decimal.zero;
         for (final r in results) {
-          weightedInfl +=
-              r.cumulativeInflationPercent! *
-              (r.initialValueTry.toDouble() / totalInitialDouble);
+          final inflationRate = Decimal.parse(
+            r.cumulativeInflationPercent!.toString(),
+          );
+          weightedInflationNumerator += r.initialValueTry * inflationRate;
         }
-        totalInflation = weightedInfl;
+        totalInflation = _requireFinite(
+          (weightedInflationNumerator / totalInitial).toDouble(),
+          'totalCumulativeInflationPercent',
+        );
       }
     }
 
+    final calculatedAt = _clock();
     return PortfolioResult(
       items: itemResults,
       failures: failures,
@@ -135,7 +159,10 @@ class CalculatePortfolio {
       // Legacy boolean yalnız binary API compatibility içindir; sıfır
       // presentation'da [FinancialOutcome.neutral] olarak gösterilir.
       isProfit: totalPnL > Decimal.zero,
-      effectiveSellDate: sellDate ?? _dateOnly(_clock()),
+      effectiveSellDate: sellDate ?? _dateOnly(calculatedAt),
+      requestedBuyDate: buyDate,
+      requestedSellDate: sellDate,
+      calculatedAt: calculatedAt,
       totalRealProfitLossTry: totalRealPnL,
       totalRealProfitLossPercent: totalRealPct,
       totalCumulativeInflationPercent: totalInflation,
@@ -144,6 +171,26 @@ class CalculatePortfolio {
 
   static DateTime _dateOnly(DateTime value) =>
       DateTime(value.year, value.month, value.day);
+
+  static double _ratioPercent(
+    Decimal numerator,
+    Decimal denominator,
+    String field,
+  ) {
+    final value = ((numerator * Decimal.fromInt(100)) / denominator).toDouble();
+    return _requireFinite(value, field);
+  }
+
+  static double _requireFinite(double value, String field) {
+    if (value.isFinite) return value;
+    throw MalformedResponseError(
+      cause: FormatException('portfolio: $field finite değil ($value)'),
+    );
+  }
+
+  static void _requireFiniteNullable(double? value, String field) {
+    if (value != null) _requireFinite(value, field);
+  }
 
   AppError _aggregateFailure(List<PortfolioItemFailure> failures) {
     final errors = failures.map((failure) => failure.error).toList();

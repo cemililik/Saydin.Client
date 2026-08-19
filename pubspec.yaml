@@ -64,6 +64,21 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/branding/saydin-logo-horizontal-light-h512.png
+    - assets/branding/saydin-logo-horizontal-dark-h512.png
+    - assets/branding/saydin-symbol-fullcolor-256.png
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/inter/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/inter/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/inter/Inter-Bold.ttf
+          weight: 700
 
 sentry:
   upload_debug_symbols: true

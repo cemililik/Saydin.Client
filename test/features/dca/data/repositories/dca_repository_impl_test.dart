@@ -117,6 +117,45 @@ void main() {
       await expectLater(calc(), throwsA(isA<MalformedResponseError>()));
     });
 
+    test('calculate_nonFinitePercent_throwsMalformedResponse', () async {
+      for (final field in [
+        'profitLossPercent',
+        'cumulativeInflationPercent',
+        'realProfitLossPercent',
+      ]) {
+        for (final value in [
+          double.nan,
+          double.infinity,
+          double.negativeInfinity,
+        ]) {
+          stubPost(okResponse({...dcaJson(), field: value}));
+
+          await expectLater(
+            calc(),
+            throwsA(isA<MalformedResponseError>()),
+            reason: '$field=$value reddedilmeli',
+          );
+        }
+      }
+    });
+
+    test('calculate_finiteExtremeAndZeroPercent_returnsResult', () async {
+      stubPost(
+        okResponse({
+          ...dcaJson(),
+          'profitLossPercent': double.maxFinite,
+          'cumulativeInflationPercent': 0.0,
+          'realProfitLossPercent': -double.maxFinite,
+        }),
+      );
+
+      final result = await calc();
+
+      expect(result.profitLossPercent, double.maxFinite);
+      expect(result.cumulativeInflationPercent, 0.0);
+      expect(result.realProfitLossPercent, -double.maxFinite);
+    });
+
     test('calculate_missingIsProfit_derivesDirectionFromProfitLoss', () async {
       final response = dcaJson()..remove('isProfit');
       stubPost(okResponse(response));

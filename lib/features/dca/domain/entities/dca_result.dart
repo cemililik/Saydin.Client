@@ -76,6 +76,7 @@ class DcaResult extends Equatable {
   final double? cumulativeInflationPercent;
   final double? realProfitLossPercent;
   final DateTime? inflationDataAsOf;
+  final DateTime? calculatedAt;
   final List<DcaPurchase> purchases;
   final List<DcaChartPoint> chartData;
 
@@ -98,6 +99,7 @@ class DcaResult extends Equatable {
     this.cumulativeInflationPercent,
     this.realProfitLossPercent,
     this.inflationDataAsOf,
+    this.calculatedAt,
     this.purchases = const [],
     this.chartData = const [],
   });
@@ -123,6 +125,31 @@ class DcaResult extends Equatable {
     cumulativeInflationPercent: cumulativeInflationPercent,
     realProfitLossPercent: realProfitLossPercent,
     inflationDataAsOf: inflationDataAsOf,
+    calculatedAt: calculatedAt,
+    purchases: purchases,
+    chartData: chartData,
+  );
+
+  DcaResult withCalculatedAt(DateTime value) => DcaResult(
+    assetSymbol: assetSymbol,
+    assetDisplayName: assetDisplayName,
+    startDate: startDate,
+    endDate: endDate,
+    period: period,
+    periodicAmount: periodicAmount,
+    totalPurchases: totalPurchases,
+    totalInvestedTry: totalInvestedTry,
+    currentValueTry: currentValueTry,
+    profitLossTry: profitLossTry,
+    profitLossPercent: profitLossPercent,
+    isProfit: isProfit,
+    averageCostPerUnit: averageCostPerUnit,
+    totalUnitsAcquired: totalUnitsAcquired,
+    currentUnitPrice: currentUnitPrice,
+    cumulativeInflationPercent: cumulativeInflationPercent,
+    realProfitLossPercent: realProfitLossPercent,
+    inflationDataAsOf: inflationDataAsOf,
+    calculatedAt: value,
     purchases: purchases,
     chartData: chartData,
   );
@@ -147,6 +174,7 @@ class DcaResult extends Equatable {
     cumulativeInflationPercent,
     realProfitLossPercent,
     inflationDataAsOf,
+    calculatedAt,
     purchases,
     chartData,
   ];

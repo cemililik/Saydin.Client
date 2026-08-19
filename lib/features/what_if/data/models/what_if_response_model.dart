@@ -1,3 +1,4 @@
+import 'package:saydin/core/error/response_body_validator.dart';
 import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/core/utils/profit_direction_validator.dart';
 import '../../domain/entities/what_if_result.dart';
@@ -60,17 +61,24 @@ class WhatIfResponseModel extends WhatIfResult {
         'finalValueTry',
       ),
       profitLossTry: profitLossTry,
-      profitLossPercent: (json['profitLossPercent'] as num).toDouble(),
+      profitLossPercent: ResponseBodyValidator.requireFiniteDouble(
+        json['profitLossPercent'],
+        'profitLossPercent',
+      ),
       isProfit: ProfitDirectionValidator.derive(
         rawIsProfit: json['isProfit'],
         profitLossTry: profitLossTry,
         context: 'what-if response',
       ),
       priceHistory: priceHistory,
-      cumulativeInflationPercent: (json['cumulativeInflationPercent'] as num?)
-          ?.toDouble(),
-      realProfitLossPercent: (json['realProfitLossPercent'] as num?)
-          ?.toDouble(),
+      cumulativeInflationPercent: ResponseBodyValidator.optionalFiniteDouble(
+        json['cumulativeInflationPercent'],
+        'cumulativeInflationPercent',
+      ),
+      realProfitLossPercent: ResponseBodyValidator.optionalFiniteDouble(
+        json['realProfitLossPercent'],
+        'realProfitLossPercent',
+      ),
       inflationDataAsOf: json['inflationDataAsOf'] != null
           ? DateTime.parse(json['inflationDataAsOf'] as String)
           : null,

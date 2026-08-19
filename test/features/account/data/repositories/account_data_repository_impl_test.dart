@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:saydin/core/network/device_id_interceptor.dart';
 import 'package:saydin/core/constants/api_endpoints.dart';
+import 'package:saydin/core/storage/share_card_cache.dart';
 import 'package:saydin/features/account/data/repositories/account_data_repository_impl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -160,6 +161,7 @@ void main() {
       deviceIdInterceptor: deviceIdInterceptor,
       temporaryDirectoryProvider: () async => temporaryDirectory,
       deletionStateDirectoryProvider: () async => temporaryDirectory,
+      cleanupAndroidPluginCache: true,
     );
 
     test(
@@ -193,9 +195,17 @@ void main() {
         final wrongExtension = File(
           '${temporaryDirectory.path}/saydin_share_result.txt',
         );
+        final pluginCache = Directory('${temporaryDirectory.path}/share_plus');
+        await pluginCache.create();
+        final pluginSharePng = File(
+          '${pluginCache.path}/saydin_share_result.png',
+        );
+        final pluginUnrelatedPng = File('${pluginCache.path}/other.png');
         await sharePng.writeAsBytes([1, 2, 3]);
         await unrelatedPng.writeAsBytes([4]);
         await wrongExtension.writeAsBytes([5]);
+        await pluginSharePng.writeAsBytes([6, 7, 8]);
+        await pluginUnrelatedPng.writeAsBytes([9]);
 
         await buildWipeRepo().wipeLocalData();
 
@@ -203,8 +213,10 @@ void main() {
         verify(() => secureStorage.deleteAll()).called(1);
         verify(() => deviceIdInterceptor.resetCache()).called(1);
         expect(sharePng.existsSync(), isFalse);
+        expect(pluginSharePng.existsSync(), isFalse);
         expect(unrelatedPng.existsSync(), isTrue);
         expect(wrongExtension.existsSync(), isTrue);
+        expect(pluginUnrelatedPng.existsSync(), isTrue);
       },
     );
 
@@ -231,6 +243,46 @@ void main() {
       verify(() => deviceIdInterceptor.resetCache()).called(1);
       expect(sharePng.existsSync(), isFalse);
     });
+
+    test(
+      'rejects a symlinked Android plugin cache and reports partial wipe',
+      () async {
+        if (Platform.isWindows) return;
+
+        final outsideDirectory = await Directory.systemTemp.createTemp(
+          'saydin-account-wipe-outside-',
+        );
+        final outsideShare = File(
+          '${outsideDirectory.path}/saydin_share_private.png',
+        );
+        await outsideShare.writeAsBytes([1, 2, 3]);
+        final pluginLink = Link('${temporaryDirectory.path}/share_plus');
+        await pluginLink.create(outsideDirectory.path);
+        addTearDown(() async {
+          if (await pluginLink.exists()) await pluginLink.delete();
+          if (outsideDirectory.existsSync()) {
+            await outsideDirectory.delete(recursive: true);
+          }
+        });
+
+        await expectLater(
+          buildWipeRepo().wipeLocalData(),
+          throwsA(
+            isA<AccountWipeException>().having(
+              (error) => error.causes.single,
+              'share cleanup cause',
+              isA<ShareCardCacheCleanupException>(),
+            ),
+          ),
+        );
+
+        verify(() => prefs.clear()).called(1);
+        verify(() => secureStorage.deleteAll()).called(1);
+        verify(() => deviceIdInterceptor.resetCache()).called(1);
+        expect(outsideShare.existsSync(), isTrue);
+        await pluginLink.delete();
+      },
+    );
   });
 }
 

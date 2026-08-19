@@ -134,6 +134,17 @@ void main() {
       await expectLater(compare(), throwsA(isA<MalformedResponseError>()));
     });
 
+    test('compare_nestedNonFinitePercent_throwsMalformedResponse', () async {
+      final payload = compareJson();
+      final calculation =
+          (payload['results'] as List<dynamic>).first['calculation']
+              as Map<String, dynamic>;
+      calculation['profitLossPercent'] = double.nan;
+      stubPost(okResponse(payload));
+
+      await expectLater(compare(), throwsA(isA<MalformedResponseError>()));
+    });
+
     test('compare_emptyResults_throwsMalformedResponse', () async {
       stubPost(okResponse({'results': <dynamic>[]}));
 

@@ -25,6 +25,16 @@ class PortfolioCalculation extends Equatable {
   final double? cumulativeInflationPercent;
   final double? realProfitLossPercent;
 
+  /// Per-item transaction evidence retained from the delegated What-If
+  /// calculation. Nullable means the repository could not supply that piece
+  /// of evidence; it must not be replaced with an arbitrary portfolio date.
+  final DateTime? requestedBuyDate;
+  final DateTime? effectiveBuyDate;
+  final DateTime? requestedSellDate;
+  final DateTime? effectiveSellDate;
+  final DateTime? calculatedAt;
+  final DateTime? inflationDataAsOf;
+
   const PortfolioCalculation({
     required this.initialValueTry,
     required this.finalValueTry,
@@ -32,6 +42,12 @@ class PortfolioCalculation extends Equatable {
     required this.isProfit,
     this.cumulativeInflationPercent,
     this.realProfitLossPercent,
+    this.requestedBuyDate,
+    this.effectiveBuyDate,
+    this.requestedSellDate,
+    this.effectiveSellDate,
+    this.calculatedAt,
+    this.inflationDataAsOf,
   });
 
   FinancialOutcome get outcome =>
@@ -45,6 +61,12 @@ class PortfolioCalculation extends Equatable {
     isProfit,
     cumulativeInflationPercent,
     realProfitLossPercent,
+    requestedBuyDate,
+    effectiveBuyDate,
+    requestedSellDate,
+    effectiveSellDate,
+    calculatedAt,
+    inflationDataAsOf,
   ];
 }
 

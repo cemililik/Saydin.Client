@@ -148,6 +148,38 @@
 
   "shareResult": "Paylaş",
   "sharePreviewTitle": "Paylaşım Önizlemesi",
+  "sharePreviewClose": "Paylaşım önizlemesini kapat",
+  "@sharePreviewClose": {
+    "description": "Paylaşım önizlemesi kapatma düğmesinin erişilebilir etiketi"
+  },
+  "sharePreviewCardLabel": "Paylaşılacak kartın görsel önizlemesi",
+  "@sharePreviewCardLabel": {
+    "description": "Yakınlaştırılabilir paylaşım kartı önizlemesinin erişilebilir etiketi"
+  },
+  "sharePreviewZoomHint": "Kartı yakınlaştırabilir ve kaydırabilirsiniz. Paylaşım metninin tamamı aşağıdadır.",
+  "@sharePreviewZoomHint": {
+    "description": "Paylaşım kartı önizlemesi için erişilebilir etkileşim ipucu"
+  },
+  "shareCaptionTitle": "Paylaşım metni",
+  "@shareCaptionTitle": {
+    "description": "Native paylaşım hedeflerine gönderilecek son metnin başlığı"
+  },
+  "shareCopyText": "Metni kopyala",
+  "@shareCopyText": {
+    "description": "Dondurulmuş son paylaşım metnini panoya kopyalayan düğme"
+  },
+  "shareCopied": "Paylaşım metni kopyalandı.",
+  "@shareCopied": {
+    "description": "Paylaşım metni başarıyla panoya kopyalandığında gösterilen geri bildirim"
+  },
+  "shareUnavailable": "Bu cihazda paylaşım kullanılamıyor. Metni kopyalayarak devam edebilirsiniz.",
+  "@shareUnavailable": {
+    "description": "Native paylaşım kullanılamadığında kopyalama kurtarma yolunu açıklayan geri bildirim"
+  },
+  "shareCopyError": "Paylaşım metni kopyalanamadı. Lütfen tekrar deneyin.",
+  "@shareCopyError": {
+    "description": "Paylaşım metni panoya kopyalanamadığında gösterilen hata"
+  },
   "sharingInProgress": "Hazırlanıyor...",
   "shareError": "Paylaşım kartı oluşturulamadı. Lütfen tekrar deneyin.",
 

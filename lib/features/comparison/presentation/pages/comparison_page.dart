@@ -13,6 +13,8 @@ import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
+import 'package:saydin/features/config/domain/policies/share_policy.dart';
+import 'package:saydin/features/config/presentation/widgets/share_result_button.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_event.dart';
@@ -132,6 +134,7 @@ class _ComparisonPageState extends State<ComparisonPage> {
     DateTime? buyDate,
     DateTime? sellDate,
   ) {
+    if (!SharePolicy.canShare(ctx.read<AppConfigCubit>().state)) return;
     if (buyDate == null) return;
     final winner = result.results.firstOrNull;
     final winnerName = winner?.calculation.assetDisplayName ?? '';
@@ -145,6 +148,8 @@ class _ComparisonPageState extends State<ComparisonPage> {
       isScrollControlled: true,
       builder: (_) => SharePreviewSheet(
         shareText: shareText,
+        canExecuteShare: () =>
+            SharePolicy.canShare(ctx.read<AppConfigCubit>().state),
         cardWidget: ComparisonShareCardWidget(
           result: result,
           buyDate: buyDate,
@@ -447,20 +452,12 @@ class _ComparisonPageState extends State<ComparisonPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _showComparisonShare(
-                              context,
-                              state.result,
-                              state.buyDate,
-                              state.sellDate,
-                            ),
-                            icon: const Icon(Icons.share_outlined),
-                            label: Text(l10n.shareResult),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                        ShareResultButton(
+                          onPressed: () => _showComparisonShare(
+                            context,
+                            state.result,
+                            state.buyDate,
+                            state.sellDate,
                           ),
                         ),
                       ],
