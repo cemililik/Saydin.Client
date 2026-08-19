@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 
 /// Bir günün varlık fiyatı.
 ///
@@ -72,6 +73,8 @@ class WhatIfResult extends Equatable {
     this.actualSellDate,
     this.calculatedAt,
   });
+
+  FinancialOutcome get outcome => FinancialOutcome.fromAmount(profitLossTry);
 
   /// Sonucu üreten deterministik bitiş tarihi.
   ///

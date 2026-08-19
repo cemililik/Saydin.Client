@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_calculation.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 
@@ -86,6 +87,9 @@ class PortfolioResult extends Equatable {
   });
 
   bool get hasInflation => totalRealProfitLossPercent != null;
+
+  FinancialOutcome get outcome =>
+      FinancialOutcome.fromAmount(totalProfitLossTry);
 
   /// Bir veya daha fazla kalem hesaplanamadıysa true.
   bool get hasPartialFailure => failures.isNotEmpty;

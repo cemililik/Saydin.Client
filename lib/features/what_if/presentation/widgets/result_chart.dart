@@ -2,18 +2,19 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
-import 'package:saydin/core/theme/financial_colors.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 
 class ResultChart extends StatefulWidget {
   final List<ChartPoint> priceHistory;
-  final bool isProfit;
+  final FinancialOutcome outcome;
 
   const ResultChart({
     super.key,
     required this.priceHistory,
-    required this.isProfit,
+    required this.outcome,
   });
 
   /// WhatIfResult'tan kolayca oluşturmak için factory-benzeri constructor.
@@ -21,7 +22,7 @@ class ResultChart extends StatefulWidget {
       ResultChart(
         key: key,
         priceHistory: result.priceHistory,
-        isProfit: result.isProfit,
+        outcome: result.outcome,
       );
 
   @override
@@ -79,10 +80,7 @@ class _ResultChartState extends State<ResultChart> {
     if (history.length < 2) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final financialColors = context.financialColors;
-    final color = widget.isProfit
-        ? financialColors.profit
-        : financialColors.loss;
+    final color = widget.outcome.color(context);
     final origin = history.first.date;
     final first = history.first;
     final last = history.last;
@@ -92,7 +90,7 @@ class _ResultChartState extends State<ResultChart> {
       _priceFmt.format(first.price.toDouble()),
       _dateFmt.format(last.date),
       _priceFmt.format(last.price.toDouble()),
-      last.price >= first.price ? l10n.profit : l10n.loss,
+      FinancialOutcome.fromAmount(last.price - first.price).title(l10n),
     );
 
     final spots = history
@@ -307,25 +305,20 @@ class _RangeInfoBar extends StatelessWidget {
     final toPrice = to.price.toDouble();
     final delta = toPrice - fromPrice;
     final pct = fromPrice == 0 ? 0.0 : delta / fromPrice * 100;
-    final isUp = delta >= 0;
-    final financialColors = context.financialColors;
-    final color = isUp ? financialColors.profit : financialColors.loss;
+    final outcome = FinancialOutcome.fromPercent(delta);
+    final color = outcome.color(context);
     final theme = Theme.of(context);
     final locale = context.localeName;
     final dateFmt = AppFormat.date(locale);
 
     final pctStr =
-        '${isUp ? "+" : ""}${AppFormat.percent(locale).format(pct / 100)}';
+        '${outcome.explicitPositiveSign}${AppFormat.percent(locale).format(pct / 100)}';
 
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Row(
         children: [
-          Icon(
-            isUp ? Icons.trending_up : Icons.trending_down,
-            color: color,
-            size: 14,
-          ),
+          Icon(outcome.icon, color: color, size: 14),
           const SizedBox(width: 6),
           Expanded(
             child: Text(

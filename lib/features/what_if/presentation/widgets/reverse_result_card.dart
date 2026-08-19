@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
-import 'package:saydin/core/theme/financial_colors.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
@@ -73,12 +74,12 @@ class _ReverseResultCardState extends State<ReverseResultCard>
   }
 
   String _pctSignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_pctFormatter.format(v / 100)}';
   }
 
   String _trySignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_tryFormatter.format(v)}';
   }
 
@@ -138,11 +139,9 @@ class _ReverseResultCardState extends State<ReverseResultCard>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final financialColors = context.financialColors;
-    final color = result.isProfit
-        ? financialColors.profit
-        : financialColors.loss;
-    final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
+    final outcome = result.outcome;
+    final color = outcome.color(context);
+    final icon = outcome.icon;
 
     final sellLabel = _dateFormatter.format(result.effectiveSellDate);
 
@@ -193,7 +192,7 @@ class _ReverseResultCardState extends State<ReverseResultCard>
                 if (result.priceHistory.isNotEmpty)
                   ResultChart(
                     priceHistory: result.priceHistory,
-                    isProfit: result.isProfit,
+                    outcome: outcome,
                   ),
 
                 const Divider(height: 24),
@@ -211,7 +210,7 @@ class _ReverseResultCardState extends State<ReverseResultCard>
                   formatter: _tryFormatter.format,
                 ),
                 _AnimatedRow(
-                  result.isProfit ? l10n.profitLabel : l10n.lossLabel,
+                  outcome.amountLabel(l10n),
                   result.profitLossTry.toDouble(),
                   formatter: _tryFormatter.format,
                   valueColor: color,
@@ -282,9 +281,9 @@ class _ReverseResultCardState extends State<ReverseResultCard>
                     l10n.realReturn,
                     result.realProfitLossPercent!.toDouble(),
                     formatter: _pctSignedFormatter,
-                    valueColor: result.realProfitLossPercent! >= 0
-                        ? financialColors.profit
-                        : financialColors.loss,
+                    valueColor: FinancialOutcome.fromPercent(
+                      result.realProfitLossPercent!,
+                    ).color(context),
                     bold: true,
                   ),
                   _AnimatedRow(
@@ -299,9 +298,9 @@ class _ReverseResultCardState extends State<ReverseResultCard>
                         result.realProfitLossPercent! /
                         100,
                     formatter: _trySignedFormatter,
-                    valueColor: result.realProfitLossPercent! >= 0
-                        ? financialColors.profit
-                        : financialColors.loss,
+                    valueColor: FinancialOutcome.fromPercent(
+                      result.realProfitLossPercent!,
+                    ).color(context),
                   ),
                   if (result.inflationDataAsOf != null)
                     Padding(

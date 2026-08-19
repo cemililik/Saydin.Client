@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
 import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 
 /// Tek bir portföy kaleminin hesaplama sonucu — **portföye ait** saf domain
@@ -32,6 +33,9 @@ class PortfolioCalculation extends Equatable {
     this.cumulativeInflationPercent,
     this.realProfitLossPercent,
   });
+
+  FinancialOutcome get outcome =>
+      FinancialOutcome.fromAmount(finalValueTry - initialValueTry);
 
   @override
   List<Object?> get props => [

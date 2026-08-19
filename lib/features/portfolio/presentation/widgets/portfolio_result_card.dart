@@ -1,10 +1,11 @@
-import 'package:decimal/decimal.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/theme/financial_colors.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
@@ -35,12 +36,12 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
   String? _cachedLocale;
 
   String _pctSignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_pctFormatter.format(v / 100)}';
   }
 
   String _trySignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_tryFormatter.format(v)}';
   }
 
@@ -83,10 +84,9 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final financialColors = context.financialColors;
-    final color = result.isProfit
-        ? financialColors.profit
-        : financialColors.loss;
-    final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
+    final outcome = result.outcome;
+    final color = outcome.color(context);
+    final icon = outcome.icon;
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -154,7 +154,7 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                     Icon(icon, color: color, size: 28),
                     const SizedBox(width: 8),
                     Text(
-                      result.isProfit ? l10n.profit : l10n.loss,
+                      outcome.title(l10n),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: color,
                         fontWeight: FontWeight.bold,
@@ -178,7 +178,7 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                   bold: true,
                 ),
                 _AnimatedRow(
-                  result.isProfit ? l10n.profitLabel : l10n.lossLabel,
+                  outcome.amountLabel(l10n),
                   result.totalProfitLossTry.toDouble(),
                   formatter: _tryFormatter.format,
                   valueColor: color,
@@ -211,9 +211,9 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                     l10n.portfolioRealReturn,
                     (result.totalRealProfitLossPercent ?? 0).toDouble(),
                     formatter: _pctSignedFormatter,
-                    valueColor: (result.totalRealProfitLossPercent ?? 0) >= 0
-                        ? financialColors.profit
-                        : financialColors.loss,
+                    valueColor: FinancialOutcome.fromPercent(
+                      result.totalRealProfitLossPercent ?? 0,
+                    ).color(context),
                     bold: true,
                   ),
                   if (result.totalRealProfitLossTry != null)
@@ -221,9 +221,9 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                       l10n.portfolioRealProfitLoss,
                       result.totalRealProfitLossTry!.toDouble(),
                       formatter: _trySignedFormatter,
-                      valueColor: result.totalRealProfitLossTry! >= Decimal.zero
-                          ? financialColors.profit
-                          : financialColors.loss,
+                      valueColor: FinancialOutcome.fromAmount(
+                        result.totalRealProfitLossTry!,
+                      ).color(context),
                     ),
                 ],
 
@@ -292,12 +292,9 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                   final item = result.items[i];
                   final palette = financialColors.portfolioPalette;
                   final dotColor = palette[i % palette.length];
-                  final itemColor = item.calculation.isProfit
-                      ? financialColors.profit
-                      : financialColors.loss;
-                  final itemSign = item.calculation.profitLossPercent >= 0
-                      ? '+'
-                      : '';
+                  final itemOutcome = item.calculation.outcome;
+                  final itemColor = itemOutcome.color(context);
+                  final itemSign = itemOutcome.explicitPositiveSign;
                   final pctFmt = AppFormat.percent(context.localeName);
 
                   return MergeSemantics(
@@ -322,13 +319,7 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                           ),
                           // Renk körü erişilebilirliği (CLAUDE.md): kar/zarar
                           // yalnız renkle değil, yön ikonuyla da gösterilir.
-                          Icon(
-                            item.calculation.isProfit
-                                ? Icons.trending_up
-                                : Icons.trending_down,
-                            size: 16,
-                            color: itemColor,
-                          ),
+                          Icon(itemOutcome.icon, size: 16, color: itemColor),
                           const SizedBox(width: 4),
                           Text(
                             '$itemSign${pctFmt.format(item.calculation.profitLossPercent / 100)}',

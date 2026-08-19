@@ -132,7 +132,9 @@ class CalculatePortfolio {
       totalFinalValueTry: totalFinal,
       totalProfitLossTry: totalPnL,
       totalProfitLossPercent: totalPct,
-      isProfit: totalPnL >= Decimal.zero,
+      // Legacy boolean yalnız binary API compatibility içindir; sıfır
+      // presentation'da [FinancialOutcome.neutral] olarak gösterilir.
+      isProfit: totalPnL > Decimal.zero,
       effectiveSellDate: sellDate ?? _dateOnly(_clock()),
       totalRealProfitLossTry: totalRealPnL,
       totalRealProfitLossPercent: totalRealPct,

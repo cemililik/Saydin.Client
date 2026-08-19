@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:saydin/core/theme/app_theme.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 import 'package:saydin/features/dca/presentation/widgets/dca_chart.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
 void main() {
@@ -42,7 +43,10 @@ void main() {
         ),
         home: Scaffold(
           body: SingleChildScrollView(
-            child: DcaChart(chartData: points, isProfit: true),
+            child: DcaChart(
+              chartData: points,
+              outcome: FinancialOutcome.profit,
+            ),
           ),
         ),
       ),

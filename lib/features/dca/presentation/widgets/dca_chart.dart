@@ -3,14 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/theme/financial_colors.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 
 class DcaChart extends StatefulWidget {
   final List<DcaChartPoint> chartData;
-  final bool isProfit;
+  final FinancialOutcome outcome;
 
-  const DcaChart({super.key, required this.chartData, required this.isProfit});
+  const DcaChart({super.key, required this.chartData, required this.outcome});
 
   @override
   State<DcaChart> createState() => _DcaChartState();
@@ -30,9 +32,7 @@ class _DcaChartState extends State<DcaChart> {
     final dateFmt = AppFormat.date(locale);
     final theme = Theme.of(context);
     final financialColors = context.financialColors;
-    final valueColor = widget.isProfit
-        ? financialColors.profit
-        : financialColors.loss;
+    final valueColor = widget.outcome.color(context);
     final costColor = financialColors.chartCost;
     final origin = chartData.first.date;
 

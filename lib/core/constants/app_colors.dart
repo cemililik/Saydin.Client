@@ -9,6 +9,8 @@ class AppColors {
   // Kar/zarar renkleri — her iki temada okunabilir tonlar
   static const profit = Color(0xFF2E7D32);
   static const profitDark = Color(0xFF66BB6A);
+  static const neutral = Color(0xFF455A64);
+  static const neutralDark = Color(0xFFB0BEC5);
   static const loss = Color(0xFFC62828);
   static const lossDark = Color(0xFFEF5350);
 

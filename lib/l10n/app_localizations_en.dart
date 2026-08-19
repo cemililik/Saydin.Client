@@ -73,6 +73,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lossLabel => 'Loss';
 
   @override
+  String get noChange => 'No Change';
+
+  @override
+  String get changeLabel => 'Change';
+
+  @override
   String get enterAmount => 'Enter amount';
 
   @override
@@ -618,6 +624,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareCardLoss => 'loss';
+
+  @override
+  String get shareCardNeutral => 'no change';
 
   @override
   String get shareCardInflationTitle => 'Inflation Adjustment (CPI)';

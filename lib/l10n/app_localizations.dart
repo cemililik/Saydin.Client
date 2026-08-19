@@ -224,6 +224,18 @@ abstract class AppLocalizations {
   /// **'Zarar'**
   String get lossLabel;
 
+  /// No description provided for @noChange.
+  ///
+  /// In tr, this message translates to:
+  /// **'Değişim Yok'**
+  String get noChange;
+
+  /// No description provided for @changeLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Değişim'**
+  String get changeLabel;
+
   /// No description provided for @enterAmount.
   ///
   /// In tr, this message translates to:
@@ -1135,6 +1147,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'zarar'**
   String get shareCardLoss;
+
+  /// No description provided for @shareCardNeutral.
+  ///
+  /// In tr, this message translates to:
+  /// **'değişim yok'**
+  String get shareCardNeutral;
 
   /// No description provided for @shareCardInflationTitle.
   ///

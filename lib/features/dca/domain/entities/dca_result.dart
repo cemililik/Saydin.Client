@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 
 /// Bir DCA periyotunun satın alımı.
 ///
@@ -100,6 +101,8 @@ class DcaResult extends Equatable {
     this.purchases = const [],
     this.chartData = const [],
   });
+
+  FinancialOutcome get outcome => FinancialOutcome.fromAmount(profitLossTry);
 
   DcaResult withAssetDisplayName(String value) => DcaResult(
     assetSymbol: assetSymbol,

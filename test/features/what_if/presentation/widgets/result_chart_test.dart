@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:saydin/core/theme/app_theme.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/features/what_if/presentation/widgets/result_chart.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
 void main() {
@@ -41,7 +42,10 @@ void main() {
         ),
         home: Scaffold(
           body: SingleChildScrollView(
-            child: ResultChart(priceHistory: history, isProfit: true),
+            child: ResultChart(
+              priceHistory: history,
+              outcome: FinancialOutcome.profit,
+            ),
           ),
         ),
       ),

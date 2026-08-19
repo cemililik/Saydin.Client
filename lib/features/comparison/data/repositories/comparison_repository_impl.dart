@@ -44,9 +44,11 @@ class ComparisonRepositoryImpl implements ComparisonRepository {
         },
       );
       final data = ResponseBodyValidator.requireMap(response.data);
-      return ResponseBodyValidator.parse(
-        () => CompareResultModel.fromJson(data),
-      );
+      return ResponseBodyValidator.parse(() {
+        final result = CompareResultModel.fromJson(data);
+        _validateRequestedSymbols(result, assetSymbols);
+        return result;
+      });
     } on DioException catch (e) {
       throw _errorMapper.map(e);
     }
@@ -54,4 +56,20 @@ class ComparisonRepositoryImpl implements ComparisonRepository {
 
   String _formatDate(DateTime date) =>
       '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+  static void _validateRequestedSymbols(
+    CompareResult result,
+    List<String> requestedSymbols,
+  ) {
+    final returned = result.results
+        .map((item) => item.calculation.assetSymbol)
+        .toList(growable: false);
+    if (returned.length != requestedSymbols.length ||
+        returned.toSet().length != returned.length ||
+        !requestedSymbols.every(returned.contains)) {
+      throw const FormatException(
+        'compare result: istenen ve dönen varlık sembolleri eşleşmiyor',
+      );
+    }
+  }
 }

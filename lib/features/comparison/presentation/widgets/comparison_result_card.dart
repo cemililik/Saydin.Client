@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
-import 'package:saydin/core/theme/financial_colors.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 
@@ -59,16 +60,16 @@ class _ComparisonResultCardState extends State<ComparisonResultCard>
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final calc = item.calculation;
-    final financialColors = context.financialColors;
-    final color = calc.isProfit ? financialColors.profit : financialColors.loss;
-    final icon = calc.isProfit ? Icons.trending_up : Icons.trending_down;
+    final outcome = calc.outcome;
+    final color = outcome.color(context);
+    final icon = outcome.icon;
     final sellLabel = _dateFormatter.format(calc.effectiveSellDate);
 
     final hasDateNote =
         calc.actualBuyDate != null || calc.actualSellDate != null;
-    final realColor = (calc.realProfitLossPercent ?? 0) >= 0
-        ? financialColors.profit
-        : financialColors.loss;
+    final realColor = FinancialOutcome.fromPercent(
+      calc.realProfitLossPercent ?? 0,
+    ).color(context);
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -134,7 +135,7 @@ class _ComparisonResultCardState extends State<ComparisonResultCard>
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '${calc.profitLossPercent >= 0 ? '+' : ''}'
+                          '${outcome.explicitPositiveSign}'
                           '${_pctFormatter.format(calc.profitLossPercent / 100)}',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
@@ -145,7 +146,7 @@ class _ComparisonResultCardState extends State<ComparisonResultCard>
                         if (calc.realProfitLossPercent != null) ...[
                           const SizedBox(height: 2),
                           Text(
-                            '${l10n.realReturnPrefix}${calc.realProfitLossPercent! >= 0 ? '+' : ''}'
+                            '${l10n.realReturnPrefix}${FinancialOutcome.fromPercent(calc.realProfitLossPercent!).explicitPositiveSign}'
                             '${_pctFormatter.format(calc.realProfitLossPercent! / 100)}',
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(

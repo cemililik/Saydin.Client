@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:saydin/core/constants/app_branding.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
@@ -30,11 +32,10 @@ class ShareCardWidget extends StatelessWidget {
     final tryFmt = AppFormat.tryCurrency(locale);
     final pctFmt = AppFormat.percent(locale);
     final dateFmt = AppFormat.date(locale);
-    final nominalColor = result.isProfit ? AppColors.profit : AppColors.loss;
-    final nominalIcon = result.isProfit
-        ? Icons.trending_up
-        : Icons.trending_down;
-    final nominalSign = result.profitLossPercent >= 0 ? '+' : '';
+    final outcome = result.outcome;
+    final nominalColor = outcome.shareColor;
+    final nominalIcon = outcome.icon;
+    final nominalSign = outcome.explicitPositiveSign;
     final effectiveSellDate = result.effectiveSellDate;
     final sellLabel = dateFmt.format(effectiveSellDate);
 
@@ -240,7 +241,7 @@ class ShareCardWidget extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '$nominalSign${tryFmt.format(result.profitLossTry.toDouble())} '
-                          '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
+                          '${outcome.shareLabel(l10n)}',
                           style: TextStyle(
                             fontSize: 15,
                             color: nominalColor,
@@ -311,10 +312,11 @@ class _InflationSection extends StatelessWidget {
           result.realProfitLossPercent != null,
       '_InflationSection requires non-null inflation fields (hasInflation guard)',
     );
-    final inflSign = (result.cumulativeInflationPercent ?? 0) >= 0 ? '+' : '';
+    final inflSign = (result.cumulativeInflationPercent ?? 0) > 0 ? '+' : '';
     final realPct = result.realProfitLossPercent!;
-    final realSign = realPct >= 0 ? '+' : '';
-    final realColor = realPct >= 0 ? AppColors.profit : AppColors.loss;
+    final realOutcome = FinancialOutcome.fromPercent(realPct);
+    final realSign = realOutcome.explicitPositiveSign;
+    final realColor = realOutcome.shareColor;
 
     return Container(
       padding: const EdgeInsets.all(16),

@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'what_if_result.dart';
 
 /// "Şu hedef kazancı bugün elde etmek için geçmişte ne kadar yatırmam
@@ -49,6 +50,8 @@ class ReverseWhatIfResult extends Equatable {
     this.actualSellDate,
     this.calculatedAt,
   });
+
+  FinancialOutcome get outcome => FinancialOutcome.fromAmount(profitLossTry);
 
   /// Sonucu üreten deterministik bitiş tarihi; render anındaki saate bağlı
   /// değildir.

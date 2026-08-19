@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:saydin/core/constants/app_branding.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/comparison/domain/entities/compare_result.dart';
 import 'package:saydin/features/what_if/presentation/widgets/share_card_widget.dart';
@@ -119,11 +120,10 @@ class ComparisonShareCardWidget extends StatelessWidget {
                     final i = entry.key;
                     final item = entry.value;
                     final pct = item.calculation.profitLossPercent;
-                    final sign = pct >= 0 ? '+' : '';
+                    final outcome = item.calculation.outcome;
+                    final sign = outcome.explicitPositiveSign;
                     final isWinner = item.rank == 1;
-                    final itemColor = pct >= 0
-                        ? AppColors.profit
-                        : AppColors.loss;
+                    final itemColor = outcome.shareColor;
                     final emoji = i < _rankEmojis.length ? _rankEmojis[i] : '•';
 
                     return Container(

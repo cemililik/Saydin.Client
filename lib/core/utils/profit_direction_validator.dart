@@ -13,11 +13,15 @@ class ProfitDirectionValidator {
     required Decimal profitLossTry,
     required String context,
   }) {
-    final derived = profitLossTry >= Decimal.zero;
+    final isNeutral = profitLossTry == Decimal.zero;
+    final derived = profitLossTry > Decimal.zero;
     if (rawIsProfit != null && rawIsProfit is! bool) {
       throw FormatException('$context: isProfit bool değil ($rawIsProfit)');
     }
-    if (rawIsProfit is bool && rawIsProfit != derived) {
+    // Eski boolean API sıfır değişimi temsil edemez. Sıfırda backend'in
+    // true/false seçimini kontrat ihlali saymayız; presentation üçlü sonucu
+    // exact Decimal tutardan üretir. Binary compatibility değeri false'tur.
+    if (!isNeutral && rawIsProfit is bool && rawIsProfit != derived) {
       throw FormatException('$context: isProfit, profitLossTry ile tutarsız');
     }
     return derived;

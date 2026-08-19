@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:saydin/core/constants/app_branding.dart';
 import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
 import 'package:saydin/features/what_if/presentation/widgets/share_card_widget.dart';
 
@@ -29,16 +31,18 @@ class PortfolioShareCardWidget extends StatelessWidget {
     final tryFmt = AppFormat.tryCurrency(locale);
     final pctFmt = AppFormat.percent(locale);
     final dateFmt = AppFormat.date(locale);
-    final color = result.isProfit ? AppColors.profit : AppColors.loss;
-    final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
-    final sign = result.totalProfitLossPercent >= 0 ? '+' : '';
+    final outcome = result.outcome;
+    final color = outcome.shareColor;
+    final icon = outcome.icon;
+    final sign = outcome.explicitPositiveSign;
     final effectiveSellDate = sellDate ?? result.effectiveSellDate ?? buyDate;
     final sellLabel = dateFmt.format(effectiveSellDate);
 
     final hasInflation = result.totalRealProfitLossPercent != null;
     final realPct = result.totalRealProfitLossPercent ?? 0;
-    final realSign = realPct >= 0 ? '+' : '';
-    final realColor = realPct >= 0 ? AppColors.profit : AppColors.loss;
+    final realOutcome = FinancialOutcome.fromPercent(realPct);
+    final realSign = realOutcome.explicitPositiveSign;
+    final realColor = realOutcome.shareColor;
     final visibleItems = result.items.take(_maxVisibleItems).toList();
     final remainingItemCount = result.items.length - visibleItems.length;
 
@@ -292,7 +296,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '$sign${tryFmt.format(result.totalProfitLossTry.toDouble())} '
-                          '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
+                          '${outcome.shareLabel(l10n)}',
                           style: TextStyle(
                             fontSize: 15,
                             color: color,
@@ -326,7 +330,7 @@ class PortfolioShareCardWidget extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '${(result.totalCumulativeInflationPercent ?? 0) >= 0 ? '+' : ''}'
+                                '${(result.totalCumulativeInflationPercent ?? 0) > 0 ? '+' : ''}'
                                 '${pctFmt.format((result.totalCumulativeInflationPercent ?? 0) / 100)}',
                                 style: const TextStyle(
                                   fontSize: 13,

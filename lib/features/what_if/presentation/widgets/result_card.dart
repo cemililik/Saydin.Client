@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
-import 'package:saydin/core/theme/financial_colors.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
@@ -74,13 +75,13 @@ class _ResultCardState extends State<ResultCard>
 
   /// İşaretli yüzde formatter: +%12,34 / -%5,67 (tr) · +12.34% / -5.67% (en)
   String _pctSignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_pctFormatter.format(v / 100)}';
   }
 
   /// İşaretli TL formatter: +₺1.234,56 / -₺789,00
   String _trySignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_tryFormatter.format(v)}';
   }
 
@@ -144,11 +145,9 @@ class _ResultCardState extends State<ResultCard>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final financialColors = context.financialColors;
-    final color = result.isProfit
-        ? financialColors.profit
-        : financialColors.loss;
-    final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
+    final outcome = result.outcome;
+    final color = outcome.color(context);
+    final icon = outcome.icon;
 
     final sellLabel = _dateFormatter.format(result.effectiveSellDate);
 
@@ -173,7 +172,7 @@ class _ResultCardState extends State<ResultCard>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            result.isProfit ? l10n.profit : l10n.loss,
+                            outcome.title(l10n),
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(
                                   color: color,
@@ -213,7 +212,7 @@ class _ResultCardState extends State<ResultCard>
                   bold: true,
                 ),
                 _AnimatedRow(
-                  result.isProfit ? l10n.profitLabel : l10n.lossLabel,
+                  outcome.amountLabel(l10n),
                   result.profitLossTry.toDouble(),
                   formatter: _tryFormatter.format,
                   valueColor: color,
@@ -285,9 +284,9 @@ class _ResultCardState extends State<ResultCard>
                     l10n.realReturn,
                     result.realProfitLossPercent!.toDouble(),
                     formatter: _pctSignedFormatter,
-                    valueColor: result.realProfitLossPercent! >= 0
-                        ? financialColors.profit
-                        : financialColors.loss,
+                    valueColor: FinancialOutcome.fromPercent(
+                      result.realProfitLossPercent!,
+                    ).color(context),
                     bold: true,
                   ),
                   _AnimatedRow(
@@ -302,9 +301,9 @@ class _ResultCardState extends State<ResultCard>
                         result.realProfitLossPercent! /
                         100,
                     formatter: _trySignedFormatter,
-                    valueColor: result.realProfitLossPercent! >= 0
-                        ? financialColors.profit
-                        : financialColors.loss,
+                    valueColor: FinancialOutcome.fromPercent(
+                      result.realProfitLossPercent!,
+                    ).color(context),
                   ),
                   if (result.inflationDataAsOf != null)
                     Padding(

@@ -33,6 +33,10 @@ void main() {
           contrastRatio(colors.loss, theme.colorScheme.surface),
           greaterThanOrEqualTo(4.5),
         );
+        expect(
+          contrastRatio(colors.neutral, theme.colorScheme.surface),
+          greaterThanOrEqualTo(4.5),
+        );
       },
     );
   }

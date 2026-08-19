@@ -73,6 +73,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get lossLabel => 'Zarar';
 
   @override
+  String get noChange => 'Değişim Yok';
+
+  @override
+  String get changeLabel => 'Değişim';
+
+  @override
   String get enterAmount => 'Tutar giriniz';
 
   @override
@@ -617,6 +623,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get shareCardLoss => 'zarar';
+
+  @override
+  String get shareCardNeutral => 'değişim yok';
 
   @override
   String get shareCardInflationTitle => 'Enflasyon Düzeltmesi (TÜFE)';

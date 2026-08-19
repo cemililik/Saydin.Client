@@ -63,6 +63,22 @@ void main() {
       );
     });
 
+    test('sıfır getiri legacy boolean ne olursa olsun neutral kalır', () {
+      for (final rawIsProfit in [true, false]) {
+        final json = {
+          ..._baseJson(priceHistory: []),
+          'profitLossTry': '0',
+          'profitLossPercent': 0,
+          'isProfit': rawIsProfit,
+        };
+
+        final model = WhatIfResponseModel.fromJson(json);
+
+        expect(model.isProfit, isFalse);
+        expect(model.outcome.name, 'neutral');
+      }
+    });
+
     test('sellDate null olduğunda null döner', () {
       final model = WhatIfResponseModel.fromJson(
         _baseJson(priceHistory: [], sellDate: null),
