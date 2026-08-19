@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 import struct
 import unittest
-import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -114,15 +113,21 @@ class BrandAssetsTest(unittest.TestCase):
             icon = ANDROID_RES / f"mipmap-{density}/ic_launcher.png"
             self.assertEqual(png_size(icon), (dimension, dimension))
 
-        v26 = ET.parse(ANDROID_RES / "mipmap-anydpi-v26/ic_launcher.xml").getroot()
-        v33 = ET.parse(ANDROID_RES / "mipmap-anydpi-v33/ic_launcher.xml").getroot()
-        self.assertEqual(v26.tag, "adaptive-icon")
-        self.assertEqual(v33.tag, "adaptive-icon")
-        self.assertEqual([child.tag for child in v26], ["background", "foreground"])
-        self.assertEqual(
-            [child.tag for child in v33],
-            ["background", "foreground", "monochrome"],
-        )
+        # These are repository-owned, immutable brand resources. Pinning the
+        # complete bytes is stricter than checking selected XML tags and avoids
+        # exposing the quality test to an XML parser/XXE attack surface.
+        adaptive_icons = {
+            "mipmap-anydpi-v26/ic_launcher.xml":
+                "81f594a9d597b08a093426fb6954dbd3ad2f8fa955466e01d78b28c686d2e95f",
+            "mipmap-anydpi-v33/ic_launcher.xml":
+                "f58c5dcb7eee16f6cfeb6d0e3f22c0a68badd00dd3a653810a55c67422e53e1d",
+        }
+        for relative_path, digest in adaptive_icons.items():
+            self.assertEqual(
+                sha256(ANDROID_RES / relative_path),
+                digest,
+                relative_path,
+            )
 
     def test_light_and_dark_launch_assets_are_real_images(self) -> None:
         for path in (
