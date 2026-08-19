@@ -61,6 +61,8 @@ class _DeleteAccountViewState extends State<_DeleteAccountView> {
                 message: l10n.deleteAccountPartialSuccess,
                 durationSeconds: 8,
               );
+            case AccountDeletionLocalCleanupPending():
+              _showFailureSnackbar(context, l10n.deleteAccountPartialSuccess);
             case AccountDeletionFailure():
               _showFailureSnackbar(context, l10n.deleteAccountFailed);
             case AccountDeletionIdle() || AccountDeletionInProgress():
@@ -70,8 +72,14 @@ class _DeleteAccountViewState extends State<_DeleteAccountView> {
         builder: (context, state) {
           final inProgress = state is AccountDeletionInProgress;
           return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                20 + MediaQuery.viewInsetsOf(context).bottom,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

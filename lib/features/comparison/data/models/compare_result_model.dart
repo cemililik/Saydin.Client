@@ -6,29 +6,42 @@ class CompareResultModel extends CompareResult {
 
   factory CompareResultModel.fromJson(Map<String, dynamic> json) {
     final rawResults = json['results'];
-    if (rawResults is! List) {
+    if (rawResults is! List<dynamic>) {
       throw const FormatException(
         'compare result: "results" alanı liste değil',
       );
     }
-    final items = rawResults.map((e) {
-      if (e is! Map) {
-        throw const FormatException('compare result item: map değil');
-      }
-      final rank = e['rank'];
-      final calc = e['calculation'];
-      if (rank is! num || calc is! Map) {
-        throw const FormatException(
-          'compare result item: rank int veya calculation map değil',
-        );
-      }
-      return CompareResultItem(
-        rank: rank.toInt(),
-        calculation: WhatIfResponseModel.fromJson(
-          Map<String, dynamic>.from(calc),
-        ),
-      );
-    }).toList();
+    if (rawResults.isEmpty) {
+      throw const FormatException('compare result: sonuç listesi boş');
+    }
+    final items = rawResults.indexed
+        .map((entry) {
+          final expectedRank = entry.$1 + 1;
+          final e = entry.$2;
+          if (e is! Map<Object?, Object?>) {
+            throw const FormatException('compare result item: map değil');
+          }
+          final rank = e['rank'];
+          final calc = e['calculation'];
+          if (rank is! int || calc is! Map<Object?, Object?>) {
+            throw const FormatException(
+              'compare result item: rank int veya calculation map değil',
+            );
+          }
+          if (rank != expectedRank) {
+            throw FormatException(
+              'compare result item: rank sırası bozuk '
+              '(beklenen $expectedRank, gelen $rank)',
+            );
+          }
+          return CompareResultItem(
+            rank: rank,
+            calculation: WhatIfResponseModel.fromJson(
+              Map<String, dynamic>.from(calc),
+            ),
+          );
+        })
+        .toList(growable: false);
     return CompareResultModel(results: items);
   }
 }

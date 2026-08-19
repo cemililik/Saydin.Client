@@ -59,12 +59,15 @@ done
 ```
 İhlal varsa: `setState` çağrısı yerine state'i BLoC'a taşı, `context.read<XBloc>().add(...)` ile event gönder.
 
-### 6. `double` para tutarı için
+### 6. `double`/`num` para tutarı için
 **Sinyal**: `amount`, `price`, `try`, `total`, `value` gibi para semantiği olan alanlar `double` tip.
 ```bash
-git diff -- '*.dart' | grep -E '^\+.*\bdouble\b.*(amount|price|total|try|tl|tr[yY]|value|cost|fee)'
+git diff -- '*.dart' | grep -Ei '^\+.*\b(double|num)\b.*(amount|price|total|try|tl|tr[yY]|value|cost|fee)'
 ```
-İhlal varsa: `num` (Dart) veya server'dan gelen `String` → controlled parse. Display için `NumberFormat.currency(locale: 'tr_TR', symbol: '₺')`.
+İhlal varsa: domain/request alanını `Decimal` yap; server değerini
+`MoneyParser.requireDecimal`, outbound değeri `MoneyParser.toJsonString` ile
+işle. Gösterimde aktif locale'i kullan. Ayrıntı:
+[financial/error contract](../../../docs/engineering/financial-error-contract.md).
 
 ### 7. Domain'de Flutter import
 **Tek `*` dizin sınırını aşmaz** — domain dosyaları `domain/{entities,repositories,usecases}/` altındadır. Recursive globbing için `**` veya `git ls-files` kullan:
@@ -126,7 +129,7 @@ git diff -- '*.dart' | grep -B 5 'extends Equatable\|with Equatable' | grep -E '
 Bu heuristik'ler kesin değil. Manuel doğrulama gerekenler:
 - **Türkçe karakter heuristiği** doc string'leri (`/// Türkçe açıklama`) yakalayabilir — comment'leri filtrele.
 - **Color(0xFF...)** test dosyalarında veya theme tanımında geçerli — `core/theme/`, `test/` dizinlerini hariç tut.
-- **`double` field'lar** matematiksel istatistik veya yüzde için olabilir (örn. `coverageRatio`). Sadece para alanlarında yasak.
+- **`double`/`num` field'lar** matematiksel istatistik veya yüzde için olabilir (örn. `coverageRatio`). Sadece para alanlarında yasak.
 
 Şüpheli durumda kullanıcıya sun, otomatik fix uygulama.
 

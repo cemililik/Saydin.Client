@@ -84,7 +84,7 @@ void main() {
     assetSymbol: 'USDTRY',
     buyDate: DateTime(2020, 1, 1),
     sellDate: DateTime(2021, 1, 1),
-    amount: 10000,
+    amount: Decimal.fromInt(10000),
     amountType: 'try',
   );
 
@@ -106,10 +106,16 @@ void main() {
       expect(assets.single.symbol, 'USDTRY');
     });
 
-    test('getAssets_nullBody_returnsEmptyList', () async {
+    test('getAssets_nullBody_throwsMalformedResponse', () async {
       stubGet(okResponse(null));
 
-      expect(await repo.getAssets(), isEmpty);
+      expect(repo.getAssets(), throwsA(isA<MalformedResponseError>()));
+    });
+
+    test('getAssets_missingAssets_throwsMalformedResponse', () async {
+      stubGet(okResponse(const {}));
+
+      expect(repo.getAssets(), throwsA(isA<MalformedResponseError>()));
     });
 
     test('getAssets_connectionError_throwsNoInternet', () async {
@@ -144,10 +150,10 @@ void main() {
       expect(calc(), throwsA(isA<NoInternetError>()));
     });
 
-    test('calculate_status404_throwsPriceNotFound', () async {
+    test('calculate_unknownStatus404_throwsEndpointNeutralNotFound', () async {
       stubPost(badResponse(404));
 
-      expect(calc(), throwsA(isA<PriceNotFoundError>()));
+      expect(calc(), throwsA(isA<NotFoundError>()));
     });
 
     test('calculate_status500_throwsServerError', () async {
@@ -161,15 +167,31 @@ void main() {
       );
     });
 
-    test('calculate_parseError_propagatesNotSwallowed', () async {
-      // Bozuk para alanı → FormatException. `on DioException` bunu YAKALAMAMALI;
-      // ham hata üst katmana çıkar (AppError'a sarılmaz — sözleşme L-1).
+    test('calculate_parseError_throwsMalformedResponse', () async {
       stubPost(okResponse({...calcJson(), 'finalValueTry': 'not-a-number'}));
 
-      await expectLater(
-        calc(),
-        throwsA(allOf(isA<FormatException>(), isNot(isA<AppError>()))),
+      await expectLater(calc(), throwsA(isA<MalformedResponseError>()));
+    });
+
+    test('calculate_decimalAmount_serializesCanonicalString', () async {
+      stubPost(okResponse(calcJson()));
+
+      await repo.calculate(
+        assetSymbol: 'USDTRY',
+        buyDate: DateTime(2020),
+        amount: Decimal.parse('0.12345678'),
+        amountType: 'units',
       );
+
+      final captured =
+          verify(
+                () => dio.post<Map<String, dynamic>>(
+                  any(),
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(captured['amount'], '0.12345678');
     });
   });
 
@@ -179,7 +201,7 @@ void main() {
     Future<void> reverse() => repo.calculateReverse(
       assetSymbol: 'USDTRY',
       buyDate: DateTime(2020, 1, 1),
-      targetAmount: 1000,
+      targetAmount: Decimal.fromInt(1000),
       targetAmountType: 'try',
     );
 
@@ -194,5 +216,16 @@ void main() {
 
       expect(reverse(), throwsA(isA<NoInternetError>()));
     });
+
+    test(
+      'calculateReverse_inconsistentProfit_throwsMalformedResponse',
+      () async {
+        stubPost(
+          okResponse({...calcJson(), 'profitLossTry': 1, 'isProfit': false}),
+        );
+
+        expect(reverse(), throwsA(isA<MalformedResponseError>()));
+      },
+    );
   });
 }

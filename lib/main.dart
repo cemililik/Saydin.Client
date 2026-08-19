@@ -11,7 +11,7 @@ import 'core/observability/sentry_pii_scrubber.dart';
 import 'core/platform/platform_info.dart';
 import 'core/utils/share_card_renderer.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   const scrubber = SentryPiiScrubber();
@@ -31,7 +31,7 @@ void main() {
   //
   // Manuel ikinci bir `runZonedGuarded` EKLENMEZ: Sentry'nin zone'unu sarmalar
   // ve aynı hatayı iki kez raporlardı.
-  SentryFlutter.init(
+  await SentryFlutter.init(
     (options) {
       options.dsn = const String.fromEnvironment(
         'SENTRY_DSN',
@@ -42,7 +42,25 @@ void main() {
         'APP_ENV',
         defaultValue: 'development',
       );
-      options.tracesSampleRate = 0.2; // %20 performance tracing
+      const release = String.fromEnvironment('SENTRY_RELEASE');
+      const dist = String.fromEnvironment('SENTRY_DIST');
+      if (release.isNotEmpty) options.release = release;
+      if (dist.isNotEmpty) options.dist = dist;
+      // Performance transaction/span payload'ları; description, data ve
+      // measurement alanlarında serbest metin taşıyabilir. Bunlar için gerçek
+      // serialized-envelope sözleşme testi kurulana kadar tracing fail-closed
+      // kapalıdır; crash/error event'leri normal biçimde devam eder.
+      options.tracesSampleRate = 0.0;
+      // Native auto-session envelopes Dart beforeSend scrubber'ının dışında
+      // oluşabilir. Serialized envelope sözleşmesi ayrıca doğrulanana kadar
+      // release-health session tracking'i fail-closed kapalı tut.
+      options.enableAutoSessionTracking = false;
+      // SDK varsayılanı null/disabled olsa da upgrade drift'ine karşı replay'i
+      // explicit kapat. Finansal sonuç ekranı kaydı hiçbir build'de üretilmez.
+      // ignore: experimental_member_use
+      options.experimental.replay.sessionSampleRate = 0.0;
+      // ignore: experimental_member_use
+      options.experimental.replay.onErrorSampleRate = 0.0;
 
       // ── Gizlilik (KVKK 6698 / GDPR) ────────────────────────────────────────
       // Finansal "ya alsaydım" ekranlarındaki tutar, asset ve tarih
@@ -60,9 +78,8 @@ void main() {
 
       options.beforeSend = (event, hint) async =>
           scrubber.scrubEvent(event, hint);
-      // `tracesSampleRate > 0` olduğu için transaction event'leri de Sentry'ye
-      // gider — bunlar `SentryTransaction extends SentryEvent` olduğundan
-      // aynı scrub yolundan geçirilir. Bu callback `Hint` almaz; boş Hint
+      // İleride tracing tekrar etkinleştirilirse transaction event'leri de
+      // aynı scrub yolundan geçer. Bu callback `Hint` almaz; boş Hint
       // oluşturup geçeriz.
       options.beforeSendTransaction = (transaction) async {
         final scrubbed = scrubber.scrubEvent(transaction, Hint());
@@ -80,9 +97,10 @@ void main() {
       // EN tarafını kırıyordu.
       await initializeDateFormatting();
       await configureDependencies();
-      // 1 saatten eski paylaşım kart PNG'lerini temizle. Önceki oturumda share
-      // iletişim kutusu kapanmadan uygulama kapatıldıysa renderer'ın finally
-      // bloğu çalışmaz — startup pass ikinci savunma hattı (KVKK Madde 12).
+      // 1 saatten eski kaynak PNG'leri ve Android share_plus cache kopyalarını
+      // temizle. Önceki oturumda share iletişim kutusu kapanmadan uygulama
+      // kapatıldıysa renderer'ın finally bloğu çalışmaz — startup pass ikinci
+      // savunma hattı (KVKK Madde 12).
       unawaited(ShareCardRenderer.cleanupStaleShareFiles());
       // PII olmayan cihaz/uygulama etiketlerini Sentry scope'una ekle (F-05-07).
       // M-5: bu KRİTİK OLMAYAN telemetri adımı `runApp`'i bloke etmemeli — aksi

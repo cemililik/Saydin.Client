@@ -1,3 +1,5 @@
+import 'package:decimal/decimal.dart';
+
 import '../entities/dca_result.dart';
 
 abstract class DcaRepository {
@@ -5,7 +7,7 @@ abstract class DcaRepository {
     required String assetSymbol,
     required DateTime startDate,
     DateTime? endDate,
-    required num periodicAmount,
+    required Decimal periodicAmount,
     required String period,
     required String amountType,
     bool includeInflation = false,

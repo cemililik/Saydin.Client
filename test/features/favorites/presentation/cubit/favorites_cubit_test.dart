@@ -43,6 +43,20 @@ void main() {
     ],
   );
 
+  test('toggle_saveFails_emitsOnePersistenceFeedback', () async {
+    when(() => repo.save(any())).thenThrow(Exception('disk full'));
+    final cubit = build();
+    addTearDown(cubit.close);
+    final feedback = expectLater(
+      cubit.feedbacks,
+      emits(FavoritesPersistenceFeedback.saveFailed),
+    );
+
+    await cubit.toggle('BTC');
+
+    await feedback;
+  });
+
   blocTest<FavoritesCubit, Set<String>>(
     'toggle_addsFavorite_emitsAndSaves',
     build: build,

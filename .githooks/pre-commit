@@ -30,7 +30,7 @@ else
 fi
 
 echo "→ dart format kontrolü..."
-if ! $DART format --output=none --set-exit-if-changed lib/ test/ 2>&1; then
+if ! "$DART" format --output=none --set-exit-if-changed lib/ test/ 2>&1; then
   echo ""
   echo "✗ Format hatası. Düzeltmek için:"
   echo "  dart format lib/ test/"
@@ -39,7 +39,7 @@ if ! $DART format --output=none --set-exit-if-changed lib/ test/ 2>&1; then
 fi
 
 echo "→ flutter analyze --fatal-infos..."
-if ! $FLUTTER analyze --no-pub --fatal-infos 2>&1; then
+if ! "$FLUTTER" analyze --no-pub --fatal-infos 2>&1; then
   echo ""
   echo "✗ Analiz hatası. Yukarıdaki sorunları düzeltin."
   echo "  (info seviyesi de fail eder — '--fatal-infos' sözleşme gereği)"
@@ -48,7 +48,7 @@ if ! $FLUTTER analyze --no-pub --fatal-infos 2>&1; then
 fi
 
 echo "→ flutter test..."
-if ! $FLUTTER test --no-pub --reporter=compact 2>&1; then
+if ! "$FLUTTER" test --no-pub --reporter=compact 2>&1; then
   echo ""
   echo "✗ Test hatası. Yukarıdaki testleri düzeltin."
   echo "  (Tek dosya çalıştırmak için: flutter test <path>)"

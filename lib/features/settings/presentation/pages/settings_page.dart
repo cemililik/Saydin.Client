@@ -6,6 +6,7 @@ import 'package:saydin/features/account/presentation/widgets/delete_account_tile
 import 'package:saydin/features/legal/domain/entities/legal_document.dart';
 import 'package:saydin/features/legal/presentation/widgets/legal_tile.dart';
 import 'package:saydin/features/settings/presentation/widgets/language_selector_tile.dart';
+import 'package:saydin/features/settings/presentation/widgets/reset_preferences_tile.dart';
 import 'package:saydin/features/settings/presentation/widgets/theme_selector_tile.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -42,6 +43,8 @@ class SettingsPage extends StatelessWidget {
           // ── Hesap ────────────────────────────────────────────────────────
           _SectionHeader(label: l10n.settingsSectionAccount),
           const DeleteAccountTile(),
+          const Divider(height: 1),
+          const ResetPreferencesTile(),
         ],
       ),
     );

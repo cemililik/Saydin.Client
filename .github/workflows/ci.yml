@@ -15,6 +15,9 @@ on:
     branches: [development, main]
   pull_request:
     branches: [development, main]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,6 +25,9 @@ concurrency:
 
 env:
   IOS_BUNDLE_ID: "com.saydin.saydin"
+
+permissions:
+  contents: read
 
 jobs:
   # ── Versiyon (sadece display + debug build için) ───────────────────────────
@@ -56,7 +62,7 @@ jobs:
             echo "❌ Geçersiz pubspec versiyon formatı: $VERSION (beklenen: X.Y.Z)"
             exit 1
           fi
-          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_name=$VERSION" >> "$GITHUB_OUTPUT"
           echo "ℹ️  pubspec.yaml versiyonu: $VERSION (CI display)"
 
   # ── Analyze + Test ─────────────────────────────────────────────────────────
@@ -68,6 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Flutter
@@ -79,8 +86,24 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Validate ARB locale contract
+        run: python3 tool/quality/validate_arb_contract.py
+
       - name: Generate l10n
         run: flutter gen-l10n
+
+      - name: Legal release gate unit tests
+        run: python3 -m unittest discover -s tool/tests -p 'test_*.py'
+
+      - name: Verify coverage source manifest
+        run: python3 tool/quality/generate_coverage_imports.py --check
+
+      - name: Verify generated l10n is committed
+        run: |
+          if ! git diff --exit-code -- lib/l10n/app_localizations.dart lib/l10n/app_localizations_*.dart; then
+            echo "❌ flutter gen-l10n çıktısı commit'li dosyalarla uyuşmuyor."
+            exit 1
+          fi
 
       - name: Dart format check
         run: dart format --output=none --set-exit-if-changed lib/ test/
@@ -91,58 +114,90 @@ jobs:
       - name: Flutter test
         run: flutter test --coverage
 
-      - name: Coverage özeti
-        if: always()
+      - name: Coverage gate and summary
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          if [ ! -f coverage/lcov.info ]; then
-            echo "⚠️ coverage/lcov.info bulunamadı" >> $GITHUB_STEP_SUMMARY
-            exit 0
+          coverage_args=()
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            if ! printf '%s' "$PR_BASE_SHA" | grep -Eq '^[a-f0-9]{40}$'; then
+              echo "Pull request base SHA is missing or invalid" >&2
+              exit 1
+            fi
+            coverage_patch="$RUNNER_TEMP/coverage.patch"
+            git diff --unified=0 --no-ext-diff "$PR_BASE_SHA" -- lib > "$coverage_patch"
+            coverage_args+=(--patch-file "$coverage_patch")
           fi
-
-          TOTAL_LINES=0
-          HIT_LINES=0
-          while IFS= read -r line; do
-            case "$line" in
-              LF:*) TOTAL_LINES=$((TOTAL_LINES + ${line#LF:})) ;;
-              LH:*) HIT_LINES=$((HIT_LINES + ${line#LH:})) ;;
-            esac
-          done < coverage/lcov.info
-
-          if [ "$TOTAL_LINES" -gt 0 ]; then
-            LINE_PCT=$(echo "scale=1; $HIT_LINES * 100 / $TOTAL_LINES" | bc)
-          else
-            LINE_PCT="0.0"
-          fi
-
-          echo "## 🧪 Saydin.Client — Test Coverage" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Line   | ${LINE_PCT}% ($HIT_LINES / $TOTAL_LINES) |" >> $GITHUB_STEP_SUMMARY
-
-          echo "✅ Line: ${LINE_PCT}% ($HIT_LINES / $TOTAL_LINES)"
+          {
+            echo "## Test Coverage"
+            echo ""
+            echo '```text'
+            python3 tool/quality/coverage_gate.py "${coverage_args[@]}"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
           files: coverage/lcov.info
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
-  # ── Dependency Vulnerability Scan (F-02-10) ────────────────────────────────
-  # pub.dev paketlerini ve diğer SBOM'da görünen ekosistem'leri OSV.dev
-  # database'ine karşı tarar. Yeni CVE'ler yayınlandığında erken sinyal.
-  #
-  # `continue-on-error: true` ile build merge gate'i yapılmaz (yayın
-  # vermenden önce CVE detayını insan değerlendirir) ama bulgular adım
-  # exit code'una rağmen GitHub Step Summary'e yazılır → reviewer PR
-  # ekranında görünür hale gelir.
+  # ── Non-Dart quality ───────────────────────────────────────────────────────────
+  # Python fixture, agent contract, docs/link, YAML, actionlint ve shellcheck.
+  non-dart-quality:
+    name: Non-Dart Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Quality validator unit fixtures
+        run: python3 -m unittest discover -s tool/quality/tests -p 'test_*.py' -v
+
+      - name: Release evidence generator unit tests
+        run: ruby tool/tests/test_generate_release_evidence.rb
+
+      - name: Repository agent and documentation contracts
+        run: python3 tool/quality/validate_repo_contracts.py
+
+      - name: Parse YAML files
+        run: |
+          git ls-files -z '*.yml' '*.yaml' |
+            xargs -0 ruby -e 'require "yaml"; ARGV.each { |path| abort("Empty YAML: #{path}") unless YAML.parse_file(path) }'
+
+      - name: Validate GitHub Actions workflows
+        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2
+
+      - name: ShellCheck repository scripts
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
+
+  # Tracked files deterministik kuralla, Git history gitleaks ile taranır.
+  secret-scan:
+    name: Secret & History Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Deterministic tracked-file guard
+        run: git ls-files -z | python3 tool/quality/scan_tracked_secrets.py --paths-from-stdin
+
+      - name: Gitleaks history scan
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Haftalık schedule repo değişmese de yeni advisory'leri yakalar. CVSS >= 7
+  # ve bilinmeyen severity fail-closed; daha düşük severity raporlanır.
   osv-scan:
     name: OSV Vulnerability Scan
     runs-on: ubuntu-latest
     needs: version
     permissions:
       contents: read
-      security-events: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -150,47 +205,39 @@ jobs:
 
       - name: Run osv-scanner
         id: osv
+        continue-on-error: true
         uses: google/osv-scanner-action/osv-scanner-action@v1.9.2
         with:
           scan-args: |-
             --recursive
             --skip-git
-            --format=table
-            --output=osv-report.txt
+            --format=json
+            --output=osv-report.json
             ./
-        continue-on-error: true
 
-      - name: Publish OSV findings to Step Summary
+      - name: Apply high/critical vulnerability policy
+        if: always()
+        run: >-
+          python3 tool/quality/verify_osv_report.py osv-report.json
+          --threshold 7.0
+          --summary osv-policy-summary.md
+
+      - name: Publish dependency policy summary
         if: always()
         run: |
-          {
-            echo "## 🛡️ OSV Vulnerability Scan"
-            echo ""
-            if [ "${{ steps.osv.outcome }}" = "success" ]; then
-              echo "✅ **No vulnerabilities found** in dependencies."
-            else
-              echo "⚠️ **Vulnerabilities detected** — review before merge."
-              echo ""
-              echo '```'
-              if [ -f osv-report.txt ]; then
-                cat osv-report.txt
-              else
-                echo "(osv-report.txt missing — runner failed before output)"
-              fi
-              echo '```'
-              echo ""
-              echo "Action: triage findings; bump or pin affected package."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -f osv-policy-summary.md ]; then
+            cat osv-policy-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Dependency policy summary missing" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload OSV report artifact
-        if: always() && hashFiles('osv-report.txt') != ''
+        if: always() && hashFiles('osv-report.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: osv-report-${{ github.sha }}
-          path: osv-report.txt
+          path: osv-report.json
           # Aynı içerik zaten Step Summary'de (run ile saklanır); artifact
-          # yalnızca kısa süreli indirme kolaylığı için — uzun retention gerek yok.
           retention-days: 1
 
   # ── Android Debug Build (PR + development push — sanity) ──────────────────
@@ -226,7 +273,7 @@ jobs:
         run: flutter gen-l10n
 
       - name: Pre-install CMake
-        run: yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1"
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "cmake;3.22.1"
 
       - name: Build APK (debug)
         # Defense-in-depth: version job zaten format doğruluyor, ama

@@ -42,6 +42,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get calculating => 'Hesaplanıyor...';
 
   @override
+  String get configLoading =>
+      'Ayarlar yükleniyor. Lütfen birkaç saniye sonra tekrar deneyin.';
+
+  @override
   String get initialValue => 'Başlangıç Değeri';
 
   @override
@@ -67,6 +71,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get lossLabel => 'Zarar';
+
+  @override
+  String get noChange => 'Değişim Yok';
+
+  @override
+  String get changeLabel => 'Değişim';
 
   @override
   String get enterAmount => 'Tutar giriniz';
@@ -147,7 +157,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scenarioSaved => 'Senaryo kaydedildi.';
 
   @override
-  String get scenarioDeleted => 'Senaryo silindi.';
+  String get scenarioDeleted => 'Senaryo silindi. Geri almak için dokunun.';
+
+  @override
+  String get scenarioSwipeDeleteHint => 'Silmek için bırak';
+
+  @override
+  String scenarioUndoCountdown(int seconds) {
+    return 'Geri Al ($seconds)';
+  }
+
+  @override
+  String get scenarioReplayInvalid =>
+      'Bu kaydedilmiş senaryo artık oynatılamıyor.';
 
   @override
   String scenarioSavedAtSnapshot(String date) {
@@ -156,6 +178,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get deleteScenario => 'Sil';
+
+  @override
+  String get cancel => 'Vazgeç';
 
   @override
   String get tabCalculate => 'Hesapla';
@@ -334,6 +359,33 @@ class AppLocalizationsTr extends AppLocalizations {
   String get sharePreviewTitle => 'Paylaşım Önizlemesi';
 
   @override
+  String get sharePreviewClose => 'Paylaşım önizlemesini kapat';
+
+  @override
+  String get sharePreviewCardLabel => 'Paylaşılacak kartın görsel önizlemesi';
+
+  @override
+  String get sharePreviewZoomHint =>
+      'Kartı yakınlaştırabilir ve kaydırabilirsiniz. Paylaşım metninin tamamı aşağıdadır.';
+
+  @override
+  String get shareCaptionTitle => 'Paylaşım metni';
+
+  @override
+  String get shareCopyText => 'Metni kopyala';
+
+  @override
+  String get shareCopied => 'Paylaşım metni kopyalandı.';
+
+  @override
+  String get shareUnavailable =>
+      'Bu cihazda paylaşım kullanılamıyor. Metni kopyalayarak devam edebilirsiniz.';
+
+  @override
+  String get shareCopyError =>
+      'Paylaşım metni kopyalanamadı. Lütfen tekrar deneyin.';
+
+  @override
   String get sharingInProgress => 'Hazırlanıyor...';
 
   @override
@@ -465,6 +517,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsThemeSubtitle => 'Uygulamanın görünümünü seçin';
 
   @override
+  String get settingsSaveFailed =>
+      'Ayarlar kaydedilemedi. Lütfen tekrar deneyin.';
+
+  @override
   String get themeLight => 'Açık';
 
   @override
@@ -480,6 +536,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String favoritesMaxReached(int max) {
     return 'En fazla $max favori ekleyebilirsiniz.';
   }
+
+  @override
+  String get favoritesSaveFailed =>
+      'Favori değişikliği kaydedilemedi. Lütfen tekrar deneyin.';
 
   @override
   String get settingsLanguage => 'Dil';
@@ -524,7 +584,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get deleteAccountWarning =>
-      'Bu işlem geri alınamaz. Cihazınızdaki tüm tercihleriniz, kaydedilen senaryolarınız ve favorileriniz kalıcı olarak silinir. KVKK Madde 11 / GDPR Madde 17 kapsamında verilerinizin silinmesi 30 gün içinde sonuçlandırılır.';
+      'Bu işlem geri alınamaz. Silme isteği önce hizmete gönderilir. Hizmet sonucu doğruladığında bu cihazdaki tercihler, favoriler ve diğer yerel veriler kalıcı olarak temizlenir. Sonuç doğrulanamazsa yerel veriler korunur ve yeniden deneyebilirsiniz.';
 
   @override
   String deleteAccountConfirmHint(String word) {
@@ -538,18 +598,40 @@ class AppLocalizationsTr extends AppLocalizations {
   String get deleteAccountConfirmButton => 'Hesabımı Kalıcı Olarak Sil';
 
   @override
-  String get deleteAccountInProgress => 'Veriler siliniyor...';
+  String get deleteAccountInProgress => 'Silme isteği işleniyor...';
 
   @override
-  String get deleteAccountSuccess => 'Hesabınız ve tüm verileriniz silindi.';
+  String get deleteAccountSuccess =>
+      'Silme sonucu hizmet tarafından doğrulandı ve bu cihazdaki yerel veriler temizlendi.';
 
   @override
   String get deleteAccountPartialSuccess =>
-      'Cihazınızdaki tüm veriler silindi. Ancak sunucu silme talebimiz şu an iletilemedi; iletisim@saydin.app adresinden silme talebinizi takip edin.';
+      'Hizmet silme sonucunu doğruladı ancak bu cihazdaki yerel verilerin tamamı temizlenemedi. Lütfen tekrar deneyin veya destekle iletişime geçin.';
 
   @override
   String get deleteAccountFailed =>
-      'Hesap silme tamamlanamadı. Tekrar deneyin veya iletişime geçin.';
+      'Silme sonucu doğrulanamadı veya cihaz temizliği tamamlanamadı. Lütfen tekrar deneyin ya da destekle iletişime geçin.';
+
+  @override
+  String get resetPreferencesTitle => 'Fabrika ayarlarına dön';
+
+  @override
+  String get resetPreferencesSubtitle =>
+      'Dil, tema, favoriler ve başlangıç deneyimini sıfırla.';
+
+  @override
+  String get resetPreferencesConfirmTitle => 'Yerel ayarlar sıfırlansın mı?';
+
+  @override
+  String get resetPreferencesConfirmBody =>
+      'Dil ve tema sistem ayarlarına döner; favoriler, açık formlar ve hesaplama sonuçları temizlenir. Uygulama tanıtımı yeniden gösterilir. Hesabınız ve kaydedilmiş senaryolarınız silinmez.';
+
+  @override
+  String get resetPreferencesAction => 'Ayarları Sıfırla';
+
+  @override
+  String get resetPreferencesFailed =>
+      'Yerel ayarlar sıfırlanamadı. Lütfen tekrar deneyin.';
 
   @override
   String get shareCardInitialValue => 'Başlangıç';
@@ -568,6 +650,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get shareCardLoss => 'zarar';
+
+  @override
+  String get shareCardNeutral => 'değişim yok';
 
   @override
   String get shareCardInflationTitle => 'Enflasyon Düzeltmesi (TÜFE)';
@@ -675,8 +760,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get onboardingGetStarted => 'Hemen Dene';
 
   @override
-  String onboardingLegalConsent(String privacy, String kvkk) {
-    return 'Devam ederek $privacy ve $kvkk metinlerini okuduğumu ve kabul ettiğimi onaylıyorum.';
+  String get onboardingLegalUpdateTitle => 'Yasal metinler güncellendi';
+
+  @override
+  String get onboardingLegalUpdateBody =>
+      'Gizlilik Politikası ve KVKK Aydınlatma Metni güncellendi. Metinleri inceleyebilir ve bir kabul beyanı vermeden devam edebilirsiniz.';
+
+  @override
+  String get onboardingContinue => 'Devam Et';
+
+  @override
+  String onboardingLegalNotice(String privacy, String kvkk) {
+    return '$privacy ve $kvkk size sunulmuştur. Devam ederek bu metinlere erişiminizin sağlandığını onaylarsınız.';
   }
 
   @override
@@ -684,6 +779,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get onboardingKvkkLink => 'KVKK Aydınlatma Metni';
+
+  @override
+  String get legalRecordSaveFailed =>
+      'Legal bilgilendirme kaydı kaydedilemedi. Lütfen tekrar deneyin.';
 
   @override
   String get onboardingPage1Title => 'Ya Alsaydım?';
@@ -858,6 +957,65 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get scenarioTypeReverse => 'Ters Hesaplama';
+
+  @override
+  String get portfolioPartialResult => 'Bazı varlıklar hesaplanamadı';
+
+  @override
+  String get portfolioPartialResultDetail =>
+      'Gösterilen toplam yalnızca başarıyla hesaplanan varlıkları içerir. Eksik sonuç kaydedilemez veya paylaşılamaz.';
+
+  @override
+  String get compareNoCommonDateRange =>
+      'Seçilen varlıkların ortak fiyat tarihi bulunmuyor. Farklı bir varlık seçin.';
+
+  @override
+  String get chartDataShow => 'Grafik verilerini göster';
+
+  @override
+  String get chartDataHide => 'Grafik verilerini gizle';
+
+  @override
+  String priceChartSummary(
+    String startDate,
+    String startValue,
+    String endDate,
+    String endValue,
+    String trend,
+  ) {
+    return 'Fiyat grafiği. $startDate, $startValue değerinden $endDate, $endValue değerine. $trend.';
+  }
+
+  @override
+  String dcaChartSummary(
+    String startDate,
+    String endDate,
+    String cost,
+    String value,
+  ) {
+    return 'Düzenli yatırım grafiği. $startDate ile $endDate arasında toplam maliyet $cost, portföy değeri $value.';
+  }
+
+  @override
+  String chartDataPoint(String date, String value) {
+    return '$date: $value';
+  }
+
+  @override
+  String dcaChartDataPoint(String date, String cost, String value) {
+    return '$date: maliyet $cost, değer $value';
+  }
+
+  @override
+  String shareCardMoreAssets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count varlık daha',
+      one: '+1 varlık daha',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get compareHint =>

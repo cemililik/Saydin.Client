@@ -1,6 +1,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:saydin/features/config/domain/entities/subscription_tier.dart';
 
+/// Config'in hangi güvenilirlik aşamasında olduğunu açıkça taşır.
+enum AppConfigReadiness { loading, ready, fallback }
+
 class AppConfig extends Equatable {
   final SubscriptionTier tier;
 
@@ -11,23 +14,46 @@ class AppConfig extends Equatable {
   final int maxSavedScenarios;
 
   final AppFeatureFlags features;
+  final AppConfigReadiness readiness;
 
   const AppConfig({
     required this.tier,
     required this.dailyCalculationLimit,
     required this.maxSavedScenarios,
     required this.features,
+    this.readiness = AppConfigReadiness.ready,
   });
 
+  /// Plan/feature kararlarının güvenle verilebildiği durum.
+  bool get isReady => readiness != AppConfigReadiness.loading;
+
+  bool get usesFallback => readiness == AppConfigReadiness.fallback;
   bool get isPremium => tier == SubscriptionTier.premium;
   bool get isUnlimitedCalculations => dailyCalculationLimit == 0;
   bool get isUnlimitedScenarios => maxSavedScenarios == 0;
 
-  /// Tüm özellikler açık, limit yok — backend yanıt vermeden önce kullanılacak varsayılan.
+  /// Backend yanıtı alınamadığında kullanılan güvenli fallback.
   static const defaultConfig = AppConfig(
     tier: SubscriptionTier.free,
     dailyCalculationLimit: 20,
     maxSavedScenarios: 10,
+    readiness: AppConfigReadiness.fallback,
+    features: AppFeatureFlags(
+      comparison: true,
+      inflationAdjustment: true,
+      share: true,
+      dca: true,
+      priceHistoryMonths: 12,
+    ),
+  );
+
+  /// İlk frame için placeholder. UI render edebilir fakat plan/feature kararı
+  /// gerektiren aksiyonlar [isReady] true olana kadar backend'e gitmez.
+  static const initialConfig = AppConfig(
+    tier: SubscriptionTier.free,
+    dailyCalculationLimit: 20,
+    maxSavedScenarios: 10,
+    readiness: AppConfigReadiness.loading,
     features: AppFeatureFlags(
       comparison: true,
       inflationAdjustment: true,
@@ -43,6 +69,7 @@ class AppConfig extends Equatable {
     dailyCalculationLimit,
     maxSavedScenarios,
     features,
+    readiness,
   ];
 }
 

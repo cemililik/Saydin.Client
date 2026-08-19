@@ -15,23 +15,37 @@ class AccountDeletionInProgress extends AccountDeletionState {
   const AccountDeletionInProgress();
 }
 
-/// Hesap silme tamamen başarılı: hem yerel veri silindi hem backend talebi
-/// kabul edildi (ya da backend uygun şekilde — 404/501 — toleranslı şekilde
-/// geçildi).
+/// Hesap silme tamamen başarılı: backend talebi kabul edildi ve yerel veri
+/// silindi.
 class AccountDeletionSuccess extends AccountDeletionState {
   const AccountDeletionSuccess();
 }
 
-/// Yerel veri silindi ama backend silme talebi gönderilemedi (network hatası,
-/// 5xx vb.). UI kullanıcıya "verileriniz cihazdan silindi ama sunucu talebi
-/// gönderilemedi, iletisim@saydin.app üzerinden takip edin" mesajı göstermelidir.
-/// Backend'in eventually consistent veri tutması KVKK uyumsuzluğu yaratır.
+/// Backend silmeyi doğruladı ancak durable phase yazımı veya cihazdaki cleanup
+/// adımlarından en az biri tamamlanmadı. Kullanıcı tekrar denediğinde backend
+/// DELETE tekrarlanmaz; marker yazımı ve idempotent local cleanup sürdürülür.
+class AccountDeletionLocalCleanupPending extends AccountDeletionState {
+  const AccountDeletionLocalCleanupPending(this.error);
+
+  final Object error;
+
+  @override
+  List<Object?> get props => [error];
+}
+
+/// Eski API tüketicileri için korunmuş durum. Backend silme talebi başarısızsa
+/// artık yerel veri silinmez ve [AccountDeletionFailure] yayınlanır; bu state
+/// yeni akış tarafından üretilmez.
+@Deprecated(
+  'Backend failure now emits AccountDeletionFailure without local wipe.',
+)
 class AccountDeletionPartialSuccess extends AccountDeletionState {
   const AccountDeletionPartialSuccess();
 }
 
-/// Yerel veri silme başarısız oldu (genelde storage I/O). Kullanıcı tekrar
-/// denemeli — hiçbir kalıcı değişiklik garanti edilemez.
+/// Backend sonucu doğrulanmadan önce oluşan hata veya cleanup phase bilgisinin
+/// okunamadığı durum. Backend onaylı local-cleanup hataları için ayrı
+/// [AccountDeletionLocalCleanupPending] kullanılır.
 class AccountDeletionFailure extends AccountDeletionState {
   const AccountDeletionFailure(this.error);
 

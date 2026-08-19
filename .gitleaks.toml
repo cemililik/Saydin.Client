@@ -1,0 +1,11 @@
+title = "Saydin.Client secret scanning policy"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated/build paths are not source inputs"
+paths = [
+  '''(^|/)build/''',
+  '''(^|/)\.dart_tool/'''
+]

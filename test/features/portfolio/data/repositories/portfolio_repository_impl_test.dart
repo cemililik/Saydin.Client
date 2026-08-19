@@ -44,7 +44,10 @@ void main() {
   late _FakeErrorReporter reporter;
   late PortfolioRepositoryImpl repo;
 
-  setUpAll(() => registerFallbackValue(DateTime(2020)));
+  setUpAll(() {
+    registerFallbackValue(DateTime(2020));
+    registerFallbackValue(Decimal.zero);
+  });
 
   setUp(() {
     whatIf = MockWhatIfRepository();
@@ -56,11 +59,16 @@ void main() {
     id: symbol,
     assetSymbol: symbol,
     assetDisplayName: symbol,
-    amount: 1000,
+    amount: Decimal.fromInt(1000),
     amountType: 'try',
   );
 
-  WhatIfResult whatIfResult(String symbol) => WhatIfResult(
+  WhatIfResult whatIfResult(
+    String symbol, {
+    double profitLossPercent = 20,
+    double? cumulativeInflationPercent = 5,
+    double? realProfitLossPercent = 14,
+  }) => WhatIfResult(
     assetSymbol: symbol,
     assetDisplayName: symbol,
     buyDate: DateTime(2020, 1, 1),
@@ -71,10 +79,14 @@ void main() {
     initialValueTry: Decimal.fromInt(1000),
     finalValueTry: Decimal.fromInt(1200),
     profitLossTry: Decimal.fromInt(200),
-    profitLossPercent: 20,
+    profitLossPercent: profitLossPercent,
     isProfit: true,
-    cumulativeInflationPercent: 5,
-    realProfitLossPercent: 14,
+    cumulativeInflationPercent: cumulativeInflationPercent,
+    realProfitLossPercent: realProfitLossPercent,
+    actualBuyDate: DateTime(2020, 1, 2),
+    actualSellDate: DateTime(2021, 1, 4),
+    inflationDataAsOf: DateTime(2020, 12, 31),
+    calculatedAt: DateTime(2021, 1, 5, 12),
   );
 
   void stubCalc(String symbol, {Object? throws, WhatIfResult? result}) {
@@ -115,6 +127,12 @@ void main() {
       expect(calc.isProfit, isTrue);
       expect(calc.cumulativeInflationPercent, 5);
       expect(calc.realProfitLossPercent, 14);
+      expect(calc.requestedBuyDate, DateTime(2020, 1, 1));
+      expect(calc.effectiveBuyDate, DateTime(2020, 1, 2));
+      expect(calc.requestedSellDate, DateTime(2021, 1, 1));
+      expect(calc.effectiveSellDate, DateTime(2021, 1, 4));
+      expect(calc.inflationDataAsOf, DateTime(2020, 12, 31));
+      expect(calc.calculatedAt, DateTime(2021, 1, 5, 12));
     },
   );
 
@@ -137,6 +155,7 @@ void main() {
       expect(aaa.isSuccess, isTrue);
       expect(bbb.isSuccess, isFalse);
       expect(bbb.calculation, isNull);
+      expect(bbb.error, isA<ServerError>());
     },
   );
 
@@ -150,6 +169,7 @@ void main() {
     );
 
     expect(outcomes.single.calculation, isNull);
+    expect(outcomes.single.error, isA<ServerError>());
     // Rapor fire-and-forget olsaydı bile microtask'i boşaltalım — yine de boş.
     await Future<void>.delayed(Duration.zero);
     expect(
@@ -157,6 +177,47 @@ void main() {
       isEmpty,
       reason: 'AppError beklenen hata; telemetri gürültüsü üretmemeli',
     );
+  });
+
+  test('calculateItems_nonFinitePercent_isMalformedItem', () async {
+    stubCalc(
+      'AAA',
+      result: whatIfResult('AAA', realProfitLossPercent: double.infinity),
+    );
+
+    final outcomes = await repo.calculateItems(
+      items: [item('AAA')],
+      buyDate: DateTime(2020, 1, 1),
+      sellDate: DateTime(2021, 1, 1),
+    );
+
+    expect(outcomes.single.isSuccess, isFalse);
+    expect(outcomes.single.error, isA<MalformedResponseError>());
+    await Future<void>.delayed(Duration.zero);
+    expect(reporter.reports, isEmpty);
+  });
+
+  test('calculateItems_extremeFiniteAndZeroPercent_arePreserved', () async {
+    stubCalc(
+      'AAA',
+      result: whatIfResult(
+        'AAA',
+        profitLossPercent: double.maxFinite,
+        cumulativeInflationPercent: 0,
+        realProfitLossPercent: -double.maxFinite,
+      ),
+    );
+
+    final outcomes = await repo.calculateItems(
+      items: [item('AAA')],
+      buyDate: DateTime(2020, 1, 1),
+      sellDate: DateTime(2021, 1, 1),
+    );
+
+    final calculation = outcomes.single.calculation!;
+    expect(calculation.profitLossPercent, double.maxFinite);
+    expect(calculation.cumulativeInflationPercent, 0);
+    expect(calculation.realProfitLossPercent, -double.maxFinite);
   });
 
   test('calculateItems_nonAppError_fireAndForget_isReported', () async {
@@ -171,6 +232,7 @@ void main() {
     );
 
     expect(outcomes.single.calculation, isNull, reason: 'izolasyon korunur');
+    expect(outcomes.single.error, isA<UnknownError>());
     await Future<void>.delayed(Duration.zero);
     expect(reporter.reports, hasLength(1));
     expect(reporter.reports.single, isA<ArgumentError>());

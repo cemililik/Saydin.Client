@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
 
@@ -28,7 +29,7 @@ void main() {
         selectedSymbol: 'USDTRY',
         buyDate: buyDate,
         amountType: 'units',
-        amount: 10000,
+        amount: Decimal.fromInt(10000),
         dateAdjusted: true,
       );
 
@@ -37,7 +38,7 @@ void main() {
       expect(updated.selectedSymbol, 'USDTRY');
       expect(updated.buyDate, buyDate);
       expect(updated.amountType, 'units');
-      expect(updated.amount, 10000);
+      expect(updated.amount, Decimal.fromInt(10000));
       expect(updated.dateAdjusted, false);
     });
 

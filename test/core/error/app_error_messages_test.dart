@@ -16,10 +16,16 @@ void main() {
         tr.errorPriceNotFound,
       );
       expect(const ServerError().localizedMessage(tr), tr.errorServer);
+      expect(const NotFoundError().localizedMessage(tr), tr.errorServer);
+      expect(const ForbiddenError().localizedMessage(tr), tr.errorServer);
       expect(const UnknownError().localizedMessage(tr), tr.errorGeneric);
       expect(
         const MalformedResponseError().localizedMessage(tr),
         tr.errorMalformed,
+      );
+      expect(
+        const InvalidScenarioReplayError().localizedMessage(tr),
+        tr.scenarioReplayInvalid,
       );
     });
 

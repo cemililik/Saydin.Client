@@ -1,37 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:saydin/core/constants/app_colors.dart';
+import 'package:saydin/core/theme/financial_colors.dart';
 
 class AppTheme {
   AppTheme._();
 
   static const _seedColor = AppColors.primary;
 
-  static final light = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: _seedColor,
-      brightness: Brightness.light,
-    ),
-    useMaterial3: true,
-    scaffoldBackgroundColor: AppColors.background,
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
-      elevation: 8,
-    ),
-  );
+  static final light = _build(Brightness.light);
+  static final dark = _build(Brightness.dark);
 
-  static final dark = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
+  static ThemeData _build(Brightness brightness) {
+    final colorScheme = ColorScheme.fromSeed(
       seedColor: _seedColor,
-      brightness: Brightness.dark,
-    ),
-    useMaterial3: true,
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.grey.shade900,
-      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-      elevation: 8,
-    ),
-  );
+      brightness: brightness,
+    );
+    return ThemeData(
+      colorScheme: colorScheme,
+      useMaterial3: true,
+      scaffoldBackgroundColor: colorScheme.surface,
+      extensions: [
+        brightness == Brightness.dark
+            ? FinancialColors.dark
+            : FinancialColors.light,
+      ],
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: colorScheme.surfaceContainer,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        elevation: 8,
+      ),
+    );
+  }
 }

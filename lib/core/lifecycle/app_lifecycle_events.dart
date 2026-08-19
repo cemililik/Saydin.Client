@@ -6,8 +6,8 @@ import 'dart:async';
 /// Önceki tasarım: `lib/features/account/...` doğrudan `lib/app.dart` global
 /// key'ini import ediyordu — feature → app yönünde Clean Architecture sözleşmesini
 /// kıran cross-layer coupling. Bu module ile feature'lar yalnızca [requestReset]
-/// yayar; root widget (`AppHome`) [resetStream]'i dinleyip kendi
-/// `restartFromOnboarding` metodunu çağırır.
+/// yayar; root `AppSessionResetBoundary` bütün session/user BLoC provider
+/// alt-ağacını keyed olarak yeniden yaratır.
 ///
 /// Test izolasyonu: DI'da [AppLifecycleEvents] LazySingleton; testlerde fake
 /// edilip stream akışı kontrol edilebilir.
@@ -21,9 +21,8 @@ class AppLifecycleEvents {
   Stream<void> get resetStream => _resetController.stream;
 
   /// Tüm dinleyicilere reset event'i yayar. Idempotent — birden fazla çağrı
-  /// bir o kadar event üretir; root widget zaten son state'i tekrar okumaktan
-  /// zarar görmez (`AppHome.restartFromOnboarding` `setState` ile loading
-  /// state'ine düşer + repository'yi tekrar sorgular).
+  /// bir o kadar event üretir; root boundary her event'te yeni bir session
+  /// generation oluşturur ve provider'lar temiz storage'dan yeniden yüklenir.
   void requestReset() {
     _resetController.add(null);
   }

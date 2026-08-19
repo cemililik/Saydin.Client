@@ -46,18 +46,12 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<!--
-	  App Transport Security (ATS) — açık politika.
+	  Release ve Profile App Transport Security (ATS) politikası.
 
-	  iOS varsayılanı zaten "TLS 1.2+, no cleartext", ancak App Store review
-	  bazı yan-yollarda (örn. `NSAllowsArbitraryLoadsInWebContent`) gizli
-	  istisnalar olmadığından emin olmak için explicit politikayı tercih
-	  ediyor. `NSAllowsArbitraryLoads=false` ile tüm HTTP istekleri reddedilir
-	  ve `NSExceptionDomains` yalnızca HTTP localhost (yerel geliştirme) için
-	  tanımlanır; ngrok/cloudflared tünelleri HTTPS sunduğundan ATS istisnası
-	  gerektirmez (debug build'te bile prod sürümünde override yoktur).
-
-	  Üçüncü taraf SDK'lar (Sentry, share_plus) zaten HTTPS kullanır, ATS
-	  istisnası gerektirmez.
+	  Bu dosya yalnızca TLS trafiğine izin verir; local networking ve HTTP
+	  exception anahtarları kasıtlı olarak YOKTUR. Debug için gerekli localhost
+	  istisnası ayrı `Info-Debug.plist` içindedir. Böylece native/plugin
+	  URLSession çağrıları da release artifact'te cleartext kullanamaz.
 	-->
 	<key>NSAppTransportSecurity</key>
 	<dict>
@@ -65,18 +59,6 @@
 		<false/>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<false/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>localhost</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<false/>
-			</dict>
-		</dict>
 	</dict>
 	<!--
 	  ITMS-90683 için zorunlu. share_plus eklentisi iOS'ta "Fotoğraflara

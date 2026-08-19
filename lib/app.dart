@@ -1,21 +1,26 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/di/injection.dart';
+import 'package:saydin/core/lifecycle/app_lifecycle_events.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/theme/app_theme.dart';
 import 'package:saydin/core/theme/theme_mode_mapper.dart';
+import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_bloc.dart';
 import 'package:saydin/features/comparison/presentation/bloc/comparison_event.dart';
 import 'package:saydin/features/comparison/presentation/pages/comparison_page.dart';
+import 'package:saydin/features/config/domain/entities/app_config.dart';
 import 'package:saydin/features/dca/presentation/bloc/dca_bloc.dart';
 import 'package:saydin/features/dca/presentation/bloc/dca_event.dart';
 import 'package:saydin/features/dca/presentation/pages/dca_page.dart';
 import 'package:saydin/features/onboarding/presentation/cubit/onboarding_cubit.dart';
 import 'package:saydin/features/onboarding/presentation/pages/onboarding_page.dart';
-import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_event.dart';
 import 'package:uuid/uuid.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
+import 'package:saydin/features/config/presentation/widgets/config_readiness_gate.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
 import 'package:saydin/features/portfolio/presentation/pages/portfolio_page.dart';
 import 'package:saydin/core/constants/app_colors.dart';
@@ -32,6 +37,52 @@ import 'package:saydin/features/what_if/presentation/bloc/what_if_state.dart';
 import 'package:saydin/features/what_if/presentation/pages/what_if_page.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+
+/// Hesap silme gibi session reset olaylarında bütün user/session BLoC
+/// alt-ağacını yeniden yaratır. Yalnız onboarding state'ini değiştirmek;
+/// Favorites, Settings ve finansal sonuçların eski in-memory state'ini aynı
+/// process'te bırakırdı. Keyed subtree bütün provider'ları atomik kapatıp temiz
+/// storage üzerinden yeniden yükler.
+@visibleForTesting
+class AppSessionResetBoundary extends StatefulWidget {
+  const AppSessionResetBoundary({
+    required this.lifecycleEvents,
+    required this.builder,
+    super.key,
+  });
+
+  final AppLifecycleEvents lifecycleEvents;
+  final WidgetBuilder builder;
+
+  @override
+  State<AppSessionResetBoundary> createState() =>
+      _AppSessionResetBoundaryState();
+}
+
+class _AppSessionResetBoundaryState extends State<AppSessionResetBoundary> {
+  late final StreamSubscription<void> _resetSubscription;
+  var _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _resetSubscription = widget.lifecycleEvents.resetStream.listen((_) {
+      if (mounted) setState(() => _generation++);
+    });
+  }
+
+  @override
+  void dispose() {
+    unawaited(_resetSubscription.cancel());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => KeyedSubtree(
+    key: ValueKey<int>(_generation),
+    child: Builder(builder: widget.builder),
+  );
+}
 
 class SaydinApp extends StatelessWidget {
   const SaydinApp({super.key});
@@ -55,52 +106,58 @@ class SaydinApp extends StatelessWidget {
     // alt-ağaç yeniden inşa edilir ve form/sonuç state'leri (WhatIf,
     // Comparison, Portfolio, Dca, Scenarios) kullanıcının gözü önünde
     // sıfırlanırdı.
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => sl<SettingsCubit>()..load()),
-        BlocProvider(create: (_) => sl<FavoritesCubit>()..load()),
-        BlocProvider(create: (_) => sl<AppConfigCubit>()..load()),
-        BlocProvider(create: (_) => sl<OnboardingCubit>()..load()),
-        BlocProvider(create: (_) => sl<WhatIfBloc>()),
-        BlocProvider(create: (_) => sl<ScenariosBloc>()),
-        BlocProvider(create: (_) => sl<ComparisonBloc>()),
-        BlocProvider(create: (_) => sl<PortfolioBloc>()),
-        BlocProvider(create: (_) => sl<DcaBloc>()),
-      ],
-      child: BlocBuilder<SettingsCubit, AppSettings>(
-        builder: (context, settings) {
-          return MaterialApp(
-            // Marka adı çevrilebilir UI metni: hardcoded 'Saydın' yerine
-            // l10n.appTitle (F-06-09). onGenerateTitle, Localizations hazır
-            // olduktan sonra çağrılır.
-            onGenerateTitle: (context) => context.l10n.appTitle,
-            debugShowCheckedModeBanner: false,
-            locale: _resolveLocale(settings.language),
-            supportedLocales: const [Locale('tr', 'TR'), Locale('en', 'US')],
-            // Sistem dili desteklenmiyorsa Türkçe'ye düş (F-06-04). locale
-            // açıkça seçilmişse (tr/en) bu callback yine eşleşeni döndürür.
-            localeResolutionCallback: (deviceLocale, supportedLocales) {
-              if (deviceLocale != null) {
-                for (final supported in supportedLocales) {
-                  if (supported.languageCode == deviceLocale.languageCode) {
-                    return supported;
+    return AppSessionResetBoundary(
+      lifecycleEvents: sl<AppLifecycleEvents>(),
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => sl<SettingsCubit>()..load()),
+          BlocProvider(create: (_) => sl<FavoritesCubit>()..load()),
+          // Config isteği kalıcı cihaz kimliği ve teknik header'lar taşır. Cubit
+          // burada yalnız oluşturulur; güncel legal bildirim yerelde
+          // kaydedildikten sonra [ConfigReadinessGate] yüklemeyi başlatır.
+          BlocProvider(create: (_) => sl<AppConfigCubit>()),
+          BlocProvider(create: (_) => sl<OnboardingCubit>()..load()),
+          BlocProvider(create: (_) => sl<WhatIfBloc>()),
+          BlocProvider(create: (_) => sl<ScenariosBloc>()),
+          BlocProvider(create: (_) => sl<ComparisonBloc>()),
+          BlocProvider(create: (_) => sl<PortfolioBloc>()),
+          BlocProvider(create: (_) => sl<DcaBloc>()),
+        ],
+        child: BlocBuilder<SettingsCubit, AppSettings>(
+          builder: (context, settings) {
+            return MaterialApp(
+              // Marka adı çevrilebilir UI metni: hardcoded 'Saydın' yerine
+              // l10n.appTitle (F-06-09). onGenerateTitle, Localizations hazır
+              // olduktan sonra çağrılır.
+              onGenerateTitle: (context) => context.l10n.appTitle,
+              debugShowCheckedModeBanner: false,
+              locale: _resolveLocale(settings.language),
+              supportedLocales: const [Locale('tr', 'TR'), Locale('en', 'US')],
+              // Sistem dili desteklenmiyorsa Türkçe'ye düş (F-06-04). locale
+              // açıkça seçilmişse (tr/en) bu callback yine eşleşeni döndürür.
+              localeResolutionCallback: (deviceLocale, supportedLocales) {
+                if (deviceLocale != null) {
+                  for (final supported in supportedLocales) {
+                    if (supported.languageCode == deviceLocale.languageCode) {
+                      return supported;
+                    }
                   }
                 }
-              }
-              return const Locale('tr', 'TR');
-            },
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            theme: AppTheme.light,
-            darkTheme: AppTheme.dark,
-            themeMode: toFlutterThemeMode(settings.themeMode),
-            home: const AppHome(),
-          );
-        },
+                return const Locale('tr', 'TR');
+              },
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              theme: AppTheme.light,
+              darkTheme: AppTheme.dark,
+              themeMode: toFlutterThemeMode(settings.themeMode),
+              home: const AppHome(),
+            );
+          },
+        ),
       ),
     );
   }
@@ -108,9 +165,9 @@ class SaydinApp extends StatelessWidget {
 
 /// Onboarding durumuna göre splash / onboarding / ana uygulamayı seçer.
 ///
-/// Durum ve hesap-silme reset aboneliği [OnboardingCubit]'te yönetilir
-/// (F-12-09); bu widget yalnızca state'i okur — ad-hoc `setState`/`StreamSub`
-/// yok.
+/// Durum [OnboardingCubit]'te yönetilir; session-wide reset ise
+/// [AppSessionResetBoundary] ile bütün provider ağacını yeniden yaratır. Bu
+/// widget yalnızca onboarding state'ini okur.
 class AppHome extends StatelessWidget {
   const AppHome({super.key});
 
@@ -124,7 +181,16 @@ class AppHome extends StatelessWidget {
           OnboardingStatus.pending => OnboardingPage(
             onComplete: context.read<OnboardingCubit>().complete,
           ),
-          OnboardingStatus.completed => const MainShell(),
+          OnboardingStatus.legalUpdateRequired => OnboardingPage(
+            legalUpdateOnly: true,
+            onComplete: context.read<OnboardingCubit>().complete,
+          ),
+          // Ağ tabanlı config ancak güncel legal bildirim kaydı doğrulandıktan
+          // sonra yüklenir. Böylece ilk açılışta bildirim öncesi device-ID
+          // gönderilmez.
+          OnboardingStatus.completed => const ConfigReadinessGate(
+            child: MainShell(),
+          ),
         };
       },
     );
@@ -138,26 +204,94 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
+/// Kaydedilmiş bir senaryonun güncel remote-config sözleşmesinde yeniden
+/// çalıştırılabilir olup olmadığını belirler. Replay, normal navigasyonun
+/// feature gate'ini atlayan ayrı bir giriş noktası olmamalıdır.
+@visibleForTesting
+bool isScenarioReplayEnabled(ScenarioType type, AppFeatureFlags features) =>
+    switch (type) {
+      ScenarioType.comparison => features.comparison,
+      ScenarioType.dca => features.dca,
+      ScenarioType.whatIf || ScenarioType.portfolio => true,
+    };
+
+@visibleForTesting
+bool replayInflationPreference(Object? storedValue, AppFeatureFlags features) =>
+    features.inflationAdjustment && storedValue == true;
+
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
   AppLanguage? _previousLanguage;
+  late final StreamSubscription<SettingsPersistenceFeedback>
+  _settingsFeedbackSubscription;
+  late final StreamSubscription<FavoritesPersistenceFeedback>
+  _favoritesFeedbackSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _settingsFeedbackSubscription = context
+        .read<SettingsCubit>()
+        .feedbacks
+        .listen((_) => _showPersistenceFailure(isSettings: true));
+    _favoritesFeedbackSubscription = context
+        .read<FavoritesCubit>()
+        .feedbacks
+        .listen((_) => _showPersistenceFailure(isSettings: false));
+  }
+
+  void _showPersistenceFailure({required bool isSettings}) {
+    if (!mounted) return;
+    final message = isSettings
+        ? context.l10n.settingsSaveFailed
+        : context.l10n.favoritesSaveFailed;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Semantics(liveRegion: true, child: Text(message)),
+        ),
+      );
+  }
+
+  @override
+  void dispose() {
+    _settingsFeedbackSubscription.cancel();
+    _favoritesFeedbackSubscription.cancel();
+    super.dispose();
+  }
 
   void _onScenarioTap(SavedScenario scenario) {
+    final features = context.read<AppConfigCubit>().state.features;
+    if (!ScenarioReplayParser.hasSupportedSchema(scenario.extraData)) {
+      _showScenarioReplayRejected(context.l10n.scenarioReplayInvalid);
+      return;
+    }
+    if (!isScenarioReplayEnabled(scenario.type, features)) {
+      _showScenarioReplayRejected(context.l10n.errorFeatureDisabled);
+      return;
+    }
+
+    final includeInflation = replayInflationPreference(
+      scenario.extraData?['includeInflation'],
+      features,
+    );
     switch (scenario.type) {
       case ScenarioType.whatIf:
+        if (!ScenarioReplayParser.hasValidWhatIfMode(scenario.extraData)) {
+          _showScenarioReplayRejected(context.l10n.scenarioReplayInvalid);
+          return;
+        }
         final isReverse = scenario.extraData?['mode'] == 'reverse';
         context.read<WhatIfBloc>().add(
           WhatIfReplayRequested(
             assetSymbol: scenario.assetSymbol,
             buyDate: scenario.buyDate,
             sellDate: scenario.sellDate,
-            // Replay event num bekliyor (form input num); kullanıcı
-            // tarafından girilmiş tutar zaten double-exact (örn. 47010.34)
-            // — Decimal → double burada precision farkı yaratmaz.
-            amount: scenario.amount.toDouble(),
+            amount: scenario.amount,
             amountType: scenario.amountType,
-            includeInflation:
-                (scenario.extraData?['includeInflation'] as bool?) ?? false,
+            includeInflation: includeInflation,
             calculationMode: isReverse
                 ? CalculationMode.reverse
                 : CalculationMode.normal,
@@ -165,14 +299,21 @@ class _MainShellState extends State<MainShell> {
         );
         setState(() => _selectedIndex = 0); // WhatIfPage
       case ScenarioType.comparison:
+        final symbols = ScenarioReplayParser.comparisonSymbols(
+          scenario.assetSymbol,
+        );
+        if (symbols.isEmpty) {
+          _showScenarioReplayRejected(context.l10n.scenarioReplayInvalid);
+          return;
+        }
         context.read<ComparisonBloc>().add(
           ComparisonReplayRequested(
-            symbols: scenario.assetSymbol.split(','),
+            symbols: symbols,
             buyDate: scenario.buyDate,
             sellDate: scenario.sellDate,
-            amount: scenario.amount.toDouble(),
-            includeInflation:
-                (scenario.extraData?['includeInflation'] as bool?) ?? false,
+            amount: scenario.amount,
+            amountType: scenario.amountType,
+            includeInflation: includeInflation,
           ),
         );
         setState(() => _selectedIndex = 1);
@@ -181,62 +322,66 @@ class _MainShellState extends State<MainShell> {
         final extraData = scenario.extraData;
         final rawItems = extraData?['items'];
         // Defensive parse: extraData eski/migre edilmemiş senaryolar için
-        // beklediğimiz şekilde gelmeyebilir. Tipi sıkı assert etmek yerine
-        // güvenli accessor'lar kullan ve hatalı item'ları sessizce atla —
-        // tek bir bozuk kayıt yüzünden uygulama çökmesini engelle.
-        final items = <PortfolioItem>[];
-        if (rawItems is List) {
-          for (final raw in rawItems) {
-            if (raw is! Map) continue;
-            final assetSymbol = raw['assetSymbol'];
-            final assetDisplayName = raw['assetDisplayName'];
-            final amount = raw['amount'];
-            final amountType = raw['amountType'];
-            if (assetSymbol is! String ||
-                assetDisplayName is! String ||
-                amount is! num ||
-                amountType is! String) {
-              continue;
-            }
-            items.add(
-              PortfolioItem(
-                id: uuid.v4(),
-                assetSymbol: assetSymbol,
-                assetDisplayName: assetDisplayName,
-                amount: amount,
-                amountType: amountType,
-              ),
-            );
-          }
+        // beklediğimiz şekilde gelmeyebilir. Parser bütün listeyi atomik
+        // doğrular; tek bir bozuk/duplicate/limit-dışı kalemde replay'i
+        // reddeder ve kısmi portföy çalıştırmaz.
+        final items = ScenarioReplayParser.portfolioItems(
+          rawItems,
+          nextId: uuid.v4,
+        );
+        if (items.isEmpty) {
+          _showScenarioReplayRejected(context.l10n.scenarioReplayInvalid);
+          return;
         }
-        if (items.isEmpty) return; // Geçerli item yok — replay iptal.
         context.read<PortfolioBloc>().add(
           PortfolioReplayRequested(
             buyDate: scenario.buyDate,
             sellDate: scenario.sellDate,
-            includeInflation:
-                (extraData?['includeInflation'] as bool?) ?? false,
+            includeInflation: includeInflation,
             items: items,
           ),
         );
         setState(() => _selectedIndex = 2);
       case ScenarioType.dca:
         final extra = scenario.extraData;
+        final periodicAmount = ScenarioReplayParser.dcaPeriodicAmount(
+          extra,
+          scenario.amount,
+          amountType: scenario.amountType,
+        );
+        final period = ScenarioReplayParser.dcaPeriod(extra);
+        // DCA ekranı ve API sözleşmesi periyodik yatırımı yalnız TRY kabul
+        // eder. Birim/gram senaryosunu TL etiketiyle çalıştırmayız.
+        if (periodicAmount == null ||
+            period == null ||
+            scenario.amountType != 'try') {
+          _showScenarioReplayRejected(context.l10n.scenarioReplayInvalid);
+          return;
+        }
         context.read<DcaBloc>().add(
           DcaReplayRequested(
             assetSymbol: scenario.assetSymbol,
             startDate: scenario.buyDate,
             endDate: scenario.sellDate,
-            periodicAmount:
-                (extra?['periodicAmount'] as num?) ??
-                scenario.amount.toDouble(),
-            period: (extra?['period'] as String?) ?? 'monthly',
+            periodicAmount: periodicAmount,
+            period: period,
             amountType: scenario.amountType,
-            includeInflation: (extra?['includeInflation'] as bool?) ?? false,
+            includeInflation: includeInflation,
           ),
         );
         setState(() => _selectedIndex = 3); // DcaPage
     }
+  }
+
+  void _showScenarioReplayRejected(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Semantics(liveRegion: true, child: Text(message)),
+        ),
+      );
   }
 
   @override

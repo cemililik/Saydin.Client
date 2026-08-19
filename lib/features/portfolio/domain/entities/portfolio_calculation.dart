@@ -1,5 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
+import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 
 /// Tek bir portföy kaleminin hesaplama sonucu — **portföye ait** saf domain
@@ -23,6 +25,16 @@ class PortfolioCalculation extends Equatable {
   final double? cumulativeInflationPercent;
   final double? realProfitLossPercent;
 
+  /// Per-item transaction evidence retained from the delegated What-If
+  /// calculation. Nullable means the repository could not supply that piece
+  /// of evidence; it must not be replaced with an arbitrary portfolio date.
+  final DateTime? requestedBuyDate;
+  final DateTime? effectiveBuyDate;
+  final DateTime? requestedSellDate;
+  final DateTime? effectiveSellDate;
+  final DateTime? calculatedAt;
+  final DateTime? inflationDataAsOf;
+
   const PortfolioCalculation({
     required this.initialValueTry,
     required this.finalValueTry,
@@ -30,7 +42,16 @@ class PortfolioCalculation extends Equatable {
     required this.isProfit,
     this.cumulativeInflationPercent,
     this.realProfitLossPercent,
+    this.requestedBuyDate,
+    this.effectiveBuyDate,
+    this.requestedSellDate,
+    this.effectiveSellDate,
+    this.calculatedAt,
+    this.inflationDataAsOf,
   });
+
+  FinancialOutcome get outcome =>
+      FinancialOutcome.fromAmount(finalValueTry - initialValueTry);
 
   @override
   List<Object?> get props => [
@@ -40,22 +61,53 @@ class PortfolioCalculation extends Equatable {
     isProfit,
     cumulativeInflationPercent,
     realProfitLossPercent,
+    requestedBuyDate,
+    effectiveBuyDate,
+    requestedSellDate,
+    effectiveSellDate,
+    calculatedAt,
+    inflationDataAsOf,
   ];
 }
 
 /// Bir kalemin hesaplama sonucu (girdi [item] + sonuç [calculation]).
 ///
-/// [calculation] `null` ise bu kalem hesaplanamadı (örn. backend geçici 503) —
-/// repository per-item izolasyonu sayesinde diğer kalemler etkilenmez; use
-/// case bu kalemi `failedItems`'a düşürür (partial-success akışı).
-class PortfolioItemOutcome extends Equatable {
+/// Sonuç yalnız iki production-safe varyanttan biridir: hesaplanan kalem
+/// [PortfolioItemCalculatedOutcome], başarısız kalem ise typed [AppError]
+/// taşıyan [PortfolioItemErrorOutcome]. Böylece partial-success nedeni data
+/// sınırında kaybolmaz.
+sealed class PortfolioItemOutcome extends Equatable {
   final PortfolioItem item;
-  final PortfolioCalculation? calculation;
+  const PortfolioItemOutcome({required this.item});
 
-  const PortfolioItemOutcome({required this.item, this.calculation});
+  PortfolioCalculation? get calculation;
+  AppError? get error;
 
   bool get isSuccess => calculation != null;
 
   @override
-  List<Object?> get props => [item, calculation];
+  List<Object?> get props => [item, calculation, error];
+}
+
+final class PortfolioItemCalculatedOutcome extends PortfolioItemOutcome {
+  @override
+  final PortfolioCalculation calculation;
+
+  const PortfolioItemCalculatedOutcome({
+    required super.item,
+    required this.calculation,
+  });
+
+  @override
+  AppError? get error => null;
+}
+
+final class PortfolioItemErrorOutcome extends PortfolioItemOutcome {
+  @override
+  final AppError error;
+
+  const PortfolioItemErrorOutcome({required super.item, required this.error});
+
+  @override
+  PortfolioCalculation? get calculation => null;
 }

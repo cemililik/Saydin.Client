@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:saydin/core/constants/api_endpoints.dart';
 import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/core/error/dio_error_mapper.dart';
 import 'package:saydin/core/error/error_reporter.dart';
+import 'package:saydin/core/error/response_body_validator.dart';
+import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/scenarios/data/models/saved_scenario_model.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 import 'package:saydin/features/scenarios/domain/repositories/scenarios_repository.dart';
@@ -12,8 +15,8 @@ import 'package:saydin/features/scenarios/domain/repositories/scenarios_reposito
 /// Dio çağrılarını yapar ve `DioException`'ı bu katmanda [AppError]'a
 /// dönüştürür — BLoC Dio import etmez. Silme idempotency'si (404 = zaten yok)
 /// de burada ele alınır (F-11-03 semantiği data katmanına taşındı). Beklenmedik
-/// parse hataları (FormatException/TypeError) burada YAKALANMAZ; BLoC'un generic
-/// catch'inde [UnknownError]'a sarılır.
+/// Satır parse hataları izole edilip raporlanır; top-level 2xx gövde sözleşmesi
+/// ise fail-closed [MalformedResponseError] üretir.
 class ScenariosRepositoryImpl implements ScenariosRepository {
   final Dio _dio;
   final DioErrorMapper _errorMapper;
@@ -33,7 +36,7 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
         ApiEndpoints.scenarios,
         queryParameters: {'plan': plan},
       );
-      final list = response.data ?? [];
+      final list = ResponseBodyValidator.requireList(response.data);
       // Tek bozuk/eksik satır (örn. geçersiz tarih) tüm senaryo listesini
       // düşürmesin: her satırı izole et, hatalıyı atla ve raporla. Kullanıcı
       // diğer geçerli senaryolarını görmeye devam eder.
@@ -60,7 +63,7 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
     required String assetDisplayName,
     required DateTime buyDate,
     DateTime? sellDate,
-    required num amount,
+    required Decimal amount,
     required String amountType,
     ScenarioType type = ScenarioType.whatIf,
     Map<String, dynamic>? extraData,
@@ -73,19 +76,16 @@ class ScenariosRepositoryImpl implements ScenariosRepository {
           'assetDisplayName': assetDisplayName,
           'buyDate': _formatDate(buyDate),
           if (sellDate != null) 'sellDate': _formatDate(sellDate),
-          'amount': amount,
+          'amount': MoneyParser.toJsonString(amount),
           'amountType': amountType,
           'type': _typeToString(type),
           if (extraData != null) 'extraData': extraData,
         },
       );
-      final data = response.data;
-      // 2xx + boş gövde → MalformedResponseError (F-07-08; tip-güvenli, "başarı
-      // statüsü ama eksik gövde" anlamı `ServerError`'dan ayrı taşınır).
-      if (data == null) {
-        throw const MalformedResponseError();
-      }
-      return SavedScenarioModel.fromJson(data);
+      final data = ResponseBodyValidator.requireMap(response.data);
+      return ResponseBodyValidator.parse(
+        () => SavedScenarioModel.fromJson(data),
+      );
     } on DioException catch (e) {
       throw _errorMapper.map(e);
     }

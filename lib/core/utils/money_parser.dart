@@ -57,10 +57,8 @@ class MoneyParser {
   /// JSON'a serialize: Decimal → String. Backend `num` veya `String`
   /// kabul ediyorsa String tercih edilir — precision korunur.
   ///
-  /// NOT: Şu an lib/ içinde caller yok (yalnızca test). Senaryo kaydet
-  /// yolunda `amount` hâlâ `num` olarak gönderiliyor; backend string
-  /// `amount` kontratına geçtiğinde (Faz 4) repository serializasyonu
-  /// buraya bağlanacak — bkz. scenarios_repository_impl + portfolio_page.
+  /// Senaryo, what-if, karşılaştırma ve DCA request payload'larında Decimal
+  /// tutarların backend'e precision kaybı olmadan taşınması için kullanılır.
   static String toJsonString(Decimal value) => value.toString();
 }
 

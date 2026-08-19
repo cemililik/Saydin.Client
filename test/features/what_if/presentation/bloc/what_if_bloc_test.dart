@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 import 'package:saydin/features/what_if/domain/usecases/calculate_reverse_what_if.dart';
@@ -19,6 +22,8 @@ class MockCalculateReverseWhatIf extends Mock
     implements CalculateReverseWhatIf {}
 
 void main() {
+  setUpAll(() => registerFallbackValue(Decimal.zero));
+
   late MockGetAssets mockGetAssets;
   late MockCalculateWhatIf mockCalculateWhatIf;
   late MockCalculateReverseWhatIf mockCalculateReverseWhatIf;
@@ -165,10 +170,7 @@ void main() {
     );
   });
 
-  // F-07-06: WhatIfSuccess'te formInput zorunlu alanları (buyDate/amount) null
-  // olabilir; dil değişimi replay'i `hadResult && sym/buy/amt != null` ile
-  // gate'lenir. Eski kod savedForm.buyDate!/amount! ile crash ederdi.
-  group('WhatIfBloc — WhatIfLanguageChanged null guard (F-07-06)', () {
+  group('WhatIfBloc — sonuç snapshot bütünlüğü', () {
     WhatIfResult fixtureResult() => WhatIfResult(
       assetSymbol: 'USDTRY',
       assetDisplayName: 'Dolar/TL',
@@ -185,14 +187,23 @@ void main() {
     );
 
     blocTest<WhatIfBloc, WhatIfState>(
-      'onLanguageChanged_successWithNullFormFields_fallsBackToAssetsLoadedNoCrash',
+      'dil değişimi sonucu korur ve yeniden hesaplama yapmaz',
       build: () => WhatIfBloc(
         mockGetAssets,
         mockCalculateWhatIf,
         mockCalculateReverseWhatIf,
       ),
-      setUp: () =>
-          when(() => mockGetAssets()).thenAnswer((_) async => [assetWithRange]),
+      setUp: () => when(() => mockGetAssets()).thenAnswer(
+        (_) async => [
+          Asset(
+            symbol: 'USDTRY',
+            displayName: 'US Dollar/TL',
+            category: 'currency',
+            firstDate: assetWithRange.firstDate,
+            lastDate: assetWithRange.lastDate,
+          ),
+        ],
+      ),
       seed: () => WhatIfSuccess(
         assets: [assetWithRange],
         result: fixtureResult(),
@@ -203,15 +214,165 @@ void main() {
         ),
       ),
       act: (bloc) => bloc.add(const WhatIfLanguageChanged()),
-      // Guard çalışırsa WhatIfCalculating'e GİRMEDEN AssetsLoaded'a düşer;
-      // çalışmazsa Calculating + null-check crash olurdu.
+      expect: () => [
+        isA<WhatIfSuccess>()
+            .having(
+              (s) => s.result?.finalValueTry,
+              'financial result',
+              fixtureResult().finalValueTry,
+            )
+            .having(
+              (s) => s.result?.assetDisplayName,
+              'localized result name',
+              'US Dollar/TL',
+            )
+            .having(
+              (s) => s.formInput.selectedSymbol,
+              'selectedSymbol',
+              'USDTRY',
+            ),
+      ],
+      verify: (_) {
+        verifyNever(
+          () => mockCalculateWhatIf.call(
+            assetSymbol: any(named: 'assetSymbol'),
+            buyDate: any(named: 'buyDate'),
+            sellDate: any(named: 'sellDate'),
+            amount: any(named: 'amount'),
+            amountType: any(named: 'amountType'),
+            includeInflation: any(named: 'includeInflation'),
+          ),
+        );
+        verifyZeroInteractions(mockCalculateReverseWhatIf);
+      },
+    );
+
+    blocTest<WhatIfBloc, WhatIfState>(
+      'başarılı sonuçtan sonra tutar değişikliği sonucu geçersiz kılar',
+      build: () => WhatIfBloc(
+        mockGetAssets,
+        mockCalculateWhatIf,
+        mockCalculateReverseWhatIf,
+      ),
+      seed: () => WhatIfSuccess(
+        assets: [assetWithRange],
+        result: fixtureResult(),
+        formInput: WhatIfFormInput(
+          selectedSymbol: 'USDTRY',
+          buyDate: DateTime.utc(2021),
+          amount: Decimal.fromInt(100),
+        ),
+      ),
+      act: (bloc) => bloc.add(WhatIfAmountChanged(Decimal.fromInt(200))),
       expect: () => [
         isA<WhatIfAssetsLoaded>().having(
-          (s) => s.formInput.selectedSymbol,
-          'selectedSymbol',
-          'USDTRY',
+          (s) => s.formInput.amount,
+          'amount',
+          Decimal.fromInt(200),
+        ),
+      ],
+    );
+
+    blocTest<WhatIfBloc, WhatIfState>(
+      'alış tarihi satıştan ileri taşınırsa satış tarihi atomik temizlenir',
+      build: () => WhatIfBloc(
+        mockGetAssets,
+        mockCalculateWhatIf,
+        mockCalculateReverseWhatIf,
+      ),
+      seed: () => WhatIfAssetsLoaded(
+        [assetWithRange],
+        formInput: WhatIfFormInput(
+          selectedSymbol: 'USDTRY',
+          buyDate: DateTime.utc(2021),
+          sellDate: DateTime.utc(2022),
+        ),
+      ),
+      act: (bloc) => bloc.add(WhatIfBuyDateChanged(DateTime.utc(2023))),
+      expect: () => [
+        isA<WhatIfAssetsLoaded>()
+            .having(
+              (state) => state.formInput.buyDate,
+              'buyDate',
+              DateTime.utc(2023),
+            )
+            .having((state) => state.formInput.sellDate, 'sellDate', isNull),
+      ],
+    );
+
+    blocTest<WhatIfBloc, WhatIfState>(
+      'hesap sürerken form değişirse eski cevap yayınlanmaz',
+      build: () => WhatIfBloc(
+        mockGetAssets,
+        mockCalculateWhatIf,
+        mockCalculateReverseWhatIf,
+      ),
+      setUp: () {
+        final completer = Completer<WhatIfResult>();
+        calculationCompleter = completer;
+        when(
+          () => mockCalculateWhatIf(
+            assetSymbol: any(named: 'assetSymbol'),
+            buyDate: any(named: 'buyDate'),
+            sellDate: any(named: 'sellDate'),
+            amount: any(named: 'amount'),
+            amountType: any(named: 'amountType'),
+            includeInflation: any(named: 'includeInflation'),
+          ),
+        ).thenAnswer((_) => completer.future);
+      },
+      seed: () => WhatIfAssetsLoaded([assetWithRange]),
+      act: (bloc) async {
+        bloc.add(
+          WhatIfCalculateRequested(
+            assetSymbol: 'USDTRY',
+            buyDate: DateTime.utc(2021),
+            amount: Decimal.fromInt(100),
+            amountType: 'try',
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(WhatIfAmountChanged(Decimal.fromInt(200)));
+        await Future<void>.delayed(Duration.zero);
+        calculationCompleter.complete(fixtureResult());
+      },
+      expect: () => [
+        isA<WhatIfCalculating>(),
+        isA<WhatIfAssetsLoaded>().having(
+          (state) => state.formInput.amount,
+          'edited amount',
+          Decimal.fromInt(200),
         ),
       ],
     );
   });
+
+  blocTest<WhatIfBloc, WhatIfState>(
+    'reverse replay units tutarıyla normal form invariantını atlayamaz',
+    build: () => WhatIfBloc(
+      mockGetAssets,
+      mockCalculateWhatIf,
+      mockCalculateReverseWhatIf,
+    ),
+    seed: () => WhatIfAssetsLoaded([assetWithRange]),
+    act: (bloc) => bloc.add(
+      WhatIfReplayRequested(
+        assetSymbol: 'USDTRY',
+        buyDate: DateTime.utc(2021),
+        amount: Decimal.one,
+        amountType: 'units',
+        calculationMode: CalculationMode.reverse,
+      ),
+    ),
+    expect: () => [
+      isA<WhatIfFailure>().having(
+        (state) => state.error,
+        'typed replay error',
+        isA<InvalidScenarioReplayError>(),
+      ),
+    ],
+    verify: (_) => verifyZeroInteractions(mockCalculateReverseWhatIf),
+  );
 }
+
+late Completer<WhatIfResult> calculationCompleter;

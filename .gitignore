@@ -20,6 +20,7 @@ build/
 **/android/key.properties
 **/*.keystore
 **/*.jks
+**/*.aab
 
 # iOS
 **/ios/**/*.mode1v3
@@ -39,6 +40,19 @@ build/
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+**/*.ipa
+**/*.p8
+**/*.p12
+**/*.mobileprovision
+
+# Private keys / machine credentials / signing inputs
+**/*.pem
+**/*.key
+**/AuthKey_*.p8
+**/*service-account*.json
+**/*service_account*.json
+**/dart-define*.json
+**/dart_defines*.json
 
 # macOS
 **/macos/Flutter/GeneratedPluginRegistrant.swift
@@ -47,6 +61,8 @@ build/
 # Coverage
 coverage/
 lcov.info
+!test/coverage/
+!test/coverage/*.dart
 
 # Code review artefactları (lokal incelemeler)
 docs/code-reviews/
@@ -64,6 +80,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.saydin/local/
 
 # Claude Code transient scheduled-task lock
 .claude/scheduled_tasks.lock

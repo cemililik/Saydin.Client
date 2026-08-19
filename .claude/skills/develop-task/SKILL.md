@@ -14,7 +14,7 @@ Bir geliştirme görevini **baştan sona, az hata, az fix turuyla** tamamlamak i
    - Hangi feature'ı etkiliyor? `lib/features/<x>/` tamamen
    - İlgili core katman: `lib/core/{network|di|error|theme|...}/`
    - Mevcut benzer pattern'ler — başka feature nasıl yapmış?
-3. **Proje kuralları:** [CLAUDE.md](../../../CLAUDE.md) yasak listesi, [docs/architecture.md](../../../docs/architecture.md) katman bağımlılığı.
+3. **Proje kuralları:** [CLAUDE.md](../../../CLAUDE.md) yasak listesi, [docs/architecture.md](../../../docs/architecture.md) katman bağımlılığı ve kanonik [financial/error contract](../../../docs/engineering/financial-error-contract.md).
 4. **Bağımlılıkları haritalandır:** Use case yeni mi? DI kaydı gerekiyor mu? Yeni l10n key'i? Yeni endpoint?
 5. **Bittiğinde ne görünmesi gerek?** — bitiş kriterlerini söz haline getir.
 
@@ -31,7 +31,9 @@ Bu fazı **atlamadan** bir sonraki faza geçme. Anlamadığın bir nokta varsa k
    - DI kaydı her yeni sınıfla beraber
    - L10n key'leri kullanıldığı an
    - Test'ler implementation ile paralel (TDD'ye yakın)
-2. **TodoWrite** ile adımları kaydet — her adımı "in_progress"a alıp bittiğinde "completed" yap.
+2. Runtime'da bir plan/progress aracı varsa adımları onunla kaydet; yoksa
+   aynı durumları kısa bir Markdown checklist ile takip et. Belirli bir araç
+   adının varlığını varsayma.
 3. **Bir oturumda her şeyi yapma yaklaşımı** — küçük doğrulanabilir adımlar:
    - Bir dosya yaz / değiştir → `flutter analyze` (o dosyaya odaklı) → ilerle
    - 4-5 dosya birikince `flutter test` ilgili test dosyalarıyla
@@ -47,7 +49,7 @@ Bu fazı **atlamadan** bir sonraki faza geçme. Anlamadığın bir nokta varsa k
 3. **Yasak listesi otomatik refleks**:
    - String → `context.l10n.<key>` mi?
    - Renk → `AppColors.*` mi?
-   - Para → `num` / `String` parse mi?
+   - Para → `Decimal`; JSON sınırında `MoneyParser` kullanılıyor mu?
    - HTTP → BLoC'ta yok, use case üzerinden mi?
 4. **Comment yazma alışkanlığı** — CLAUDE.md "WHY non-obvious" kuralı. WHAT yazılmaz.
 5. **Mesajlar gerçeği yansıtsın** — `// TODO: ileride x yap` yazıyorsan ya yap ya yazma.

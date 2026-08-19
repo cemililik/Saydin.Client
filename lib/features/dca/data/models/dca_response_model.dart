@@ -1,4 +1,6 @@
+import 'package:saydin/core/error/response_body_validator.dart';
 import 'package:saydin/core/utils/money_parser.dart';
+import 'package:saydin/core/utils/profit_direction_validator.dart';
 import '../../domain/entities/dca_result.dart';
 
 class DcaResponseModel extends DcaResult {
@@ -21,15 +23,25 @@ class DcaResponseModel extends DcaResult {
     super.cumulativeInflationPercent,
     super.realProfitLossPercent,
     super.inflationDataAsOf,
+    super.calculatedAt,
     super.purchases,
     super.chartData,
   });
 
   factory DcaResponseModel.fromJson(Map<String, dynamic> json) {
+    final profitLossTry = MoneyParser.requireDecimal(
+      json['profitLossTry'],
+      'profitLossTry',
+    );
+    final isProfit = ProfitDirectionValidator.derive(
+      rawIsProfit: json['isProfit'],
+      profitLossTry: profitLossTry,
+      context: 'dca response',
+    );
     final rawPurchases = json['purchases'];
-    final purchases = rawPurchases is List
+    final purchases = rawPurchases is List<dynamic>
         ? rawPurchases.map((e) {
-            if (e is! Map) {
+            if (e is! Map<Object?, Object?>) {
               throw const FormatException('dca purchase: map değil');
             }
             return DcaPurchase(
@@ -56,9 +68,9 @@ class DcaResponseModel extends DcaResult {
         : <DcaPurchase>[];
 
     final rawChart = json['chartData'];
-    final chartData = rawChart is List
+    final chartData = rawChart is List<dynamic>
         ? rawChart.map((e) {
-            if (e is! Map) {
+            if (e is! Map<Object?, Object?>) {
               throw const FormatException('dca chart point: map değil');
             }
             return DcaChartPoint(
@@ -100,15 +112,12 @@ class DcaResponseModel extends DcaResult {
         json['currentValueTry'],
         'currentValueTry',
       ),
-      profitLossTry: MoneyParser.requireDecimal(
-        json['profitLossTry'],
-        'profitLossTry',
-      ),
-      profitLossPercent: _requireNum(
+      profitLossTry: profitLossTry,
+      profitLossPercent: ResponseBodyValidator.requireFiniteDouble(
         json['profitLossPercent'],
         'profitLossPercent',
-      ).toDouble(),
-      isProfit: json['isProfit'] is bool ? json['isProfit'] as bool : false,
+      ),
+      isProfit: isProfit,
       averageCostPerUnit: MoneyParser.requireDecimal(
         json['averageCostPerUnit'],
         'averageCostPerUnit',
@@ -121,12 +130,14 @@ class DcaResponseModel extends DcaResult {
         json['currentUnitPrice'],
         'currentUnitPrice',
       ),
-      cumulativeInflationPercent: _optionalNum(
+      cumulativeInflationPercent: ResponseBodyValidator.optionalFiniteDouble(
         json['cumulativeInflationPercent'],
-      )?.toDouble(),
-      realProfitLossPercent: _optionalNum(
+        'cumulativeInflationPercent',
+      ),
+      realProfitLossPercent: ResponseBodyValidator.optionalFiniteDouble(
         json['realProfitLossPercent'],
-      )?.toDouble(),
+        'realProfitLossPercent',
+      ),
       inflationDataAsOf: _optionalDate(json['inflationDataAsOf']),
       purchases: purchases,
       chartData: chartData,
@@ -142,8 +153,6 @@ class DcaResponseModel extends DcaResult {
     if (value is num) return value;
     throw FormatException('dca response: $field sayı değil ($value)');
   }
-
-  static num? _optionalNum(Object? value) => value is num ? value : null;
 
   static String _requireString(Object? value, String field) {
     if (value is String) return value;

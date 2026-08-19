@@ -58,9 +58,14 @@ flutter run \
   --dart-define=API_BASE_URL=http://10.0.2.2:5080 \
   --dart-define=APP_ENV=development
 
-# iOS Simulator / fiziksel cihaz
+# iOS Simulator
 flutter run \
   --dart-define=API_BASE_URL=http://localhost:5080 \
+  --dart-define=APP_ENV=development
+
+# Fiziksel cihaz: LAN/tunnel endpoint'i HTTPS olmalı
+flutter run -d <device-id> \
+  --dart-define=API_BASE_URL=https://<dev-host> \
   --dart-define=APP_ENV=development
 
 # Sentry hata izleme etkin (opsiyonel)
@@ -72,9 +77,9 @@ flutter run \
 
 > `API_BASE_URL` tanımlı değilse uygulama açılışta `StateError` ile çöker
 > (fail-loud). Release build'lerde scheme **`https://` zorunludur**; debug
-> build'lerde `http://` sadece `localhost` / `127.0.0.1` / `10.0.2.2` veya
-> `*.ngrok-free.app` / `*.ngrok.app` / `*.trycloudflare.com` host'larında
-> kabul edilir (bkz. [lib/core/network/api_base_url_validator.dart](../lib/core/network/api_base_url_validator.dart)).
+> build'lerde `http://` sadece `localhost` / `127.0.0.1` / `10.0.2.2`
+> host'larında kabul edilir. LAN ve tünel origin'leri debug dahil HTTPS
+> kullanır (bkz. [lib/core/network/api_base_url_validator.dart](../lib/core/network/api_base_url_validator.dart)).
 >
 > `SENTRY_DSN` tanımlı değilse Sentry sessizce devre dışı kalır.
 >
@@ -96,11 +101,14 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5080
 # iOS Simulator
 flutter run -d "iPhone 16" --dart-define=API_BASE_URL=http://localhost:5080
 
-# Fiziksel cihaz (USB debug açık)
-flutter run -d <device-id> --dart-define=API_BASE_URL=http://<local-ip>:5080
+# Fiziksel cihaz (USB debug açık; LAN/tunnel endpoint'i HTTPS olmalı)
+flutter run -d <device-id> --dart-define=API_BASE_URL=https://<dev-host> --dart-define=APP_ENV=development
 
-# Release modda (performans testi)
-flutter run --release --dart-define=API_BASE_URL=http://10.0.2.2:5080
+# Profile modda (performans testi; onaylı HTTPS staging origin'i)
+flutter run --profile \
+  --dart-define=API_BASE_URL=https://<approved-staging-origin> \
+  --dart-define=APP_ENV=staging \
+  --dart-define=SENTRY_DSN=<staging-dsn>
 ```
 
 ## 5. Testleri Çalıştır
@@ -141,7 +149,7 @@ dart format lib/ test/
 ```bash
 # TestFlight için IPA
 flutter build ipa \
-  --dart-define=API_BASE_URL=https://api.saydin.app \
+  --dart-define=API_BASE_URL=https://<approved-production-origin> \
   --dart-define=APP_ENV=production \
   --dart-define=SENTRY_DSN=<production-dsn>
 # Çıktı: build/ios/ipa/Saydin.ipa
@@ -152,13 +160,15 @@ flutter build ipa \
 ```bash
 # Play Store için AAB
 flutter build appbundle \
-  --dart-define=API_BASE_URL=https://api.saydin.app \
+  --dart-define=API_BASE_URL=https://<approved-production-origin> \
   --dart-define=APP_ENV=production \
   --dart-define=SENTRY_DSN=<production-dsn>
 # Çıktı: build/app/outputs/bundle/release/app-release.aab
 
 # Debug APK (test dağıtımı)
-flutter build apk --dart-define=API_BASE_URL=http://10.0.2.2:5080
+flutter build apk \
+  --dart-define=API_BASE_URL=http://10.0.2.2:5080 \
+  --dart-define=APP_ENV=development
 ```
 
 ## 8. Sık Kullanılan Komutlar
@@ -249,13 +259,31 @@ Saydın **tag-driven release** modelini kullanır — sadece `v*` formatında an
 
 | Tag formatı | Kanal | Play Store | TestFlight | GitHub Environment |
 |---|---|---|---|---|
-| `v0.2.0-rc.1` | staging | `internal` (draft) | beta | `staging` (oto-onay) |
-| `v0.2.0` | production | `production` (%10 staged) | beta | `production` (**manuel approval**) |
+| `v0.2.0-rc.1` | staging | `internal` (draft) | beta | `staging` (koruma dış konfigürasyonuna bağlı) |
+| `v0.2.0` | production | `production` (%10 staged) | beta | `production` (**required reviewer kurulmadan güvenli değildir**) |
 
 ### Adım Adım Release
 
 1. **`main` yeşil mi kontrol et** ([Actions sekmesi](https://github.com/cemililik/Saydin.Client/actions)).
-2. **Annotated tag oluştur** — gövdede TR/EN release notes:
+2. **Production legal approval commit'ini hazırla:** Önce
+   [legal release sign-off](legal/legal-release-signoff.md) belgesindeki sırayı
+   tamamla. Dört legal metni nihai hale getir; `--print-bundle-hash` sonucunu
+   `LegalAcceptanceVersion.bundleSha256` ile eşleştir; gerekiyorsa legal
+   version/document ID/tarihi artır; `--print-runtime-surface-hash` ile
+   privacy/runtime snapshot'ını al ve beş gerçek rolün kanıtlı onayını tamamla.
+   Final legal/source commit'i bundan sonra approved source SHA olarak sabitle.
+   Schema v2 `docs/legal/legal-release-approval.json` içindeki
+   `source_commit_sha`, iki hash ve legal version alanlarını o commit'e bağla.
+   Ardından tek parent'lı ve source commit'e göre **yalnız
+   approval JSON'u değiştiren** ayrı bir commit oluştur; production tag bu
+   approval commit'ine konur. RC tag'lerinde bu adım zorunlu değildir.
+
+   ```bash
+   python3 tool/verify_legal_release_approval.py --print-bundle-hash
+   python3 tool/verify_legal_release_approval.py --print-runtime-surface-hash
+   ```
+
+3. **Annotated tag oluştur** — gövdede TR/EN release notes:
 
    ```bash
    git tag -a v0.2.0 -m "v0.2.0
@@ -270,14 +298,20 @@ Saydın **tag-driven release** modelini kullanır — sadece `v*` formatında an
    "
    ```
 
-3. **Tag'i push'la:**
+4. **Tag'i push'la:**
    ```bash
    git push origin v0.2.0
    ```
 
-4. **GitHub Actions takip et:** [release.yml](../.github/workflows/release.yml) tetiklenir. Production tag ise `production` environment manuel onay bekler — onaylayıcılar GitHub Settings → Environments → production altında tanımlı.
+5. **GitHub Actions takip et:** [release.yml](../.github/workflows/release.yml)
+   tetiklenir. Workflow'un `environment: production` demesi tek başına manuel
+   onay oluşturmaz. Store secret'ları tanımlanmadan önce GitHub Settings →
+   Environments → production altında bağımsız required reviewer, self-review
+   yasağı ve tag deployment policy kurulmuş ve ayrıca doğrulanmış olmalıdır.
+   Verifier approver kimliğinin gerçekliğini veya hukuk görüşünün yeterliliğini
+   kanıtlamaz; agent isim/identity/evidence uyduramaz.
 
-5. **Staged rollout'u büyüt:** Production deployment %10 ile başlar. 24-48 saat sonra crash-free rate sağlamsa Play Console → Production → Manage release → %25 / %50 / %100 promote et.
+6. **Staged rollout'u büyüt:** Production deployment %10 ile başlar. 24-48 saat sonra crash-free rate sağlamsa Play Console → Production → Manage release → %25 / %50 / %100 promote et.
 
 ### Tag Mesajı Formatı
 
@@ -291,7 +325,9 @@ v0.2.0                          ← Tag subject (GitHub Release başlığı)
 <English release notes>          ← Play Store EN-US + TestFlight EN (≤500)
 ```
 
-Separator yoksa TR ve EN aynı metni alır. Karakter limiti Play Store'un 500'lük sınırı; daha uzun yazarsanız truncate edilir.
+Separator yoksa TR ve EN aynı annotated tag body'yi alır. Karakter limiti Play
+Store'un 500'lük sınırı; daha uzun yazarsanız truncate edilir. Lightweight tag
+için commit-subject fallback yoktur; workflow fail-closed reddeder.
 
 ### Acil Yeniden Çalıştırma
 
@@ -299,7 +335,9 @@ Workflow yarıda kalırsa veya retry gerekirse:
 
 1. GitHub Actions → Release workflow → "Run workflow" butonu
 2. `tag` input'una mevcut tag adını gir (`v0.2.0`)
-3. Workflow yeniden başlar (concurrency=false sayesinde başkasıyla çakışmaz)
+3. Workflow yeniden başlar; `run_attempt` yeni ve store-uyumlu benzersiz build
+   numarasına dahil edilir. Concurrency aynı tag için iki release'in eşzamanlı
+   ilerlemesini engeller.
 
 ### Versiyon Strateji
 
@@ -314,9 +352,15 @@ Commit mesajları (Conventional Commits) sürüm seçimine ipucu verir ama otoma
 
 ### Yasak
 
-- **Lightweight tag** (`git tag v0.2.0` — `-a` flag'i olmadan): annotated message yok, fallback son commit subject'i olur.
-- **Tag silip yeniden push:** Play Console'da çift sürüm. Yeni sürüm gerekirse `v0.2.1` olarak çıkar.
+- **Lightweight tag** (`git tag v0.2.0` — `-a` flag'i olmadan): workflow bunu
+  fallback uygulamadan reddeder.
+- **Push'lanmış tag'i silme/force-update/retarget:** Kesinlikle yasaktır.
+  Hatalı pushed tag yerine yeni SemVer; production için ayrı content-bound
+  approval commit'i kullan.
 - **Main'de olmayan commit'i tag'leme:** Guard job hatayla durdurur — sadece `main`'e merge edilmiş commit'ler release'lenebilir.
+- **Onaysız production origin'i:** Validator origin-only HTTPS sözleşmesini
+  doğrular; kalıcı staging/production host allowlist'i ve ortam ayrımı SEC-02
+  kararıyla ertelenmiştir. Owner doğrulaması olmadan production tag basılmaz.
 
 ## 12. Yaygın Sorunlar
 

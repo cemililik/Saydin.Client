@@ -150,8 +150,17 @@ void main() {
       expect(scenarios.first.amount, Decimal.fromInt(10000));
     });
 
-    test('getScenarios_nullBody_returnsEmptyList', () async {
+    test('getScenarios_nullBody_throwsMalformedResponse', () async {
       stubGet(listResponse(null));
+
+      await expectLater(
+        repo.getScenarios(),
+        throwsA(isA<MalformedResponseError>()),
+      );
+    });
+
+    test('getScenarios_explicitEmptyList_returnsEmptyList', () async {
+      stubGet(listResponse(const []));
 
       expect(await repo.getScenarios(), isEmpty);
     });
@@ -172,6 +181,21 @@ void main() {
       // Rapor fire-and-forget (unawaited) → microtask kuyruğunu boşalt.
       await Future<void>.delayed(Duration.zero);
       expect(reporter.reports, hasLength(1));
+    });
+
+    test('getScenarios_unknownType_skipsAndReports_insteadOfWhatIf', () async {
+      stubGet(
+        listResponse([
+          scenarioJson(),
+          {...scenarioJson(id: 'future'), 'type': 'future_type'},
+        ]),
+      );
+
+      final scenarios = await repo.getScenarios();
+
+      expect(scenarios.map((scenario) => scenario.id), ['abc-123']);
+      await Future<void>.delayed(Duration.zero);
+      expect(reporter.reports, [isA<FormatException>()]);
     });
 
     test('getScenarios_connectionError_throwsNoInternet', () async {
@@ -207,7 +231,7 @@ void main() {
       assetDisplayName: 'Dolar/TL',
       buyDate: DateTime(2020, 3, 1),
       sellDate: DateTime(2021, 1, 1),
-      amount: 10000,
+      amount: Decimal.fromInt(10000),
       amountType: 'try',
     );
 
@@ -218,18 +242,33 @@ void main() {
         assetSymbol: 'USDTRY',
         assetDisplayName: 'Dolar/TL',
         buyDate: DateTime(2020, 3, 1),
-        amount: 10000,
+        amount: Decimal.parse('10000.25'),
         amountType: 'try',
       );
 
       expect(scenario.id, 'abc-123');
       expect(scenario.assetSymbol, 'USDTRY');
+      final captured =
+          verify(
+                () => dio.post<Map<String, dynamic>>(
+                  any(),
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(captured['amount'], '10000.25');
     });
 
     test('saveScenario_nullBody_throwsMalformedResponse', () async {
       stubPost(okResponse(null));
 
       // F-07-08: 2xx + boş gövde → MalformedResponseError.
+      await expectLater(save(), throwsA(isA<MalformedResponseError>()));
+    });
+
+    test('saveScenario_parseError_throwsMalformedResponse', () async {
+      stubPost(okResponse({'id': 42}));
+
       await expectLater(save(), throwsA(isA<MalformedResponseError>()));
     });
 

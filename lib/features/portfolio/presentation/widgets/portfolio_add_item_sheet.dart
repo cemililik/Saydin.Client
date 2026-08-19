@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/utils/financial_amount_validator.dart';
 import 'package:saydin/core/utils/locale_number_parser.dart';
-import 'package:saydin/core/utils/money_parser.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/portfolio_constants.dart';
 import 'package:saydin/features/what_if/domain/entities/asset.dart';
@@ -23,7 +23,7 @@ class PortfolioAddItemSheet extends StatefulWidget {
   final void Function({
     required String assetSymbol,
     required String assetDisplayName,
-    required num amount,
+    required Decimal amount,
     required String amountType,
   })
   onSave;
@@ -73,7 +73,7 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
     if (edit != null && !_didPrefill) {
       _didPrefill = true;
       _amountController.text = LocaleNumberParser.formatForInput(
-        edit.amount.toDouble(),
+        edit.amount,
         context.localeName,
       );
     }
@@ -101,8 +101,7 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
       _amountController.text,
       context.localeName,
     );
-    // null / NaN / Infinity (isFinite hepsini eler) / <=0 reddet.
-    if (amount == null || !amount.isFinite || amount <= 0) {
+    if (amount == null || amount <= Decimal.zero) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.validAmountRequired)));
@@ -117,11 +116,12 @@ class _PortfolioAddItemSheetState extends State<PortfolioAddItemSheet> {
     }
     // Ondalık hane sınırı: TL kuruş (2), birim/gram (4). Decimal.toString()
     // kanonik '.' ayraç kullanır (binlik yok) → güvenilir hane sayımı.
-    final maxDecimals = _amountType == 'try' ? 2 : 4;
-    final decStr = (MoneyParser.tryDecimal(amount) ?? Decimal.zero).toString();
-    final dotIdx = decStr.indexOf('.');
-    final decimalCount = dotIdx >= 0 ? decStr.length - dotIdx - 1 : 0;
-    if (decimalCount > maxDecimals) {
+    final maxDecimals = FinancialAmountValidator.maximumScaleFor(_amountType);
+    if (!FinancialAmountValidator.isValid(
+      value: amount,
+      amountType: _amountType,
+      allowedAmountTypes: _selectedAsset?.allowedAmountTypes,
+    )) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.portfolioAmountTooManyDecimals(maxDecimals)),

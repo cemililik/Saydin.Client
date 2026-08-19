@@ -62,7 +62,7 @@ void main() {
     assetSymbol: 'USDTRY',
     startDate: DateTime(2020, 1, 1),
     endDate: DateTime(2021, 1, 1),
-    periodicAmount: 1000,
+    periodicAmount: Decimal.fromInt(1000),
     period: 'monthly',
     amountType: 'try',
   );
@@ -96,7 +96,7 @@ void main() {
       expect(calc(), throwsA(isA<NoInternetError>()));
     });
 
-    test('calculate_status404_throwsPriceNotFound', () async {
+    test('calculate_unknownStatus404_throwsEndpointNeutralNotFound', () async {
       stubPost(
         DioException(
           requestOptions: RequestOptions(path: '/x'),
@@ -108,18 +108,87 @@ void main() {
         ),
       );
 
-      expect(calc(), throwsA(isA<PriceNotFoundError>()));
+      expect(calc(), throwsA(isA<NotFoundError>()));
     });
 
-    test('calculate_parseError_propagatesNotSwallowed', () async {
-      // Bozuk para alanı → FormatException; `on DioException` yakalamaz, ham
-      // hata propagate olur (AppError'a sarılmaz — sözleşme L-1).
+    test('calculate_parseError_throwsMalformedResponse', () async {
       stubPost(okResponse({...dcaJson(), 'currentValueTry': 'not-a-number'}));
 
-      await expectLater(
-        calc(),
-        throwsA(allOf(isA<FormatException>(), isNot(isA<AppError>()))),
+      await expectLater(calc(), throwsA(isA<MalformedResponseError>()));
+    });
+
+    test('calculate_nonFinitePercent_throwsMalformedResponse', () async {
+      for (final field in [
+        'profitLossPercent',
+        'cumulativeInflationPercent',
+        'realProfitLossPercent',
+      ]) {
+        for (final value in [
+          double.nan,
+          double.infinity,
+          double.negativeInfinity,
+        ]) {
+          stubPost(okResponse({...dcaJson(), field: value}));
+
+          await expectLater(
+            calc(),
+            throwsA(isA<MalformedResponseError>()),
+            reason: '$field=$value reddedilmeli',
+          );
+        }
+      }
+    });
+
+    test('calculate_finiteExtremeAndZeroPercent_returnsResult', () async {
+      stubPost(
+        okResponse({
+          ...dcaJson(),
+          'profitLossPercent': double.maxFinite,
+          'cumulativeInflationPercent': 0.0,
+          'realProfitLossPercent': -double.maxFinite,
+        }),
       );
+
+      final result = await calc();
+
+      expect(result.profitLossPercent, double.maxFinite);
+      expect(result.cumulativeInflationPercent, 0.0);
+      expect(result.realProfitLossPercent, -double.maxFinite);
+    });
+
+    test('calculate_missingIsProfit_derivesDirectionFromProfitLoss', () async {
+      final response = dcaJson()..remove('isProfit');
+      stubPost(okResponse(response));
+
+      expect((await calc()).isProfit, isTrue);
+    });
+
+    test('calculate_inconsistentIsProfit_throwsMalformedResponse', () async {
+      stubPost(okResponse({...dcaJson(), 'isProfit': false}));
+
+      expect(calc(), throwsA(isA<MalformedResponseError>()));
+    });
+
+    test('calculate_decimalAmount_serializesCanonicalString', () async {
+      stubPost(okResponse(dcaJson()));
+
+      await repo.calculate(
+        assetSymbol: 'USDTRY',
+        startDate: DateTime(2020),
+        periodicAmount: Decimal.parse('1000.01'),
+        period: 'monthly',
+        amountType: 'try',
+      );
+
+      final captured =
+          verify(
+                () => dio.post<Map<String, dynamic>>(
+                  any(),
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(captured['periodicAmount'], '1000.01');
     });
   });
 }

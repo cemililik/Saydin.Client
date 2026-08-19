@@ -1,13 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/core/network/locale_provider.dart';
 import 'package:saydin/features/settings/domain/entities/app_settings.dart';
 import 'package:saydin/features/settings/domain/repositories/settings_repository.dart';
 
+enum SettingsPersistenceFeedback { saveFailed }
+
 class SettingsCubit extends Cubit<AppSettings> {
   final SettingsRepository _repository;
   final LocaleProvider _localeProvider;
   final ErrorReporter _reporter;
+  final _feedbackController =
+      StreamController<SettingsPersistenceFeedback>.broadcast();
 
   SettingsCubit(
     this._repository,
@@ -15,6 +21,13 @@ class SettingsCubit extends Cubit<AppSettings> {
     ErrorReporter? reporter,
   }) : _reporter = reporter ?? const ErrorReporter(),
        super(const AppSettings());
+
+  /// Kalıcı yazma hatalarını kullanıcı arayüzüne bir kez iletir.
+  ///
+  /// Ayarlar state'i başarılı olarak kaydedilmiş tercihleri temsil etmeye devam
+  /// eder; geçici hata state'i eklemek yerine bu kısa ömürlü kanal kullanılır.
+  Stream<SettingsPersistenceFeedback> get feedbacks =>
+      _feedbackController.stream;
 
   /// F-12-21: depo okuması (SharedPreferences) çökerse uygulama açılışta
   /// crash etmesin — hatayı raporla ve güvenli varsayılan ([AppSettings] +
@@ -45,6 +58,9 @@ class SettingsCubit extends Cubit<AppSettings> {
       emit(updated);
     } catch (e, st) {
       await _reporter.report(e, st, context: 'settings_set_theme');
+      if (!isClosed) {
+        _feedbackController.add(SettingsPersistenceFeedback.saveFailed);
+      }
     }
   }
 
@@ -60,6 +76,9 @@ class SettingsCubit extends Cubit<AppSettings> {
       emit(updated);
     } catch (e, st) {
       await _reporter.report(e, st, context: 'settings_set_language');
+      if (!isClosed) {
+        _feedbackController.add(SettingsPersistenceFeedback.saveFailed);
+      }
     }
   }
 
@@ -69,5 +88,11 @@ class SettingsCubit extends Cubit<AppSettings> {
       AppLanguage.en => 'en',
       AppLanguage.system => null,
     });
+  }
+
+  @override
+  Future<void> close() async {
+    await _feedbackController.close();
+    return super.close();
   }
 }

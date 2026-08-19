@@ -35,6 +35,11 @@ class SentryPiiScrubber {
     'platform',
     'appVersion',
     'backendOk',
+    // Yalnızca uygulamanın kendi, şeması doğrulanan scope tag'leri.
+    'os',
+    'os_version',
+    'app_version',
+    'context',
     // Sentry framework ürettiği güvenli anahtarlar
     'level',
     'type',
@@ -64,16 +69,14 @@ class SentryPiiScrubber {
     r'\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?',
   );
 
-  /// Tutar / fiyat pattern'i. Üç kalıbı OR ile birleştirir:
-  ///   - Türkçe binlik formatı: `47.010,34` veya `1.250.500` (`d{1,3}` + en az bir
-  ///     `[.,]ddd` grubu + opsiyonel `[.,]dd`).
-  ///   - Küçük tutar: `999,99`, `100,50`, `47.34` (1-3 hane + ondalık 1-4 hane).
-  ///   - Binlik ayraçsız 4+ haneli sayı: `47010` veya `47010.34`.
-  /// Tam sayı 1-3 haneli sayılar (HTTP status, retry sayısı vb.) ondalıksız
-  /// korunur — `429` gibi teknik telemetri sızıntı oluşturmaz.
-  static final RegExp _largeNumber = RegExp(
-    r'\b(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,4})?|\d{1,3}[.,]\d{2,4}|\d{4,}(?:[.,]\d+)?)\b',
-  );
+  /// Serbest metindeki sayı pattern'i. Bir sayının finansal tutar mı yoksa
+  /// teknik değer mi olduğunu event mesajında güvenilir biçimde ayıramayız;
+  /// bu yüzden **bütün** sayılar redakte edilir. HTTP status/retry/duration
+  /// gibi ihtiyaç duyulan teknik sayılar yalnızca şeması doğrulanan yapılandırılmış
+  /// allowlist alanlarında tutulabilir.
+  ///
+  /// Türkçe/İngilizce ondalık ve binlik biçimlerini de kapsar.
+  static final RegExp _largeNumber = RegExp(r'\b\d+(?:[.,]\d+)*\b');
 
   /// Asset sembolü kalıbı (pair): `USD/TRY`, `BTC-USD`, `ETH/USDT`.
   static final RegExp _assetSymbol = RegExp(r'\b[A-Z]{3,6}[/-][A-Z]{2,6}\b');
@@ -303,9 +306,14 @@ class SentryPiiScrubber {
     if (message == null) return null;
     return SentryMessage(
       redactText(message.formatted),
-      template: message.template,
+      // `template`, serialize edilir ve ham kullanıcı girdisi/finansal veri
+      // içerebilir. Sadece `formatted` alanını temizlemek yeterli değildir.
+      template: message.template == null ? null : redactText(message.template!),
       params: message.params
-          ?.map((p) => redactText(p.toString()))
+          // Parametrelerin string olmayan türleri SDK tarafından toString() ile
+          // serialize edilebilir. Bunu kabul etmek typed-context bypass'ına
+          // denktir; serbest değerleri deny-by-default reddederiz.
+          ?.map((p) => p is String ? redactText(p) : '<REDACTED>')
           .toList(growable: false),
     );
   }
@@ -343,20 +351,58 @@ class SentryPiiScrubber {
         out[entry.key] = '<REDACTED>';
         continue;
       }
-      // `endpoint` özel davranış: scheme/host atılır, query/fragment
-      // tamamen kesilir. Call-site sözleşmesi "path-only" diyordu ama
-      // scrubber'da enforce etmek tek savunma hattı oluşturuyor — query
-      // string'in identifier sızdırma riskini elimine eder.
-      if (entry.key == 'endpoint') {
-        out[entry.key] = _scrubEndpoint(entry.value);
-        continue;
-      }
-      out[entry.key] = _scrubValue(entry.value);
+      out[entry.key] = _validateAllowedValue(entry.key, entry.value);
     }
     return out;
   }
 
-  /// `endpoint` allowlist anahtarı için path-only normalize:
+  /// Allowlist'teki her anahtar için hem tip hem değer şeması uygular. Bir
+  /// anahtarın allowlist'te olması tek başına değerinin güvenli olduğu anlamına
+  /// gelmez: örneğin `durationMs: 99` yanlış kullanımda finansal tutar olabilir.
+  Object? _validateAllowedValue(String key, Object? value) => switch (key) {
+    'endpoint' => _scrubEndpoint(value),
+    'httpStatus' => _boundedInt(value, min: 100, max: 599),
+    'retryCount' => _boundedInt(value, min: 0, max: 10),
+    'durationMs' => _boundedInt(value, min: 0, max: 300000),
+    'backendOk' => value is bool ? value : '<REDACTED>',
+    'method' => _httpMethod(value),
+    'os' => _oneOf(value, const {'ios', 'android'}),
+    'os_version' => _matches(value, RegExp(r'^\d{1,2}(?:\.\d{1,2})?$')),
+    'app_version' ||
+    'appVersion' => _matches(value, RegExp(r'^\d+\.\d+\.\d+\+\d+$')),
+    'errorType' ||
+    'feature' ||
+    'action' ||
+    'category' ||
+    'platform' ||
+    'context' ||
+    'level' ||
+    'type' => _matches(value, RegExp(r'^[A-Za-z][A-Za-z0-9_.-]{0,80}$')),
+    _ => '<REDACTED>',
+  };
+
+  Object _boundedInt(Object? value, {required int min, required int max}) {
+    final number = switch (value) {
+      int value => value,
+      String value => int.tryParse(value),
+      _ => null,
+    };
+    return number != null && number >= min && number <= max
+        ? number
+        : '<REDACTED>';
+  }
+
+  Object _httpMethod(Object? value) =>
+      _oneOf(value, const {'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'});
+
+  Object _oneOf(Object? value, Set<String> allowed) =>
+      value is String && allowed.contains(value) ? value : '<REDACTED>';
+
+  Object _matches(Object? value, RegExp pattern) =>
+      value is String && pattern.hasMatch(value) ? value : '<REDACTED>';
+
+  /// `endpoint` allowlist anahtarı için path-only normalize ve statik endpoint
+  /// şeması:
   /// - Query (`?...`) ve fragment (`#...`) tamamen kesilir.
   /// - Absolute URL ise scheme/host atılır, sadece path döner.
   /// - String olmayan değer için `<REDACTED>` (tip uyumsuzluğu zaten bug).
@@ -366,18 +412,20 @@ class SentryPiiScrubber {
     final withoutQuery = withoutFragment.split('?').first;
     final uri = Uri.tryParse(withoutQuery);
     if (uri != null && (uri.hasScheme || uri.hasAuthority)) {
-      return uri.path.isEmpty ? '/' : uri.path;
+      return _validateEndpointPath(uri.path.isEmpty ? '/' : uri.path);
     }
-    return withoutQuery;
+    return _validateEndpointPath(withoutQuery);
   }
 
-  Object? _scrubValue(Object? value) {
-    if (value == null) return null;
-    if (value is String) return redactText(value);
-    if (value is num || value is bool) return value;
-    if (value is List) return value.map(_scrubValue).toList(growable: false);
-    if (value is Map<String, Object?>) return _scrubMap(value);
-    return redactText(value.toString());
+  Object _validateEndpointPath(String path) {
+    if (!path.startsWith('/')) return '<REDACTED>';
+    final segments = path.split('/').where((part) => part.isNotEmpty);
+    final isSafe = segments.every(
+      (segment) =>
+          RegExp(r'^v\d+$').hasMatch(segment) ||
+          RegExp(r'^[a-z-]+$').hasMatch(segment),
+    );
+    return isSafe ? path : '<REDACTED>';
   }
 
   String _scrubBreadcrumbMessage(String message) {
@@ -389,19 +437,17 @@ class SentryPiiScrubber {
   }
 
   Contexts _scrubContexts(Contexts contexts) {
-    // Contexts içindeki yapılandırılmış alanlar (device, app, runtime) PII içermez.
-    // Bizim eklediğimiz `setContexts('extra', map)` allowlist'ten geçer.
+    // SDK'nin typed context nesneleri cihaz adı/modeli, device-app hash, view
+    // adı, raw user-agent, URL veya üçüncü taraf eklenti alanı taşıyabilir.
+    // Bunları field bazında eksiksiz scrub edeceğimizi varsaymak güvenli değildir;
+    // yalnızca kendi şemalı custom context'imiz korunur, diğer her şey drop edilir.
     final scrubbed = Contexts();
     contexts.forEach((key, value) {
-      if (value == null) {
-        scrubbed[key] = null;
+      if (key == 'app_telemetry' && value is Map<String, Object?>) {
+        scrubbed[key] = _scrubMap(value);
         return;
       }
-      if (value is Map<String, Object?>) {
-        scrubbed[key] = _scrubMap(value);
-      } else {
-        scrubbed[key] = value;
-      }
+      scrubbed[key] = null;
     });
     return scrubbed;
   }
@@ -420,7 +466,7 @@ class SentryPiiScrubber {
       cookies: null,
       data: null,
       fragment: null,
-      apiTarget: request.apiTarget,
+      apiTarget: null,
       env: null,
       headers: Map.fromEntries(
         request.headers.entries.where(
@@ -434,14 +480,19 @@ class SentryPiiScrubber {
     'content-type',
     'accept',
     'accept-language',
-    'user-agent',
   };
 
   String _scrubUrl(String url) {
-    // Query string ve path parametrelerini sansürle.
-    final idx = url.indexOf('?');
-    final base = idx >= 0 ? url.substring(0, idx) : url;
-    // Path'ten UUID'leri sansürle.
-    return base.replaceAll(_uuid, '<UUID>');
+    // URL'yi path-only endpoint şemasına indirger. UUID dışındaki sayısal veya
+    // serbest path segmentleri de kullanıcı/hesap identifier'ı olabilir;
+    // yalnız statik API path'i saklanır.
+    final withoutFragment = url.split('#').first;
+    final withoutQuery = withoutFragment.split('?').first;
+    final uri = Uri.tryParse(withoutQuery);
+    final path = uri != null && (uri.hasScheme || uri.hasAuthority)
+        ? uri.path
+        : withoutQuery;
+    final sanitized = _validateEndpointPath(path.isEmpty ? '/' : path);
+    return sanitized is String ? sanitized : '<REDACTED>';
   }
 }

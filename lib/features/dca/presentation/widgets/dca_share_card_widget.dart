@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:saydin/core/constants/app_branding.dart';
-import 'package:saydin/core/constants/app_colors.dart';
+import 'package:saydin/core/constants/brand_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
+import 'package:saydin/core/widgets/share_card_surface.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 import 'package:saydin/l10n/app_localizations.dart';
 
@@ -29,11 +32,10 @@ class DcaShareCardWidget extends StatelessWidget {
     final tryFmt = AppFormat.tryCurrency(locale);
     final pctFmt = AppFormat.percent(locale);
     final dateFmt = AppFormat.date(locale);
-    final nominalColor = result.isProfit ? AppColors.profit : AppColors.loss;
-    final nominalIcon = result.isProfit
-        ? Icons.trending_up
-        : Icons.trending_down;
-    final nominalSign = result.profitLossPercent >= 0 ? '+' : '';
+    final outcome = result.outcome;
+    final nominalColor = outcome.shareColor;
+    final nominalIcon = outcome.icon;
+    final nominalSign = outcome.explicitPositiveSign;
 
     final periodLabel = result.period == 'weekly'
         ? l10n.dcaPeriodWeekly
@@ -43,289 +45,253 @@ class DcaShareCardWidget extends StatelessWidget {
         result.cumulativeInflationPercent != null &&
         result.realProfitLossPercent != null;
 
-    return SizedBox(
-      width: 540,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(color: Colors.white),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Üst aksan çizgisi
-            Container(height: 6, color: AppColors.primary),
-
-            // ── Header
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              child: Center(
-                child: Text(
-                  AppBranding.wordmark,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-            ),
-
-            Container(height: 1, color: const Color(0xFFEEEEEE)),
-
-            // ── İçerik
-            Padding(
-              padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+    return ShareCardSurface(
+      children: [
+        // ── İçerik
+        Padding(
+          padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Varlık adı + süre chip
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Varlık adı + süre chip
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          result.assetDisplayName,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A1A),
-                          ),
-                        ),
+                  Expanded(
+                    child: Text(
+                      result.assetDisplayName,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: ShareCardColors.textPrimary,
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8F0FE),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _durationLabel(
-                            l10n,
-                            result.startDate,
-                            result.endDate,
-                          ),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  // Tarih aralığı + periyot
-                  Text(
-                    '${dateFmt.format(result.startDate)}  →  '
-                    '${dateFmt.format(result.endDate)}  •  $periodLabel',
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Toplam Yatırım → Güncel Değer kutusu
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                      horizontal: 10,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FF),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFDDE5FF)),
+                      color: ShareCardColors.brandSurface,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.dcaTotalInvested,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                tryFmt.format(
-                                  result.totalInvestedTry.toDouble(),
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1A1A1A),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward,
-                          color: Colors.grey.shade400,
-                          size: 20,
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                l10n.dcaCurrentValue,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                tryFmt.format(
-                                  result.currentValueTry.toDouble(),
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A1A1A),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Nominal getiri kutusu
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: nominalColor.withValues(alpha: 0.07),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: nominalColor.withValues(alpha: 0.22),
+                    child: Text(
+                      _durationLabel(l10n, result.startDate, result.endDate),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: BrandColors.navy,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    child: Column(
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Tarih aralığı + periyot
+              Text(
+                '${dateFmt.format(result.startDate)}  →  '
+                '${dateFmt.format(result.endDate)}  •  $periodLabel',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: ShareCardColors.textSecondary,
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Toplam Yatırım → Güncel Değer kutusu
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: ShareCardColors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: ShareCardColors.divider),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.dcaTotalInvested,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: ShareCardColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            tryFmt.format(result.totalInvestedTry.toDouble()),
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color: ShareCardColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward,
+                      color: ShareCardColors.iconMuted,
+                      size: 20,
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            l10n.dcaCurrentValue,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: ShareCardColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            tryFmt.format(result.currentValueTry.toDouble()),
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: ShareCardColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Nominal getiri kutusu
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: nominalColor.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: nominalColor.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      hasInflation
+                          ? l10n.shareCardNominalReturn
+                          : l10n.shareCardReturn,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: ShareCardColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        Icon(nominalIcon, color: nominalColor, size: 32),
+                        const SizedBox(width: 8),
                         Text(
-                          hasInflation
-                              ? l10n.shareCardNominalReturn
-                              : l10n.shareCardReturn,
+                          '$nominalSign${pctFmt.format(result.profitLossPercent / 100)}',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Icon(nominalIcon, color: nominalColor, size: 32),
-                            const SizedBox(width: 8),
-                            Text(
-                              '$nominalSign${pctFmt.format(result.profitLossPercent / 100)}',
-                              style: TextStyle(
-                                fontSize: 44,
-                                fontWeight: FontWeight.bold,
-                                color: nominalColor,
-                                height: 1.0,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$nominalSign${tryFmt.format(result.profitLossTry.toDouble())} '
-                          '${result.isProfit ? l10n.shareCardProfit : l10n.shareCardLoss}',
-                          style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 44,
+                            fontWeight: FontWeight.bold,
                             color: nominalColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // DCA detayları
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FF),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFDDE5FF)),
-                    ),
-                    child: Row(
-                      children: [
-                        _MiniStat(
-                          label: l10n.dcaPeriodicAmount,
-                          value: tryFmt.format(
-                            result.periodicAmount.toDouble(),
-                          ),
-                        ),
-                        _MiniStat(
-                          label: l10n.dcaTotalPurchases,
-                          value: result.totalPurchases.toString(),
-                        ),
-                        _MiniStat(
-                          label: l10n.dcaAvgCost,
-                          value: tryFmt.format(
-                            result.averageCostPerUnit.toDouble(),
+                            height: 1.0,
                           ),
                         ),
                       ],
                     ),
-                  ),
-
-                  // Enflasyon bölümü
-                  if (hasInflation) ...[
-                    const SizedBox(height: 12),
-                    _InflationSection(result: result),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$nominalSign${tryFmt.format(result.profitLossTry.toDouble())} '
+                      '${outcome.shareLabel(l10n)}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: nominalColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
-                ],
+                ),
               ),
-            ),
 
-            // ── Footer
-            Container(
-              color: const Color(0xFFF5F5F5),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 13),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    l10n.shareCardDcaFooter,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                      fontWeight: FontWeight.w500,
+              // DCA detayları
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: ShareCardColors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: ShareCardColors.divider),
+                ),
+                child: Row(
+                  children: [
+                    _MiniStat(
+                      label: l10n.dcaPeriodicAmount,
+                      value: tryFmt.format(result.periodicAmount.toDouble()),
                     ),
-                  ),
-                  const Text(
-                    AppBranding.domain,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
+                    _MiniStat(
+                      label: l10n.dcaTotalPurchases,
+                      value: result.totalPurchases.toString(),
                     ),
-                  ),
-                ],
+                    _MiniStat(
+                      label: l10n.dcaAvgCost,
+                      value: tryFmt.format(
+                        result.averageCostPerUnit.toDouble(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+
+              // Enflasyon bölümü
+              if (hasInflation) ...[
+                const SizedBox(height: 12),
+                _InflationSection(result: result),
+              ],
+            ],
+          ),
         ),
-      ),
+
+        // ── Footer
+        Container(
+          color: ShareCardColors.surfaceSubtle,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 13),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                l10n.shareCardDcaFooter,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: ShareCardColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Text(
+                AppBranding.domain,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: BrandColors.navy,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -343,7 +309,10 @@ class _MiniStat extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+            style: const TextStyle(
+              fontSize: 10,
+              color: ShareCardColors.textSecondary,
+            ),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -354,7 +323,7 @@ class _MiniStat extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
+              color: ShareCardColors.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -373,17 +342,18 @@ class _InflationSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final pctFmt = AppFormat.percent(context.localeName);
-    final inflSign = (result.cumulativeInflationPercent ?? 0) >= 0 ? '+' : '';
+    final inflSign = (result.cumulativeInflationPercent ?? 0) > 0 ? '+' : '';
     final realPct = result.realProfitLossPercent!;
-    final realSign = realPct >= 0 ? '+' : '';
-    final realColor = realPct >= 0 ? AppColors.profit : AppColors.loss;
+    final realOutcome = FinancialOutcome.fromPercent(realPct);
+    final realSign = realOutcome.explicitPositiveSign;
+    final realColor = realOutcome.shareColor;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: ShareCardColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDDDDDD)),
+        border: Border.all(color: ShareCardColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,14 +363,14 @@ class _InflationSection extends StatelessWidget {
               const Icon(
                 Icons.insights_outlined,
                 size: 14,
-                color: Color(0xFF757575),
+                color: ShareCardColors.textSecondary,
               ),
               const SizedBox(width: 6),
               Text(
                 l10n.shareCardInflationTitle,
                 style: const TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF757575),
+                  color: ShareCardColors.textSecondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -412,20 +382,23 @@ class _InflationSection extends StatelessWidget {
             children: [
               Text(
                 l10n.shareCardCumulativeInflation,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: ShareCardColors.textSecondary,
+                ),
               ),
               Text(
                 '$inflSign${pctFmt.format(result.cumulativeInflationPercent! / 100)}',
                 style: const TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF666666),
+                  color: ShareCardColors.textSecondary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          const Divider(height: 1, color: Color(0xFFDDDDDD)),
+          const Divider(height: 1, color: ShareCardColors.divider),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -435,7 +408,7 @@ class _InflationSection extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
+                  color: ShareCardColors.textPrimary,
                 ),
               ),
               Text(

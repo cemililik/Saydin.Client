@@ -1,3 +1,5 @@
+import 'package:decimal/decimal.dart';
+
 import '../entities/compare_result.dart';
 
 abstract class ComparisonRepository {
@@ -5,7 +7,7 @@ abstract class ComparisonRepository {
     required List<String> assetSymbols,
     required DateTime buyDate,
     DateTime? sellDate,
-    required num amount,
+    required Decimal amount,
     required String amountType,
     bool includeInflation = false,
   });

@@ -39,6 +39,46 @@ void main() {
       expect(model.isProfit, true);
     });
 
+    test('isProfit yoksa yönü profitLossTry işaretinden türetir', () {
+      final json = _baseJson(priceHistory: [])..remove('isProfit');
+
+      expect(WhatIfResponseModel.fromJson(json).isProfit, isTrue);
+    });
+
+    test('isProfit ile profitLossTry çelişirse payloadı reddeder', () {
+      final json = _baseJson(priceHistory: [])..['isProfit'] = false;
+
+      expect(
+        () => WhatIfResponseModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('isProfit bool değilse payloadı reddeder', () {
+      final json = _baseJson(priceHistory: [])..['isProfit'] = 'yes';
+
+      expect(
+        () => WhatIfResponseModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('sıfır getiri legacy boolean ne olursa olsun neutral kalır', () {
+      for (final rawIsProfit in [true, false]) {
+        final json = {
+          ..._baseJson(priceHistory: []),
+          'profitLossTry': '0',
+          'profitLossPercent': 0,
+          'isProfit': rawIsProfit,
+        };
+
+        final model = WhatIfResponseModel.fromJson(json);
+
+        expect(model.isProfit, isFalse);
+        expect(model.outcome.name, 'neutral');
+      }
+    });
+
     test('sellDate null olduğunda null döner', () {
       final model = WhatIfResponseModel.fromJson(
         _baseJson(priceHistory: [], sellDate: null),
@@ -146,6 +186,42 @@ void main() {
 
       expect(model.cumulativeInflationPercent, closeTo(85.4, 0.001));
       expect(model.realProfitLossPercent, closeTo(-22.7, 0.001));
+    });
+
+    test('zorunlu ve opsiyonel yüzde alanları non-finite olamaz', () {
+      for (final field in [
+        'profitLossPercent',
+        'cumulativeInflationPercent',
+        'realProfitLossPercent',
+      ]) {
+        for (final value in [
+          double.nan,
+          double.infinity,
+          double.negativeInfinity,
+        ]) {
+          expect(
+            () => WhatIfResponseModel.fromJson({
+              ..._baseJson(priceHistory: []),
+              field: value,
+            }),
+            throwsFormatException,
+            reason: '$field=$value reddedilmeli',
+          );
+        }
+      }
+    });
+
+    test('yüzde alanlarında sıfır ve çok büyük finite değerler geçerlidir', () {
+      final model = WhatIfResponseModel.fromJson({
+        ..._baseJson(priceHistory: []),
+        'profitLossPercent': double.maxFinite,
+        'cumulativeInflationPercent': 0.0,
+        'realProfitLossPercent': -double.maxFinite,
+      });
+
+      expect(model.profitLossPercent, double.maxFinite);
+      expect(model.cumulativeInflationPercent, 0.0);
+      expect(model.realProfitLossPercent, -double.maxFinite);
     });
 
     test('inflationDataAsOf null gelince null döner', () {

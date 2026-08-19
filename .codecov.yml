@@ -1,0 +1,20 @@
+codecov:
+  require_ci_to_pass: true
+
+ignore:
+  - "lib/l10n/app_localizations.dart"
+  - "lib/l10n/app_localizations_*.dart"
+
+coverage:
+  precision: 2
+  round: down
+  range: "40...60"
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 0%
+    patch:
+      default:
+        target: 50%
+        threshold: 0%

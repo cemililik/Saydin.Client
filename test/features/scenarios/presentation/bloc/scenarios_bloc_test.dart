@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +30,7 @@ void main() {
 
   setUp(() {
     registerFallbackValue(DateTime(2020));
+    registerFallbackValue(Decimal.zero);
     registerFallbackValue(ScenarioType.whatIf);
     mockGetScenarios = MockGetScenarios();
     mockSaveScenario = MockSaveScenario();
@@ -70,6 +73,69 @@ void main() {
   );
 
   group('ScenariosBloc — ScenarioSaveRequested', () {
+    late Completer<SavedScenario> concurrentSave;
+    late int concurrentSaveCalls;
+
+    blocTest<ScenariosBloc, ScenariosState>(
+      'eşzamanlı aynı save isteklerini serialize eder ve tek POST yapar',
+      build: buildBloc,
+      seed: () => ScenariosLoaded(const []),
+      setUp: () {
+        concurrentSave = Completer<SavedScenario>();
+        concurrentSaveCalls = 0;
+        when(
+          () => mockSaveScenario(
+            assetSymbol: any(named: 'assetSymbol'),
+            assetDisplayName: any(named: 'assetDisplayName'),
+            buyDate: any(named: 'buyDate'),
+            sellDate: any(named: 'sellDate'),
+            amount: any(named: 'amount'),
+            amountType: any(named: 'amountType'),
+            type: any(named: 'type'),
+            extraData: any(named: 'extraData'),
+          ),
+        ).thenAnswer((_) {
+          concurrentSaveCalls++;
+          return concurrentSave.future;
+        });
+      },
+      act: (bloc) async {
+        final request = ScenarioSaveRequested(
+          assetSymbol: 'USDTRY',
+          assetDisplayName: 'Dolar/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: Decimal.fromInt(10000),
+          amountType: 'try',
+        );
+        bloc
+          ..add(request)
+          ..add(request);
+        await Future<void>.delayed(Duration.zero);
+        expect(concurrentSaveCalls, 1);
+        concurrentSave.complete(existingScenario);
+      },
+      expect: () => [
+        isA<ScenariosSaving>(),
+        isA<ScenariosSaved>(),
+        isA<ScenariosDuplicate>(),
+      ],
+      verify: (_) {
+        verify(
+          () => mockSaveScenario(
+            assetSymbol: any(named: 'assetSymbol'),
+            assetDisplayName: any(named: 'assetDisplayName'),
+            buyDate: any(named: 'buyDate'),
+            sellDate: any(named: 'sellDate'),
+            amount: any(named: 'amount'),
+            amountType: any(named: 'amountType'),
+            type: any(named: 'type'),
+            extraData: any(named: 'extraData'),
+          ),
+        ).called(1);
+      },
+    );
+
     blocTest<ScenariosBloc, ScenariosState>(
       'aynı senaryo varsa ScenariosDuplicate emit edilir ve API çağrılmaz',
       build: () =>
@@ -81,7 +147,7 @@ void main() {
           assetDisplayName: 'Dolar/TL',
           buyDate: DateTime(2020, 1, 1),
           sellDate: DateTime(2021, 1, 1),
-          amount: 10000,
+          amount: Decimal.fromInt(10000),
           amountType: 'try',
         ),
       ),
@@ -111,7 +177,7 @@ void main() {
           assetDisplayName: 'Dolar/TL',
           buyDate: DateTime(2020, 1, 1),
           sellDate: DateTime(2021, 1, 1),
-          amount: 10000,
+          amount: Decimal.fromInt(10000),
           amountType: 'try',
         ),
       ),
@@ -156,7 +222,7 @@ void main() {
           assetDisplayName: 'Dolar/TL',
           buyDate: DateTime(2020, 1, 1),
           sellDate: DateTime(2021, 1, 1),
-          amount: 5000, // farklı miktar → duplicate değil
+          amount: Decimal.fromInt(5000), // farklı miktar → duplicate değil
           amountType: 'try',
         ),
       ),
@@ -202,7 +268,7 @@ void main() {
           assetSymbol: 'BTC', // farklı sembol → duplicate değil
           assetDisplayName: 'Bitcoin',
           buyDate: DateTime(2021, 1, 1),
-          amount: 5000,
+          amount: Decimal.fromInt(5000),
           amountType: 'try',
         ),
       ),
@@ -239,7 +305,7 @@ void main() {
           assetDisplayName: 'Dolar/TL',
           buyDate: DateTime(2020, 1, 1),
           sellDate: DateTime(2021, 1, 1),
-          amount: 10000, // aynı tutar ama...
+          amount: Decimal.fromInt(10000), // aynı tutar ama...
           amountType: 'try',
           type: ScenarioType.portfolio, // ...farklı type → duplicate DEĞİL
         ),
@@ -270,7 +336,7 @@ void main() {
           assetSymbol: 'BTC',
           assetDisplayName: 'Bitcoin',
           buyDate: DateTime(2021, 1, 1),
-          amount: 5000,
+          amount: Decimal.fromInt(5000),
           amountType: 'try',
         ),
       ),
@@ -283,23 +349,9 @@ void main() {
     );
 
     blocTest<ScenariosBloc, ScenariosState>(
-      'geçersiz (NaN) tutar Decimal.zero\'a coerce edilmez → yanlış duplicate olmaz',
+      'Decimal tutar use case katmanına double dönüşümü olmadan taşınır',
       build: buildBloc,
-      // Tutarı 0 olan, diğer tüm alanları eşleşen mevcut bir senaryo. Eski
-      // `?? Decimal.zero` davranışında NaN→0 bununla yanlış-pozitif duplicate
-      // yapardı; yeni davranışta NaN→null → duplicate atlanır, kaydetmeye gider.
-      seed: () => ScenariosLoaded([
-        SavedScenario(
-          id: 'zero-amt',
-          assetSymbol: 'USDTRY',
-          assetDisplayName: 'Dolar/TL',
-          buyDate: DateTime(2020, 1, 1),
-          sellDate: DateTime(2021, 1, 1),
-          amount: Decimal.zero,
-          amountType: 'try',
-          createdAt: DateTime(2026, 1, 1),
-        ),
-      ]),
+      seed: () => ScenariosLoaded(const []),
       setUp: () => stubSaveAny(
         SavedScenario(
           id: 'new-id',
@@ -307,7 +359,7 @@ void main() {
           assetDisplayName: 'Dolar/TL',
           buyDate: DateTime(2020, 1, 1),
           sellDate: DateTime(2021, 1, 1),
-          amount: Decimal.fromInt(5000),
+          amount: Decimal.parse('10000.25'),
           amountType: 'try',
           createdAt: DateTime(2026, 1, 1),
         ),
@@ -318,17 +370,47 @@ void main() {
           assetDisplayName: 'Dolar/TL',
           buyDate: DateTime(2020, 1, 1),
           sellDate: DateTime(2021, 1, 1),
-          amount:
-              double.nan, // parse edilemez → Decimal.zero'a coerce EDİLMEMELİ
+          amount: Decimal.parse('10000.25'),
           amountType: 'try',
         ),
       ),
-      // Duplicate DEĞİL → kaydetmeye gider (ScenariosDuplicate emit edilmez).
       expect: () => [isA<ScenariosSaving>(), isA<ScenariosSaved>()],
+      verify: (_) {
+        verify(
+          () => mockSaveScenario(
+            assetSymbol: any(named: 'assetSymbol'),
+            assetDisplayName: any(named: 'assetDisplayName'),
+            buyDate: any(named: 'buyDate'),
+            sellDate: any(named: 'sellDate'),
+            amount: Decimal.parse('10000.25'),
+            amountType: any(named: 'amountType'),
+            type: any(named: 'type'),
+            extraData: any(named: 'extraData'),
+          ),
+        ).called(1);
+      },
     );
   });
 
   group('ScenariosBloc — ScenariosRequested', () {
+    test('completion is resolved only after the request finishes', () async {
+      final response = Completer<List<SavedScenario>>();
+      final completion = Completer<void>();
+      when(
+        () => mockGetScenarios(plan: any(named: 'plan')),
+      ).thenAnswer((_) => response.future);
+      final bloc = buildBloc();
+
+      bloc.add(ScenariosRequested(completion: completion));
+      await Future<void>.delayed(Duration.zero);
+      expect(completion.isCompleted, isFalse);
+
+      response.complete([existingScenario]);
+      await completion.future;
+      expect(bloc.state, isA<ScenariosLoaded>());
+      await bloc.close();
+    });
+
     blocTest<ScenariosBloc, ScenariosState>(
       'başarılı yükleme: Loading → Loaded',
       build: buildBloc,
@@ -401,6 +483,93 @@ void main() {
   });
 
   group('ScenariosBloc — ScenarioDeleteRequested', () {
+    test(
+      'eşzamanlı silmeleri serialize eder ve rollback son state\'i bozmaz',
+      () async {
+        final firstScenario = existingScenario;
+        final secondScenario = SavedScenario(
+          id: 'def-456',
+          assetSymbol: 'EURTRY',
+          assetDisplayName: 'Euro/TL',
+          buyDate: DateTime(2020, 1, 1),
+          sellDate: DateTime(2021, 1, 1),
+          amount: Decimal.fromInt(5000),
+          amountType: 'try',
+          createdAt: DateTime(2026, 1, 2),
+        );
+        final firstResponse = Completer<void>();
+        final secondResponse = Completer<void>();
+        final firstStarted = Completer<void>();
+        final secondStarted = Completer<void>();
+        final firstCompletion = Completer<bool>();
+        final secondCompletion = Completer<bool>();
+        when(() => mockDeleteScenario(any())).thenAnswer((invocation) {
+          final id = invocation.positionalArguments.single as String;
+          if (id == firstScenario.id) {
+            firstStarted.complete();
+            return firstResponse.future;
+          }
+          secondStarted.complete();
+          return secondResponse.future;
+        });
+        final bloc = buildBloc();
+        bloc.emit(ScenariosLoaded([firstScenario, secondScenario]));
+
+        bloc.add(
+          ScenarioDeleteRequested(
+            firstScenario.id,
+            completion: firstCompletion,
+          ),
+        );
+        await firstStarted.future;
+        bloc.add(
+          ScenarioDeleteRequested(
+            secondScenario.id,
+            completion: secondCompletion,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+
+        expect(secondStarted.isCompleted, isFalse);
+        expect(bloc.state.scenarios, [secondScenario]);
+
+        firstResponse.complete();
+        await expectLater(firstCompletion.future, completion(isTrue));
+        await secondStarted.future;
+        expect(bloc.state.scenarios, isEmpty);
+
+        secondResponse.completeError(const NoInternetError());
+        await expectLater(secondCompletion.future, completion(isFalse));
+        expect(bloc.state.scenarios, [secondScenario]);
+        await bloc.close();
+      },
+    );
+
+    test('completion reports the confirmed backend outcome', () async {
+      final success = Completer<bool>();
+      when(() => mockDeleteScenario(any())).thenAnswer((_) async {});
+      final bloc = buildBloc();
+      bloc.emit(ScenariosLoaded([existingScenario]));
+
+      bloc.add(ScenarioDeleteRequested('abc-123', completion: success));
+
+      await expectLater(success.future, completion(isTrue));
+      await bloc.close();
+    });
+
+    test('completion is false and the optimistic delete rolls back', () async {
+      final failure = Completer<bool>();
+      when(() => mockDeleteScenario(any())).thenThrow(const NoInternetError());
+      final bloc = buildBloc();
+      bloc.emit(ScenariosLoaded([existingScenario]));
+
+      bloc.add(ScenarioDeleteRequested('abc-123', completion: failure));
+
+      await expectLater(failure.future, completion(isFalse));
+      expect(bloc.state.scenarios, [existingScenario]);
+      await bloc.close();
+    });
+
     blocTest<ScenariosBloc, ScenariosState>(
       'başarılı silme: optimistic kaldırma, listeden düşer',
       build: buildBloc,
@@ -482,7 +651,7 @@ void main() {
           assetDisplayName: 'Dolar/TL',
           buyDate: DateTime(2020, 1, 1),
           sellDate: DateTime(2021, 1, 1),
-          amount: 10000,
+          amount: Decimal.fromInt(10000),
           amountType: 'try',
           // extraData yok → normal mod; reverse'den farklı → duplicate DEĞİL
         ),
@@ -500,7 +669,7 @@ void main() {
           assetDisplayName: 'Dolar/TL',
           buyDate: DateTime(2020, 1, 1),
           sellDate: DateTime(2021, 1, 1),
-          amount: 10000,
+          amount: Decimal.fromInt(10000),
           amountType: 'try',
           extraData: const {'mode': 'reverse'},
         ),

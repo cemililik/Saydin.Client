@@ -5,6 +5,8 @@ description: Scaffold a new feature in lib/features/<name>/ with CLAUDE.md-compl
 
 Saydın'a yeni bir feature eklemek için **CLAUDE.md'deki katman düzenine** birebir uyan iskelet üret.
 
+Para ve hata akışında kanonik [financial/error contract](../../../docs/engineering/financial-error-contract.md) zorunludur.
+
 ## Önce sor (sırayla, tek tek)
 
 1. **Feature adı** (snake_case, örn. `inflation_compare`)
@@ -37,11 +39,12 @@ lib/features/<feature>/
 
 ## İskelet üretimi sırasında uy
 
-- **Domain entity:** `Equatable` ile genişlet, alanları `final`, `props` tanımla. Para alanları `num` (asla `double`). `import 'package:flutter/...'` YASAK.
-- **Repository interface:** `Future<Result<Entity, AppError>>` döndüren metotlar.
-- **Repository impl:** `injectable` değil; manuel — `lib/core/di/injection.dart`'a `sl.registerLazySingleton<IFooRepo>(() => FooRepoImpl(sl()));` satırı ekle.
-- **Use case:** Tek metot (`call`), tek sorumluluk. `FailureOrSuccess<T>` döndür.
-- **BLoC:** Use case'i `final` alan olarak tut. Event handler'lar `emit(state.copyWith(status: loading))` → use case → `emit(state.copyWith(status: success, data: ...))` deseni.
+- **Domain entity:** `Equatable` ile genişlet, alanları `final`, `props` tanımla. Para alanları `Decimal` (`num`/`double` değil). `import 'package:flutter/...'` YASAK.
+- **Repository interface:** `Future<Entity>` döndürür; beklenen hataları typed `AppError` olarak fırlatır.
+- **Repository impl:** Transport/parse hatalarını data katmanında typed
+  `AppError`a map et. DI manuel: `sl.registerLazySingleton<FooRepository>(() => FooRepositoryImpl(sl()));`.
+- **Use case:** Tek `Future<T> call(...)` metodu, tek sorumluluk; repository'nin `AppError` sözleşmesini korur.
+- **BLoC:** Use case'i `final` alan olarak tut. `try` içinde loading → await use case → success; `on AppError catch` ile failure emit et; beklenmedik hatayı `UnknownError(cause: error)` olarak sar.
 - **State:** `<feature>_status.dart` enum'u (`initial`, `loading`, `success`, `failure`) + `copyWith`. Form input alanları state'in içinde — hata geldiğinde kullanıcı verisi kaybolmaz.
 - **Page:** `BlocProvider<XBloc>(create: (_) => sl(), child: ...)`. `BlocConsumer` ile state'i dinle, `listenWhen` race önler.
 - **L10n:** Yeni key'leri **hem `lib/l10n/app_tr.arb` hem `lib/l10n/app_en.arb`** dosyalarına ekle. Placeholder varsa her iki dosyada da tanımla. `flutter gen-l10n` çalıştır.
@@ -54,7 +57,7 @@ Detay için [l10n-add](../l10n-add/SKILL.md) skill'ini kullan.
 
 ```dart
 // Repositories
-sl.registerLazySingleton<IFooRepository>(
+sl.registerLazySingleton<FooRepository>(
   () => FooRepositoryImpl(sl<ApiClient>()),
 );
 
@@ -79,7 +82,7 @@ test/features/<feature>/
 blocTest<FooBloc, FooState>(
   'success path',
   setUp: () {
-    when(() => mockUseCase(any())).thenAnswer((_) async => Result.ok(fixture));
+    when(() => mockUseCase(any())).thenAnswer((_) async => fixture);
   },
   build: () => FooBloc(mockUseCase),
   act: (b) => b.add(FooRequested(...)),
@@ -106,5 +109,6 @@ blocTest<FooBloc, FooState>(
 - Hardcoded string / renk / URL
 - `print()` (`debugPrint` kullan)
 - `double` para tutarı için
+- `Result` / `FailureOrSuccess` gibi repoda tanımlı olmayan ikinci hata modeli
 
 Yasak ihlali şüphesi varsa [yasak-check](../yasak-check/SKILL.md) skill'i ile diff'i denetle.

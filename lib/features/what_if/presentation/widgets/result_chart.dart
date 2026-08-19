@@ -1,19 +1,20 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/features/what_if/domain/entities/what_if_result.dart';
 
 class ResultChart extends StatefulWidget {
   final List<ChartPoint> priceHistory;
-  final bool isProfit;
+  final FinancialOutcome outcome;
 
   const ResultChart({
     super.key,
     required this.priceHistory,
-    required this.isProfit,
+    required this.outcome,
   });
 
   /// WhatIfResult'tan kolayca oluşturmak için factory-benzeri constructor.
@@ -21,7 +22,7 @@ class ResultChart extends StatefulWidget {
       ResultChart(
         key: key,
         priceHistory: result.priceHistory,
-        isProfit: result.isProfit,
+        outcome: result.outcome,
       );
 
   @override
@@ -30,6 +31,7 @@ class ResultChart extends StatefulWidget {
 
 class _ResultChartState extends State<ResultChart> {
   bool _isRangeMode = false;
+  bool _showData = false;
   int? _fromIdx;
   int? _toIdx;
 
@@ -78,8 +80,18 @@ class _ResultChartState extends State<ResultChart> {
     if (history.length < 2) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final color = widget.isProfit ? AppColors.profit : AppColors.loss;
+    final color = widget.outcome.color(context);
     final origin = history.first.date;
+    final first = history.first;
+    final last = history.last;
+    final l10n = context.l10n;
+    final summary = l10n.priceChartSummary(
+      _dateFmt.format(first.date),
+      _priceFmt.format(first.price.toDouble()),
+      _dateFmt.format(last.date),
+      _priceFmt.format(last.price.toDouble()),
+      FinancialOutcome.fromAmount(last.price - first.price).title(l10n),
+    );
 
     final spots = history
         .map(
@@ -118,80 +130,91 @@ class _ResultChartState extends State<ResultChart> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          height: 96,
-          child: LineChart(
-            LineChartData(
-              minY: minY - yPad,
-              maxY: maxY + yPad,
-              clipData: const FlClipData.all(),
-              gridData: const FlGridData(show: false),
-              titlesData: const FlTitlesData(show: false),
-              borderData: FlBorderData(show: false),
-              rangeAnnotations: RangeAnnotations(
-                verticalRangeAnnotations: [
-                  if (hasRange)
-                    VerticalRangeAnnotation(
-                      x1: spots[normFrom!].x,
-                      x2: spots[normTo!].x,
-                      color: color.withValues(alpha: 0.12),
-                    ),
-                ],
-              ),
-              extraLinesData: ExtraLinesData(
-                verticalLines: [
-                  if (_fromIdx != null)
-                    VerticalLine(
-                      x: spots[_fromIdx!].x,
-                      color: vLineColor,
-                      strokeWidth: 1,
-                      dashArray: [4, 4],
-                    ),
-                  if (_toIdx != null && _toIdx != _fromIdx)
-                    VerticalLine(
-                      x: spots[_toIdx!].x,
-                      color: vLineColor,
-                      strokeWidth: 1,
-                      dashArray: [4, 4],
-                    ),
-                ],
-              ),
-              lineTouchData: LineTouchData(
-                handleBuiltInTouches: !_isRangeMode,
-                touchCallback: _onTouch,
-                touchTooltipData: LineTouchTooltipData(
-                  getTooltipColor: (_) => tooltipBg,
-                  tooltipRoundedRadius: 8,
-                  getTooltipItems: (touchedSpots) => touchedSpots.map((s) {
-                    final date = origin.add(Duration(days: s.x.toInt()));
-                    return LineTooltipItem(
-                      '${_dateFmt.format(date)}\n${_priceFmt.format(s.y)}',
-                      TextStyle(color: tooltipFg, fontSize: 11, height: 1.6),
-                    );
-                  }).toList(),
-                ),
-              ),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: spots,
-                  isCurved: true,
-                  curveSmoothness: 0.25,
-                  color: color,
-                  barWidth: 1.8,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        color.withValues(alpha: 0.18),
-                        color.withValues(alpha: 0.0),
-                      ],
+        Semantics(
+          container: true,
+          image: true,
+          label: summary,
+          child: ExcludeSemantics(
+            child: SizedBox(
+              height: 96,
+              child: LineChart(
+                LineChartData(
+                  minY: minY - yPad,
+                  maxY: maxY + yPad,
+                  clipData: const FlClipData.all(),
+                  gridData: const FlGridData(show: false),
+                  titlesData: const FlTitlesData(show: false),
+                  borderData: FlBorderData(show: false),
+                  rangeAnnotations: RangeAnnotations(
+                    verticalRangeAnnotations: [
+                      if (hasRange)
+                        VerticalRangeAnnotation(
+                          x1: spots[normFrom!].x,
+                          x2: spots[normTo!].x,
+                          color: color.withValues(alpha: 0.12),
+                        ),
+                    ],
+                  ),
+                  extraLinesData: ExtraLinesData(
+                    verticalLines: [
+                      if (_fromIdx != null)
+                        VerticalLine(
+                          x: spots[_fromIdx!].x,
+                          color: vLineColor,
+                          strokeWidth: 1,
+                          dashArray: [4, 4],
+                        ),
+                      if (_toIdx != null && _toIdx != _fromIdx)
+                        VerticalLine(
+                          x: spots[_toIdx!].x,
+                          color: vLineColor,
+                          strokeWidth: 1,
+                          dashArray: [4, 4],
+                        ),
+                    ],
+                  ),
+                  lineTouchData: LineTouchData(
+                    handleBuiltInTouches: !_isRangeMode,
+                    touchCallback: _onTouch,
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (_) => tooltipBg,
+                      tooltipRoundedRadius: 8,
+                      getTooltipItems: (touchedSpots) => touchedSpots.map((s) {
+                        final date = origin.add(Duration(days: s.x.toInt()));
+                        return LineTooltipItem(
+                          '${_dateFmt.format(date)}\n${_priceFmt.format(s.y)}',
+                          TextStyle(
+                            color: tooltipFg,
+                            fontSize: 11,
+                            height: 1.6,
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      curveSmoothness: 0.25,
+                      color: color,
+                      barWidth: 1.8,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            color.withValues(alpha: 0.18),
+                            color.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -199,7 +222,70 @@ class _ResultChartState extends State<ResultChart> {
           const SizedBox(height: 8),
           _RangeInfoBar(from: history[normFrom!], to: history[normTo!]),
         ],
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            key: const ValueKey('price-chart-data-toggle'),
+            onPressed: () => setState(() => _showData = !_showData),
+            icon: Icon(_showData ? Icons.expand_less : Icons.table_rows),
+            label: Text(_showData ? l10n.chartDataHide : l10n.chartDataShow),
+          ),
+        ),
+        if (_showData)
+          _PriceDataTable(
+            history: history,
+            dateFormatter: _dateFmt,
+            priceFormatter: _priceFmt,
+          ),
       ],
+    );
+  }
+}
+
+class _PriceDataTable extends StatelessWidget {
+  final List<ChartPoint> history;
+  final DateFormat dateFormatter;
+  final NumberFormat priceFormatter;
+
+  const _PriceDataTable({
+    required this.history,
+    required this.dateFormatter,
+    required this.priceFormatter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 240),
+      child: Scrollbar(
+        child: ListView.separated(
+          key: const ValueKey('price-chart-data-list'),
+          primary: false,
+          shrinkWrap: true,
+          itemCount: history.length,
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final point = history[index];
+            final value = l10n.chartDataPoint(
+              dateFormatter.format(point.date),
+              priceFormatter.format(point.price.toDouble()),
+            );
+            return Semantics(
+              container: true,
+              label: value,
+              excludeSemantics: true,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Text(value),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -219,24 +305,20 @@ class _RangeInfoBar extends StatelessWidget {
     final toPrice = to.price.toDouble();
     final delta = toPrice - fromPrice;
     final pct = fromPrice == 0 ? 0.0 : delta / fromPrice * 100;
-    final isUp = delta >= 0;
-    final color = isUp ? AppColors.profit : AppColors.loss;
+    final outcome = FinancialOutcome.fromPercent(delta);
+    final color = outcome.color(context);
     final theme = Theme.of(context);
     final locale = context.localeName;
     final dateFmt = AppFormat.date(locale);
 
     final pctStr =
-        '${isUp ? "+" : ""}${AppFormat.percent(locale).format(pct / 100)}';
+        '${outcome.explicitPositiveSign}${AppFormat.percent(locale).format(pct / 100)}';
 
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Row(
         children: [
-          Icon(
-            isUp ? Icons.trending_up : Icons.trending_down,
-            color: color,
-            size: 14,
-          ),
+          Icon(outcome.icon, color: color, size: 14),
           const SizedBox(width: 6),
           Expanded(
             child: Text(

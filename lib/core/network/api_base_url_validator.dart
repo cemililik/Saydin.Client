@@ -6,12 +6,16 @@ import 'package:flutter/foundation.dart';
 /// Release modunda `https://` zorunludur — düz HTTP ile gönderilen istekler
 /// MITM saldırılarına açıktır ve KVKK Madde 12 (veri güvenliği) ile App Store
 /// / Play Store iletim güvenliği kurallarını ihlal eder.
+/// Release/profile build'lerde yalnız HTTPS ve default port kabul edilir.
+/// Kalıcı production/staging host allowlist'i, onaylı origin kararıyla birlikte
+/// ele alınacaktır; bu validator doğrulanmamış bir hostname uydurmaz.
 ///
 /// Debug modunda `http://` yalnızca yerel geliştirme host'larına izin verilir
-/// (`localhost`, `127.0.0.1`, `10.0.2.2` — Android emulator host loopback,
-/// `*.ngrok-free.app`, `*.ngrok.app`, `*.trycloudflare.com`). Bu beyaz
-/// listenin amacı: dev ngrok URL'i bir typo nedeniyle üçüncü taraf domain'e
-/// dönerse erken sinyal vermek.
+/// (`localhost`, `127.0.0.1`, `10.0.2.2` — Android emulator host loopback).
+/// Tüneller ve LAN servisleri HTTPS kullanmak zorundadır. Böylece Dart
+/// doğrulaması, Android debug network-security allowlist'i ile aynı sözleşmeyi
+/// uygular; platformlardan birinde çalışan cleartext URL diğerinde sessizce
+/// kırılmaz.
 class ApiBaseUrlValidator {
   const ApiBaseUrlValidator._();
 
@@ -21,13 +25,6 @@ class ApiBaseUrlValidator {
     '127.0.0.1',
     '10.0.2.2',
   };
-
-  /// Debug modda cleartext'e izin verilen host suffix'leri.
-  static const _devCleartextHostSuffixes = <String>[
-    '.ngrok-free.app',
-    '.ngrok.app',
-    '.trycloudflare.com',
-  ];
 
   /// `baseUrl`'i doğrular. Başarısızlıkta `StateError` fırlatır — `assert`
   /// release build'te derlenmez, dolayısıyla fail-loud doğrulama
@@ -62,6 +59,15 @@ class ApiBaseUrlValidator {
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
       throw StateError('API_BASE_URL is not a valid absolute URL: $baseUrl');
     }
+    if (uri.userInfo.isNotEmpty ||
+        (uri.path.isNotEmpty && uri.path != '/') ||
+        uri.hasQuery ||
+        uri.hasFragment) {
+      throw StateError(
+        'API_BASE_URL must be an origin-only URL without user info, path, '
+        'query, or fragment. Got: $baseUrl',
+      );
+    }
 
     final scheme = uri.scheme.toLowerCase();
     if (scheme != 'https' && scheme != 'http') {
@@ -70,7 +76,16 @@ class ApiBaseUrlValidator {
       );
     }
 
-    if (scheme == 'https') return;
+    final host = uri.host.toLowerCase();
+    if (scheme == 'https') {
+      if ((isRelease || isProfile) && uri.port != 443) {
+        throw StateError(
+          'API_BASE_URL must use the default HTTPS port in non-debug builds. '
+          'Got: ${uri.port}',
+        );
+      }
+      return;
+    }
 
     // HTTP — sadece debug mod + tanımlı dev host'lar. Profile build
     // de production'a yakın (release optimizasyonları + observatory);
@@ -81,16 +96,11 @@ class ApiBaseUrlValidator {
       );
     }
 
-    final host = uri.host.toLowerCase();
-    final isAllowedHost =
-        _devCleartextHosts.contains(host) ||
-        _devCleartextHostSuffixes.any(host.endsWith);
-
-    if (!isAllowedHost) {
+    if (!_devCleartextHosts.contains(host)) {
       throw StateError(
         'API_BASE_URL uses http but host is not on the dev cleartext '
-        'allowlist (localhost / 10.0.2.2 / *.ngrok-free.app / '
-        '*.ngrok.app / *.trycloudflare.com). Got: $baseUrl',
+        'allowlist (localhost / 127.0.0.1 / 10.0.2.2). Tunnels and LAN '
+        'hosts must use https. Got: $baseUrl',
       );
     }
   }

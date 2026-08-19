@@ -2,6 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/dca/domain/entities/dca_result.dart';
 import 'package:saydin/features/dca/domain/usecases/calculate_dca.dart';
 import 'package:saydin/features/dca/presentation/bloc/dca_bloc.dart';
@@ -63,21 +64,37 @@ void main() {
     blocTest<DcaBloc, DcaState>(
       'onAssetsRequested_nonEmptyList_emitsDcaAssetsLoaded',
       build: () => DcaBloc(getAssets, calculateDca),
-      setUp: () => when(() => getAssets()).thenAnswer((_) async => [asset]),
+      setUp: () => when(() => getAssets()).thenAnswer(
+        (_) async => [
+          Asset(
+            symbol: 'USDTRY',
+            displayName: 'US Dollar/TL',
+            category: 'currency',
+            firstDate: asset.firstDate,
+            lastDate: asset.lastDate,
+          ),
+        ],
+      ),
       act: (bloc) => bloc.add(const DcaAssetsRequested()),
       expect: () => [isA<DcaAssetsLoading>(), isA<DcaAssetsLoaded>()],
     );
   });
 
-  // F-08-07: WhatIfBloc ile aynı kanonik guard — DcaSuccess'te formInput
-  // zorunlu alanları (startDate/periodicAmount) null olabilir; dil değişimi
-  // replay'i bunları null-check eder. Eski kod savedForm.startDate!/
-  // periodicAmount! ile crash ederdi.
-  group('DcaBloc — DcaLanguageChanged null guard (F-08-07)', () {
+  group('DcaBloc — sonuç snapshot bütünlüğü', () {
     blocTest<DcaBloc, DcaState>(
-      'onLanguageChanged_successWithNullFormFields_fallsBackToAssetsLoadedNoCrash',
+      'dil değişimi sonucu korur ve yeniden hesaplama yapmaz',
       build: () => DcaBloc(getAssets, calculateDca),
-      setUp: () => when(() => getAssets()).thenAnswer((_) async => [asset]),
+      setUp: () => when(() => getAssets()).thenAnswer(
+        (_) async => [
+          Asset(
+            symbol: 'USDTRY',
+            displayName: 'US Dollar/TL',
+            category: 'currency',
+            firstDate: asset.firstDate,
+            lastDate: asset.lastDate,
+          ),
+        ],
+      ),
       seed: () => DcaSuccess(
         assets: [asset],
         result: fixtureResult(),
@@ -86,15 +103,167 @@ void main() {
       ),
       act: (bloc) => bloc.add(const DcaLanguageChanged()),
       expect: () => [
+        isA<DcaSuccess>()
+            .having(
+              (s) => s.result.currentValueTry,
+              'financial result',
+              fixtureResult().currentValueTry,
+            )
+            .having(
+              (s) => s.result.assetDisplayName,
+              'localized result name',
+              'US Dollar/TL',
+            )
+            .having(
+              (s) => s.formInput.selectedSymbol,
+              'selectedSymbol',
+              'USDTRY',
+            ),
+      ],
+      verify: (_) => verifyZeroInteractions(calculateDca),
+    );
+
+    blocTest<DcaBloc, DcaState>(
+      'başarılı sonuçtan sonra periyodik tutar değişikliği sonucu temizler',
+      build: () => DcaBloc(getAssets, calculateDca),
+      seed: () => DcaSuccess(
+        assets: [asset],
+        result: fixtureResult(),
+        formInput: DcaFormInput(
+          selectedSymbol: 'USDTRY',
+          startDate: DateTime.utc(2021),
+          periodicAmount: Decimal.fromInt(100),
+        ),
+      ),
+      act: (bloc) => bloc.add(DcaPeriodicAmountChanged(Decimal.fromInt(200))),
+      expect: () => [
         isA<DcaAssetsLoaded>().having(
-          (s) => s.formInput.selectedSymbol,
-          'selectedSymbol',
-          'USDTRY',
+          (s) => s.formInput.periodicAmount,
+          'periodicAmount',
+          Decimal.fromInt(200),
         ),
       ],
-      // Null-guard'ın amacı: eksik form alanlarında replay (yeniden hesaplama)
-      // YAPILMAMALI — calculateDca'ya hiç dokunulmadığını doğrula.
+    );
+  });
+
+  group('DcaBloc — nullable ve tarih invariantları', () {
+    blocTest<DcaBloc, DcaState>(
+      'opsiyonel endDate null ile gerçekten temizlenir',
+      build: () => DcaBloc(getAssets, calculateDca),
+      seed: () => DcaAssetsLoaded(
+        [asset],
+        formInput: DcaFormInput(
+          selectedSymbol: 'USDTRY',
+          startDate: DateTime.utc(2021),
+          endDate: DateTime.utc(2022),
+        ),
+      ),
+      act: (bloc) => bloc.add(const DcaEndDateChanged(null)),
+      expect: () => [
+        isA<DcaAssetsLoaded>().having(
+          (state) => state.formInput.endDate,
+          'endDate',
+          isNull,
+        ),
+      ],
+    );
+
+    blocTest<DcaBloc, DcaState>(
+      'sembol değişimi tarihleri yeni asset aralığına atomik clamp eder',
+      build: () => DcaBloc(getAssets, calculateDca),
+      seed: () => DcaAssetsLoaded(
+        [
+          asset,
+          Asset(
+            symbol: 'NEW',
+            displayName: 'New',
+            category: 'currency',
+            firstDate: DateTime.utc(2023, 1, 1),
+            lastDate: DateTime.utc(2023, 12, 31),
+          ),
+        ],
+        formInput: DcaFormInput(
+          selectedSymbol: 'USDTRY',
+          startDate: DateTime.utc(2021),
+          endDate: DateTime.utc(2022),
+        ),
+      ),
+      act: (bloc) => bloc.add(const DcaSymbolChanged('NEW')),
+      expect: () => [
+        isA<DcaAssetsLoaded>()
+            .having(
+              (state) => state.formInput.startDate,
+              'startDate',
+              DateTime.utc(2023, 1, 1),
+            )
+            .having(
+              (state) => state.formInput.endDate,
+              'endDate',
+              DateTime.utc(2023, 1, 1),
+            ),
+      ],
+    );
+
+    blocTest<DcaBloc, DcaState>(
+      'ters tarih aralığı domain çağrısına ulaşmaz',
+      build: () => DcaBloc(getAssets, calculateDca),
+      seed: () => DcaAssetsLoaded([asset]),
+      act: (bloc) => bloc.add(
+        DcaCalculateRequested(
+          assetSymbol: 'USDTRY',
+          startDate: DateTime.utc(2022),
+          endDate: DateTime.utc(2021),
+          periodicAmount: Decimal.fromInt(100),
+          period: 'monthly',
+        ),
+      ),
+      expect: () => const <DcaState>[],
       verify: (_) => verifyZeroInteractions(calculateDca),
     );
   });
+
+  blocTest<DcaBloc, DcaState>(
+    'replay tanımsız period ile SegmentedButton sözleşmesini atlayamaz',
+    build: () => DcaBloc(getAssets, calculateDca),
+    seed: () => DcaAssetsLoaded([asset]),
+    act: (bloc) => bloc.add(
+      DcaReplayRequested(
+        assetSymbol: 'USDTRY',
+        startDate: DateTime.utc(2021),
+        periodicAmount: Decimal.one,
+        period: 'daily',
+      ),
+    ),
+    expect: () => [
+      isA<DcaFailure>().having(
+        (state) => state.error,
+        'typed replay error',
+        isA<InvalidScenarioReplayError>(),
+      ),
+    ],
+    verify: (_) => verifyZeroInteractions(calculateDca),
+  );
+
+  blocTest<DcaBloc, DcaState>(
+    'replay TRY dışı amountType ile TL ekran sözleşmesini atlayamaz',
+    build: () => DcaBloc(getAssets, calculateDca),
+    seed: () => DcaAssetsLoaded([asset]),
+    act: (bloc) => bloc.add(
+      DcaReplayRequested(
+        assetSymbol: 'USDTRY',
+        startDate: DateTime.utc(2021),
+        periodicAmount: Decimal.one,
+        period: 'monthly',
+        amountType: 'units',
+      ),
+    ),
+    expect: () => [
+      isA<DcaFailure>().having(
+        (state) => state.error,
+        'typed replay error',
+        isA<InvalidScenarioReplayError>(),
+      ),
+    ],
+    verify: (_) => verifyZeroInteractions(calculateDca),
+  );
 }

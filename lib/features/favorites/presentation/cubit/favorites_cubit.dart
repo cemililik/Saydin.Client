@@ -1,16 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/error_reporter.dart';
 import 'package:saydin/features/favorites/domain/repositories/favorites_repository.dart';
+
+enum FavoritesPersistenceFeedback { saveFailed }
 
 class FavoritesCubit extends Cubit<Set<String>> {
   static const maxFavorites = 5;
 
   final FavoritesRepository _repository;
   final ErrorReporter _reporter;
+  final _feedbackController =
+      StreamController<FavoritesPersistenceFeedback>.broadcast();
 
   FavoritesCubit(this._repository, {ErrorReporter? reporter})
     : _reporter = reporter ?? const ErrorReporter(),
       super(const {});
+
+  /// Optimistic değişiklik disk/depo katmanına yazılamadığında, rollback'e ek
+  /// olarak arayüze bir kez bildirim gönderir.
+  Stream<FavoritesPersistenceFeedback> get feedbacks =>
+      _feedbackController.stream;
 
   Future<void> load() async {
     try {
@@ -51,6 +62,7 @@ class FavoritesCubit extends Cubit<Set<String>> {
       // `identical` ile araya emit girip girmediğini kontrol et — girmişse
       // rollback'i atla (en güncel niyet kazanır), hata yine raporlanır.
       if (identical(state, updated)) emit(previous);
+      _feedbackController.add(FavoritesPersistenceFeedback.saveFailed);
       await _reporter.report(e, st, context: 'favorites_toggle');
     }
   }
@@ -58,4 +70,10 @@ class FavoritesCubit extends Cubit<Set<String>> {
   bool isFavorite(String symbol) => state.contains(symbol);
 
   bool get isFull => state.length >= maxFavorites;
+
+  @override
+  Future<void> close() async {
+    await _feedbackController.close();
+    return super.close();
+  }
 }

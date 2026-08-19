@@ -1,9 +1,11 @@
-import 'package:decimal/decimal.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:saydin/core/constants/app_colors.dart';
+import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_colors.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
@@ -34,12 +36,12 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
   String? _cachedLocale;
 
   String _pctSignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_pctFormatter.format(v / 100)}';
   }
 
   String _trySignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_tryFormatter.format(v)}';
   }
 
@@ -81,8 +83,10 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final color = result.isProfit ? AppColors.profit : AppColors.loss;
-    final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
+    final financialColors = context.financialColors;
+    final outcome = result.outcome;
+    final color = outcome.color(context);
+    final icon = outcome.icon;
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -95,13 +99,62 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (result.hasPartialFailure) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.portfolioPartialResult,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onErrorContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.portfolioPartialResultDetail,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onErrorContainer,
+                              ),
+                        ),
+                        const SizedBox(height: 6),
+                        ...result.failures.map(
+                          (failure) => Text(
+                            '\u2022 ${failure.item.assetDisplayName}: '
+                            '${failure.error.localizedMessage(l10n)}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onErrorContainer,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // ── Başlık ────────────────────────────────────────────────
                 Row(
                   children: [
                     Icon(icon, color: color, size: 28),
                     const SizedBox(width: 8),
                     Text(
-                      result.isProfit ? l10n.profit : l10n.loss,
+                      outcome.title(l10n),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: color,
                         fontWeight: FontWeight.bold,
@@ -125,7 +178,7 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                   bold: true,
                 ),
                 _AnimatedRow(
-                  result.isProfit ? l10n.profitLabel : l10n.lossLabel,
+                  outcome.amountLabel(l10n),
                   result.totalProfitLossTry.toDouble(),
                   formatter: _tryFormatter.format,
                   valueColor: color,
@@ -158,9 +211,9 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                     l10n.portfolioRealReturn,
                     (result.totalRealProfitLossPercent ?? 0).toDouble(),
                     formatter: _pctSignedFormatter,
-                    valueColor: (result.totalRealProfitLossPercent ?? 0) >= 0
-                        ? AppColors.profit
-                        : AppColors.loss,
+                    valueColor: FinancialOutcome.fromPercent(
+                      result.totalRealProfitLossPercent ?? 0,
+                    ).color(context),
                     bold: true,
                   ),
                   if (result.totalRealProfitLossTry != null)
@@ -168,9 +221,9 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                       l10n.portfolioRealProfitLoss,
                       result.totalRealProfitLossTry!.toDouble(),
                       formatter: _trySignedFormatter,
-                      valueColor: result.totalRealProfitLossTry! >= Decimal.zero
-                          ? AppColors.profit
-                          : AppColors.loss,
+                      valueColor: FinancialOutcome.fromAmount(
+                        result.totalRealProfitLossTry!,
+                      ).color(context),
                     ),
                 ],
 
@@ -186,36 +239,48 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                 ),
                 const SizedBox(height: 12),
 
-                SizedBox(
-                  height: 180,
-                  child: PieChart(
-                    PieChartData(
-                      sections: List.generate(result.items.length, (i) {
-                        final item = result.items[i];
-                        final color =
-                            AppColors.portfolioColors[i %
-                                AppColors.portfolioColors.length];
-                        return PieChartSectionData(
-                          // fl_chart double ister; pasta dilimi oranı zaten
-                          // floating-point ile temsil ediliyor — finansal
-                          // toplama Decimal'da yapıldı.
-                          value: item.calculation.finalValueTry.toDouble(),
-                          color: color,
-                          // F-11-16: locale-aware yüzde (manuel '%' yerine).
-                          title: AppFormat.percent(
-                            context.localeName,
-                            decimalDigits: 1,
-                          ).format(item.sharePercent / 100),
-                          titleStyle: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          radius: 72,
-                        );
-                      }),
-                      sectionsSpace: 2,
-                      centerSpaceRadius: 0,
+                Semantics(
+                  container: true,
+                  image: true,
+                  label: l10n.portfolioChartTitle,
+                  child: ExcludeSemantics(
+                    child: SizedBox(
+                      height: 180,
+                      child: PieChart(
+                        PieChartData(
+                          sections: List.generate(result.items.length, (i) {
+                            final item = result.items[i];
+                            final palette = financialColors.portfolioPalette;
+                            final color = palette[i % palette.length];
+                            return PieChartSectionData(
+                              // fl_chart double ister; pasta dilimi oranı zaten
+                              // floating-point ile temsil ediliyor — finansal
+                              // toplama Decimal'da yapıldı.
+                              value: item.calculation.finalValueTry.toDouble(),
+                              color: color,
+                              // F-11-16: locale-aware yüzde (manuel '%' yerine).
+                              title: AppFormat.percent(
+                                context.localeName,
+                                decimalDigits: 1,
+                              ).format(item.sharePercent / 100),
+                              titleStyle: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    ThemeData.estimateBrightnessForColor(
+                                          color,
+                                        ) ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                              radius: 72,
+                            );
+                          }),
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 0,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -225,54 +290,47 @@ class _PortfolioResultCardState extends State<PortfolioResultCard>
                 // ── Varlık bazlı döküm ────────────────────────────────────
                 ...List.generate(result.items.length, (i) {
                   final item = result.items[i];
-                  final dotColor = AppColors
-                      .portfolioColors[i % AppColors.portfolioColors.length];
-                  final itemColor = item.calculation.isProfit
-                      ? AppColors.profit
-                      : AppColors.loss;
-                  final itemSign = item.calculation.profitLossPercent >= 0
-                      ? '+'
-                      : '';
+                  final palette = financialColors.portfolioPalette;
+                  final dotColor = palette[i % palette.length];
+                  final itemOutcome = item.calculation.outcome;
+                  final itemColor = itemOutcome.color(context);
+                  final itemSign = itemOutcome.explicitPositiveSign;
                   final pctFmt = AppFormat.percent(context.localeName);
 
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: dotColor,
-                            shape: BoxShape.circle,
+                  return MergeSemantics(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: dotColor,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            item.item.assetDisplayName,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item.item.assetDisplayName,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
                           ),
-                        ),
-                        // Renk körü erişilebilirliği (CLAUDE.md): kar/zarar
-                        // yalnız renkle değil, yön ikonuyla da gösterilir.
-                        Icon(
-                          item.calculation.isProfit
-                              ? Icons.trending_up
-                              : Icons.trending_down,
-                          size: 16,
-                          color: itemColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$itemSign${pctFmt.format(item.calculation.profitLossPercent / 100)}',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: itemColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                      ],
+                          // Renk körü erişilebilirliği (CLAUDE.md): kar/zarar
+                          // yalnız renkle değil, yön ikonuyla da gösterilir.
+                          Icon(itemOutcome.icon, size: 16, color: itemColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$itemSign${pctFmt.format(item.calculation.profitLossPercent / 100)}',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: itemColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }),

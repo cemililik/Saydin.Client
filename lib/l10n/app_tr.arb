@@ -11,6 +11,7 @@
   "amountTypeGrams": "Gram",
   "calculate": "Hesapla",
   "calculating": "Hesaplanıyor...",
+  "configLoading": "Ayarlar yükleniyor. Lütfen birkaç saniye sonra tekrar deneyin.",
   "initialValue": "Başlangıç Değeri",
   "finalValue": "Bugünkü Değer",
   "profitLoss": "Kar / Zarar",
@@ -20,6 +21,8 @@
   "loss": "Kayıp",
   "profitLabel": "Kar",
   "lossLabel": "Zarar",
+  "noChange": "Değişim Yok",
+  "changeLabel": "Değişim",
   "enterAmount": "Tutar giriniz",
   "assetRequired": "Varlık seçiniz",
   "buyDateRequired": "Alış tarihi giriniz",
@@ -48,12 +51,19 @@
   "scenariosEmptyHint": "Hesaplama yaptıktan sonra senaryolarınızı kaydedebilirsiniz.",
   "saveScenario": "Kaydet",
   "scenarioSaved": "Senaryo kaydedildi.",
-  "scenarioDeleted": "Senaryo silindi.",
+  "scenarioDeleted": "Senaryo silindi. Geri almak için dokunun.",
+  "scenarioSwipeDeleteHint": "Silmek için bırak",
+  "scenarioUndoCountdown": "Geri Al ({seconds})",
+  "@scenarioUndoCountdown": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "scenarioReplayInvalid": "Bu kaydedilmiş senaryo artık oynatılamıyor.",
   "scenarioSavedAtSnapshot": "{date} tarihinde kaydedildi — o günkü sonuç",
   "@scenarioSavedAtSnapshot": {
     "placeholders": { "date": { "type": "String" } }
   },
   "deleteScenario": "Sil",
+  "cancel": "Vazgeç",
   "tabCalculate": "Hesapla",
   "tabScenarios": "Senaryolar",
 
@@ -138,6 +148,38 @@
 
   "shareResult": "Paylaş",
   "sharePreviewTitle": "Paylaşım Önizlemesi",
+  "sharePreviewClose": "Paylaşım önizlemesini kapat",
+  "@sharePreviewClose": {
+    "description": "Paylaşım önizlemesi kapatma düğmesinin erişilebilir etiketi"
+  },
+  "sharePreviewCardLabel": "Paylaşılacak kartın görsel önizlemesi",
+  "@sharePreviewCardLabel": {
+    "description": "Yakınlaştırılabilir paylaşım kartı önizlemesinin erişilebilir etiketi"
+  },
+  "sharePreviewZoomHint": "Kartı yakınlaştırabilir ve kaydırabilirsiniz. Paylaşım metninin tamamı aşağıdadır.",
+  "@sharePreviewZoomHint": {
+    "description": "Paylaşım kartı önizlemesi için erişilebilir etkileşim ipucu"
+  },
+  "shareCaptionTitle": "Paylaşım metni",
+  "@shareCaptionTitle": {
+    "description": "Native paylaşım hedeflerine gönderilecek son metnin başlığı"
+  },
+  "shareCopyText": "Metni kopyala",
+  "@shareCopyText": {
+    "description": "Dondurulmuş son paylaşım metnini panoya kopyalayan düğme"
+  },
+  "shareCopied": "Paylaşım metni kopyalandı.",
+  "@shareCopied": {
+    "description": "Paylaşım metni başarıyla panoya kopyalandığında gösterilen geri bildirim"
+  },
+  "shareUnavailable": "Bu cihazda paylaşım kullanılamıyor. Metni kopyalayarak devam edebilirsiniz.",
+  "@shareUnavailable": {
+    "description": "Native paylaşım kullanılamadığında kopyalama kurtarma yolunu açıklayan geri bildirim"
+  },
+  "shareCopyError": "Paylaşım metni kopyalanamadı. Lütfen tekrar deneyin.",
+  "@shareCopyError": {
+    "description": "Paylaşım metni panoya kopyalanamadığında gösterilen hata"
+  },
   "sharingInProgress": "Hazırlanıyor...",
   "shareError": "Paylaşım kartı oluşturulamadı. Lütfen tekrar deneyin.",
 
@@ -194,12 +236,14 @@
   "settings": "Ayarlar",
   "settingsTheme": "Tema",
   "settingsThemeSubtitle": "Uygulamanın görünümünü seçin",
+  "settingsSaveFailed": "Ayarlar kaydedilemedi. Lütfen tekrar deneyin.",
   "themeLight": "Açık",
   "themeDark": "Koyu",
   "themeSystem": "Sistem",
 
   "categoryFavorites": "Favoriler",
   "favoritesMaxReached": "En fazla {max} favori ekleyebilirsiniz.",
+  "favoritesSaveFailed": "Favori değişikliği kaydedilemedi. Lütfen tekrar deneyin.",
   "@favoritesMaxReached": {
     "placeholders": {
       "max": { "type": "int" }
@@ -227,7 +271,7 @@
   },
 
   "deleteAccountTitle": "Hesabımı Sil",
-  "deleteAccountWarning": "Bu işlem geri alınamaz. Cihazınızdaki tüm tercihleriniz, kaydedilen senaryolarınız ve favorileriniz kalıcı olarak silinir. KVKK Madde 11 / GDPR Madde 17 kapsamında verilerinizin silinmesi 30 gün içinde sonuçlandırılır.",
+  "deleteAccountWarning": "Bu işlem geri alınamaz. Silme isteği önce hizmete gönderilir. Hizmet sonucu doğruladığında bu cihazdaki tercihler, favoriler ve diğer yerel veriler kalıcı olarak temizlenir. Sonuç doğrulanamazsa yerel veriler korunur ve yeniden deneyebilirsiniz.",
   "deleteAccountConfirmHint": "Onaylamak için aşağıya \"{word}\" yazınız.",
   "@deleteAccountConfirmHint": {
     "placeholders": {
@@ -236,10 +280,16 @@
   },
   "deleteAccountConfirmWord": "SİL",
   "deleteAccountConfirmButton": "Hesabımı Kalıcı Olarak Sil",
-  "deleteAccountInProgress": "Veriler siliniyor...",
-  "deleteAccountSuccess": "Hesabınız ve tüm verileriniz silindi.",
-  "deleteAccountPartialSuccess": "Cihazınızdaki tüm veriler silindi. Ancak sunucu silme talebimiz şu an iletilemedi; iletisim@saydin.app adresinden silme talebinizi takip edin.",
-  "deleteAccountFailed": "Hesap silme tamamlanamadı. Tekrar deneyin veya iletişime geçin.",
+  "deleteAccountInProgress": "Silme isteği işleniyor...",
+  "deleteAccountSuccess": "Silme sonucu hizmet tarafından doğrulandı ve bu cihazdaki yerel veriler temizlendi.",
+  "deleteAccountPartialSuccess": "Hizmet silme sonucunu doğruladı ancak bu cihazdaki yerel verilerin tamamı temizlenemedi. Lütfen tekrar deneyin veya destekle iletişime geçin.",
+  "deleteAccountFailed": "Silme sonucu doğrulanamadı veya cihaz temizliği tamamlanamadı. Lütfen tekrar deneyin ya da destekle iletişime geçin.",
+  "resetPreferencesTitle": "Fabrika ayarlarına dön",
+  "resetPreferencesSubtitle": "Dil, tema, favoriler ve başlangıç deneyimini sıfırla.",
+  "resetPreferencesConfirmTitle": "Yerel ayarlar sıfırlansın mı?",
+  "resetPreferencesConfirmBody": "Dil ve tema sistem ayarlarına döner; favoriler, açık formlar ve hesaplama sonuçları temizlenir. Uygulama tanıtımı yeniden gösterilir. Hesabınız ve kaydedilmiş senaryolarınız silinmez.",
+  "resetPreferencesAction": "Ayarları Sıfırla",
+  "resetPreferencesFailed": "Yerel ayarlar sıfırlanamadı. Lütfen tekrar deneyin.",
 
   "shareCardInitialValue": "Başlangıç",
   "shareCardFinalValue": "Son Değer",
@@ -247,6 +297,7 @@
   "shareCardReturn": "Getiri",
   "shareCardProfit": "kazanç",
   "shareCardLoss": "zarar",
+  "shareCardNeutral": "değişim yok",
   "shareCardInflationTitle": "Enflasyon Düzeltmesi (TÜFE)",
   "shareCardCumulativeInflation": "Birikimli Enflasyon",
   "shareCardRealReturn": "Reel Getiri",
@@ -303,8 +354,11 @@
   "onboardingSkip": "Atla",
   "onboardingNext": "İleri",
   "onboardingGetStarted": "Hemen Dene",
-  "onboardingLegalConsent": "Devam ederek {privacy} ve {kvkk} metinlerini okuduğumu ve kabul ettiğimi onaylıyorum.",
-  "@onboardingLegalConsent": {
+  "onboardingLegalUpdateTitle": "Yasal metinler güncellendi",
+  "onboardingLegalUpdateBody": "Gizlilik Politikası ve KVKK Aydınlatma Metni güncellendi. Metinleri inceleyebilir ve bir kabul beyanı vermeden devam edebilirsiniz.",
+  "onboardingContinue": "Devam Et",
+  "onboardingLegalNotice": "{privacy} ve {kvkk} size sunulmuştur. Devam ederek bu metinlere erişiminizin sağlandığını onaylarsınız.",
+  "@onboardingLegalNotice": {
     "placeholders": {
       "privacy": { "type": "String" },
       "kvkk": { "type": "String" }
@@ -312,6 +366,7 @@
   },
   "onboardingPrivacyPolicyLink": "Gizlilik Politikası",
   "onboardingKvkkLink": "KVKK Aydınlatma Metni",
+  "legalRecordSaveFailed": "Legal bilgilendirme kaydı kaydedilemedi. Lütfen tekrar deneyin.",
   "onboardingPage1Title": "Ya Alsaydım?",
   "onboardingPage1Body": "Merak ettiğiniz yatırımı geçmişe dönük hesaplayın. Dolar, altın, Bitcoin ve daha fazlası.",
   "onboardingPage2Title": "Karşılaştır ve Keşfet",
@@ -380,6 +435,49 @@
   "shareCardRequiredInvestment": "Gereken Yatırım",
   "shareCardTargetValue": "Hedef Değer",
   "scenarioTypeReverse": "Ters Hesaplama",
+  "portfolioPartialResult": "Bazı varlıklar hesaplanamadı",
+  "portfolioPartialResultDetail": "Gösterilen toplam yalnızca başarıyla hesaplanan varlıkları içerir. Eksik sonuç kaydedilemez veya paylaşılamaz.",
+  "compareNoCommonDateRange": "Seçilen varlıkların ortak fiyat tarihi bulunmuyor. Farklı bir varlık seçin.",
+  "chartDataShow": "Grafik verilerini göster",
+  "chartDataHide": "Grafik verilerini gizle",
+  "priceChartSummary": "Fiyat grafiği. {startDate}, {startValue} değerinden {endDate}, {endValue} değerine. {trend}.",
+  "@priceChartSummary": {
+    "placeholders": {
+      "startDate": { "type": "String" },
+      "startValue": { "type": "String" },
+      "endDate": { "type": "String" },
+      "endValue": { "type": "String" },
+      "trend": { "type": "String" }
+    }
+  },
+  "dcaChartSummary": "Düzenli yatırım grafiği. {startDate} ile {endDate} arasında toplam maliyet {cost}, portföy değeri {value}.",
+  "@dcaChartSummary": {
+    "placeholders": {
+      "startDate": { "type": "String" },
+      "endDate": { "type": "String" },
+      "cost": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "chartDataPoint": "{date}: {value}",
+  "@chartDataPoint": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "dcaChartDataPoint": "{date}: maliyet {cost}, değer {value}",
+  "@dcaChartDataPoint": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "cost": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "shareCardMoreAssets": "{count, plural, =1{+1 varlık daha} other{+{count} varlık daha}}",
+  "@shareCardMoreAssets": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "compareHint": "Aynı tutarı farklı varlıklara yatırsaydınız hangisi daha çok kazandırırdı?",
   "dcaHint": "Düzenli aralıklarla alım yaparak yatırım maliyetinizi ve getirinizi simüle edin."
 }

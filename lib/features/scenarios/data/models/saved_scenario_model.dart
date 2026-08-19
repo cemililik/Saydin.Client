@@ -1,4 +1,5 @@
 import 'package:saydin/core/utils/money_parser.dart';
+import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/features/scenarios/domain/entities/saved_scenario.dart';
 
 class SavedScenarioModel extends SavedScenario {
@@ -17,14 +18,14 @@ class SavedScenarioModel extends SavedScenario {
   });
 
   factory SavedScenarioModel.fromJson(Map<String, dynamic> json) {
-    final type = json['type'];
+    // Type önce doğrulanır: bilinmeyen bir backend tipi what-if gibi
+    // yorumlanıp farklı semantikte replay edilmemeli.
+    final type = _parseType(json['type']);
     final label = json['label'];
-    final extraData = json['extraData'];
+    final extraData = _parseExtraData(json['extraData']);
     return SavedScenarioModel(
       id: _requireString(json['id'], 'id'),
-      // type non-String ise (`as String?` TypeError atardı) null geç →
-      // _parseType default'una (whatIf) düşsün.
-      type: _parseType(type is String ? type : null),
+      type: type,
       assetSymbol: _requireString(json['assetSymbol'], 'assetSymbol'),
       assetDisplayName: _requireString(
         json['assetDisplayName'],
@@ -36,10 +37,7 @@ class SavedScenarioModel extends SavedScenario {
       amountType: _requireString(json['amountType'], 'amountType'),
       label: label is String ? label : null,
       createdAt: _parseDate(json['createdAt']),
-      // Map değilse null; non-String key'leri toString ile güvenle çevir.
-      extraData: extraData is Map
-          ? extraData.map((k, v) => MapEntry(k.toString(), v))
-          : null,
+      extraData: extraData,
     );
   }
 
@@ -53,13 +51,45 @@ class SavedScenarioModel extends SavedScenario {
   /// `ScenariosRepositoryImpl._typeToString` ile **simetrik** olmalı.
   /// `'what_if'` case'i explicit; default'a düşmek backend'in bilinmeyen
   /// bir type döndürmesini sessiz veri kaybına dönüştürürdü.
-  static ScenarioType _parseType(String? value) => switch (value) {
+  static ScenarioType _parseType(Object? value) => switch (value) {
     'what_if' => ScenarioType.whatIf,
     'comparison' => ScenarioType.comparison,
     'portfolio' => ScenarioType.portfolio,
     'dca' => ScenarioType.dca,
-    _ => ScenarioType.whatIf,
+    String() => throw FormatException(
+      'saved scenario: bilinmeyen type ($value)',
+    ),
+    _ => throw FormatException('saved scenario: type string değil ($value)'),
   };
+
+  /// JSON dışındaki Map/key tiplerini ve desteklenmeyen replay şemalarını veri
+  /// sınırında reddeder. `null` ve version alanı olmayan map'ler legacy v1
+  /// uyumluluğu için geçerlidir.
+  static Map<String, dynamic>? _parseExtraData(Object? value) {
+    if (value == null) return null;
+    if (value is! Map<Object?, Object?>) {
+      throw FormatException('saved scenario: extraData map değil ($value)');
+    }
+
+    final result = <String, dynamic>{};
+    for (final entry in value.entries) {
+      final key = entry.key;
+      if (key is! String) {
+        throw FormatException(
+          'saved scenario: extraData anahtarı string değil ($key)',
+        );
+      }
+      result[key] = entry.value;
+    }
+
+    if (!ScenarioReplayParser.hasSupportedSchema(result)) {
+      throw FormatException(
+        'saved scenario: desteklenmeyen extraData schemaVersion '
+        '(${result['schemaVersion']})',
+      );
+    }
+    return result;
+  }
 
   /// Tarih parse — `createdAt` (ISO timestamp) ve `buyDate/sellDate`
   /// ("yyyy-MM-dd") biçimlerini güvenle ele alır.

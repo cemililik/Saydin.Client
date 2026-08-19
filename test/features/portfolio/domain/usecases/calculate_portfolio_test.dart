@@ -1,8 +1,10 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:saydin/core/error/app_error.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_calculation.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
+import 'package:saydin/features/portfolio/domain/entities/portfolio_result.dart';
 import 'package:saydin/features/portfolio/domain/repositories/portfolio_repository.dart';
 import 'package:saydin/features/portfolio/domain/usecases/calculate_portfolio.dart';
 
@@ -27,13 +29,14 @@ void main() {
     id: symbol,
     assetSymbol: symbol,
     assetDisplayName: symbol,
-    amount: 1000,
+    amount: Decimal.fromInt(1000),
     amountType: 'try',
   );
 
   PortfolioCalculation calc({
     required String initial,
     required String finalV,
+    double profitLossPercent = 0,
     double? realPct,
     double? cumInfl,
   }) {
@@ -42,7 +45,7 @@ void main() {
     return PortfolioCalculation(
       initialValueTry: init,
       finalValueTry: fin,
-      profitLossPercent: 0,
+      profitLossPercent: profitLossPercent,
       isProfit: fin >= init,
       realProfitLossPercent: realPct,
       cumulativeInflationPercent: cumInfl,
@@ -63,24 +66,53 @@ void main() {
     ).thenAnswer((_) async => outcomes);
   }
 
-  Future<dynamic> run(List<PortfolioItem> items, {bool inflation = false}) =>
-      usecase.call(
-        items: items,
-        buyDate: DateTime(2020, 1, 1),
-        sellDate: DateTime(2021, 1, 1),
-        includeInflation: inflation,
-      );
+  Future<PortfolioResult> run(
+    List<PortfolioItem> items, {
+    bool inflation = false,
+  }) => usecase.call(
+    items: items,
+    buyDate: DateTime(2020, 1, 1),
+    sellDate: DateTime(2021, 1, 1),
+    includeInflation: inflation,
+  );
 
   group('CalculatePortfolio — Decimal aggregasyon (happy path)', () {
+    test(
+      'açık uçlu sonuç effectiveSellDate değerini fake clock ile sabitler',
+      () async {
+        final a = item('AAA');
+        stubOutcomes([
+          PortfolioItemCalculatedOutcome(
+            item: a,
+            calculation: calc(initial: '100', finalV: '120'),
+          ),
+        ]);
+        usecase = CalculatePortfolio(
+          repo,
+          clock: () => DateTime(2024, 7, 9, 23, 59),
+        );
+
+        final result = await usecase.call(
+          items: [a],
+          buyDate: DateTime(2020, 1, 1),
+        );
+
+        expect(result.effectiveSellDate, DateTime(2024, 7, 9));
+        expect(result.requestedBuyDate, DateTime(2020, 1, 1));
+        expect(result.requestedSellDate, isNull);
+        expect(result.calculatedAt, DateTime(2024, 7, 9, 23, 59));
+      },
+    );
+
     test('initial/final toplamları exact Decimal — 0.1 + 0.2 == 0.3', () async {
       final a = item('AAA');
       final b = item('BBB');
       stubOutcomes([
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: a,
           calculation: calc(initial: '0.1', finalV: '0.15'),
         ),
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: b,
           calculation: calc(initial: '0.2', finalV: '0.25'),
         ),
@@ -101,7 +133,7 @@ void main() {
     test('zarar durumunda isProfit false', () async {
       final a = item('AAA');
       stubOutcomes([
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: a,
           calculation: calc(initial: '1000', finalV: '900'),
         ),
@@ -119,12 +151,12 @@ void main() {
       final a = item('AAA');
       final b = item('BBB');
       stubOutcomes([
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: a,
           calculation: calc(initial: '1000', finalV: '1200'),
         ),
         // BBB hesaplanamadı (repo izolasyonu → calculation: null).
-        PortfolioItemOutcome(item: b),
+        PortfolioItemErrorOutcome(item: b, error: const ServerError()),
       ]);
 
       final result = await run([a, b]);
@@ -142,11 +174,11 @@ void main() {
       final a = item('AAA');
       final b = item('BBB');
       stubOutcomes([
-        PortfolioItemOutcome(item: a),
-        PortfolioItemOutcome(item: b),
+        PortfolioItemErrorOutcome(item: a, error: const ServerError()),
+        PortfolioItemErrorOutcome(item: b, error: const NoInternetError()),
       ]);
 
-      expect(() => run([a, b]), throwsA(isA<PortfolioCalculationFailure>()));
+      expect(() => run([a, b]), throwsA(isA<NoInternetError>()));
     });
   });
 
@@ -156,7 +188,7 @@ void main() {
       // realFinal = 110 → realPnL = 10
       final a = item('AAA');
       stubOutcomes([
-        PortfolioItemOutcome(
+        PortfolioItemCalculatedOutcome(
           item: a,
           calculation: calc(
             initial: '100',
@@ -181,7 +213,7 @@ void main() {
         // realFinal = 300 * 1.333333 = 399.9999 → realPnL = 99.9999
         final a = item('AAA');
         stubOutcomes([
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: a,
             calculation: calc(initial: '300', finalV: '300', realPct: 33.3333),
           ),
@@ -199,12 +231,12 @@ void main() {
         final a = item('AAA');
         final b = item('BBB');
         stubOutcomes([
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: a,
             calculation: calc(initial: '100', finalV: '110', realPct: 10),
           ),
           // BBB'de realPct null → every() false → reel aggregasyon atlanır.
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: b,
             calculation: calc(initial: '100', finalV: '120'),
           ),
@@ -227,7 +259,7 @@ void main() {
         final a = item('AAA');
         final b = item('BBB');
         stubOutcomes([
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: a,
             calculation: calc(
               initial: '100',
@@ -236,7 +268,7 @@ void main() {
               cumInfl: 5,
             ),
           ),
-          PortfolioItemOutcome(
+          PortfolioItemCalculatedOutcome(
             item: b,
             calculation: calc(initial: '100', finalV: '120', realPct: 20),
           ),
@@ -248,5 +280,95 @@ void main() {
         expect(result.totalCumulativeInflationPercent, isNull);
       },
     );
+
+    test('çok büyük Decimal tutarlarda ağırlıklı oran finite kalır', () async {
+      final huge = '1${List.filled(400, '0').join()}';
+      final a = item('AAA');
+      final b = item('BBB');
+      stubOutcomes([
+        PortfolioItemCalculatedOutcome(
+          item: a,
+          calculation: calc(
+            initial: huge,
+            finalV: huge,
+            realPct: 0,
+            cumInfl: 50,
+          ),
+        ),
+        PortfolioItemCalculatedOutcome(
+          item: b,
+          calculation: calc(
+            initial: huge,
+            finalV: huge,
+            realPct: 0,
+            cumInfl: 100,
+          ),
+        ),
+      ]);
+
+      final result = await run([a, b], inflation: true);
+
+      expect(result.totalProfitLossPercent, 0);
+      expect(result.items.map((entry) => entry.sharePercent), [50, 50]);
+      expect(result.totalCumulativeInflationPercent, 75);
+    });
+  });
+
+  group('CalculatePortfolio — finite oran kontratı', () {
+    test('sıfır ve en büyük finite yüzde değerlerini kabul eder', () async {
+      final a = item('AAA');
+      stubOutcomes([
+        PortfolioItemCalculatedOutcome(
+          item: a,
+          calculation: calc(
+            initial: '100',
+            finalV: '100',
+            profitLossPercent: double.maxFinite,
+            realPct: double.maxFinite,
+            cumInfl: 0,
+          ),
+        ),
+      ]);
+
+      final result = await run([a], inflation: true);
+
+      expect(
+        result.items.single.calculation.profitLossPercent,
+        double.maxFinite,
+      );
+      expect(result.totalRealProfitLossPercent, double.maxFinite);
+      expect(result.totalCumulativeInflationPercent, 0);
+    });
+
+    test('repository non-finite yüzde döndürürse typed hata üretir', () async {
+      final a = item('AAA');
+      for (final calculation in [
+        calc(initial: '100', finalV: '100', profitLossPercent: double.nan),
+        calc(initial: '100', finalV: '100', realPct: double.infinity),
+        calc(initial: '100', finalV: '100', cumInfl: double.negativeInfinity),
+      ]) {
+        stubOutcomes([
+          PortfolioItemCalculatedOutcome(item: a, calculation: calculation),
+        ]);
+
+        await expectLater(
+          run([a], inflation: true),
+          throwsA(isA<MalformedResponseError>()),
+        );
+      }
+    });
+
+    test('double ile temsil edilemeyen türetilmiş oran reddedilir', () async {
+      final a = item('AAA');
+      final huge = '1${List.filled(400, '0').join()}';
+      stubOutcomes([
+        PortfolioItemCalculatedOutcome(
+          item: a,
+          calculation: calc(initial: '1', finalV: huge),
+        ),
+      ]);
+
+      await expectLater(run([a]), throwsA(isA<MalformedResponseError>()));
+    });
   });
 }

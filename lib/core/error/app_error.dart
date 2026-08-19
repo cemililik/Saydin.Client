@@ -45,9 +45,39 @@ class FeatureDisabledError extends AppError {
   const FeatureDisabledError({this.featureKey});
 }
 
+/// Sunucu bir kaynağın bulunamadığını bildirdi, ancak RFC-7807 `type` alanı
+/// bunu fiyat veya varlık gibi kullanıcıya anlamlı, endpoint-özel bir hataya
+/// bağlamaya yetmiyor. Böyle bir 404'ü [PriceNotFoundError]'a indirgemek yanlış
+/// ekrana yanlış açıklama gösterebilir.
+class NotFoundError extends AppError {
+  const NotFoundError();
+}
+
+/// Sunucu erişimi reddetti, ancak sözleşmedeki `feature-disabled` tipi ile
+/// doğrulanmış bir plan kapısı yok. Böyle bir 403'ü paywall olarak göstermek
+/// yanlış yönlendirme olur; çağıran bunu endpoint-nötr hata olarak ele alır.
+class ForbiddenError extends AppError {
+  const ForbiddenError();
+}
+
 /// Cihazın internet bağlantısı yok.
 class NoInternetError extends AppError {
   const NoInternetError();
+}
+
+/// İstek, kullanıcı veya ekran yaşam döngüsü tarafından iptal edildi.
+/// Bu bir bağlantı/sunucu arızası değildir ve telemetride hata olarak
+/// raporlanmamalıdır. İptal edilen ekranda sonuç artık gösterilmediği için
+/// çağıran katman bunu sessizce yok sayabilir.
+class RequestCancelledError extends AppError {
+  const RequestCancelledError();
+}
+
+/// Kaydedilmiş senaryo güncel şema veya finansal form invariant'larına
+/// güvenle taşınamıyor. Bu, sunucu arızası değil; eski/bozuk payload için
+/// kullanıcıya açık fakat raporlanmayan bir replay sonucudur.
+class InvalidScenarioReplayError extends AppError {
+  const InvalidScenarioReplayError();
 }
 
 /// Sunucu beklenmeyen bir hata döndürdü.
@@ -62,13 +92,11 @@ class ServerError extends AppError {
 /// durumudur (örn. 200 + `null` body). Böylece `ServerError(statusCode: 200)`
 /// gibi anlamsal olarak tuhaf bir değer üretmek zorunda kalmayız.
 ///
-/// NOT (L-1): `fromJson` PARSE hataları (FormatException/TypeError) bu varyanta
-/// EŞLENMEZ. Repo'lar `on DioException` ile yalnızca tipli ağ hatalarını
-/// yakalar; parse hataları kasıtlı olarak BLoC'un generic catch'ine düşüp
-/// [UnknownError]'a sarılır (sözleşme: tipli ağ hataları AppError, beklenmedik
-/// parse hataları UnknownError — bkz. `calculate_parseError_propagatesNotSwallowed`).
-/// [cause] şu an boş-gövde yolunda doldurulmaz; [UnknownError.cause] ile
-/// simetri ve ileride tanı için ayrılmıştır.
+/// Finansal repository'ler doğrulanmış 2xx gövdesindeki `FormatException` ve
+/// `TypeError`ı da bu varyanta sarar: HTTP başarılı olsa bile zorunlu alanın
+/// eksik/yanlış tipte olması aynı sunucu sözleşmesi ihlalidir. İstekten bağımsız
+/// programlama hataları ise [UnknownError] olarak kalır. [cause], hangi alanın
+/// kontratı bozduğunu telemetride ayırmak için korunur.
 class MalformedResponseError extends AppError {
   final Object? cause;
   const MalformedResponseError({this.cause});

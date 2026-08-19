@@ -1,4 +1,6 @@
+import 'package:saydin/core/error/response_body_validator.dart';
 import 'package:saydin/core/utils/money_parser.dart';
+import 'package:saydin/core/utils/profit_direction_validator.dart';
 import '../../domain/entities/reverse_what_if_result.dart';
 import '../../domain/entities/what_if_result.dart';
 
@@ -25,10 +27,19 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
   });
 
   factory ReverseWhatIfResponseModel.fromJson(Map<String, dynamic> json) {
+    final profitLossTry = MoneyParser.requireDecimal(
+      json['profitLossTry'],
+      'profitLossTry',
+    );
+    final isProfit = ProfitDirectionValidator.derive(
+      rawIsProfit: json['isProfit'],
+      profitLossTry: profitLossTry,
+      context: 'reverse what-if response',
+    );
     final rawHistory = json['priceHistory'];
-    final priceHistory = rawHistory is List
+    final priceHistory = rawHistory is List<dynamic>
         ? rawHistory.map((e) {
-            if (e is! Map) {
+            if (e is! Map<Object?, Object?>) {
               throw const FormatException('reverse what-if chart: map değil');
             }
             return ChartPoint(
@@ -63,22 +74,21 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
         json['targetValueTry'],
         'targetValueTry',
       ),
-      profitLossTry: MoneyParser.requireDecimal(
-        json['profitLossTry'],
-        'profitLossTry',
-      ),
-      profitLossPercent: _requireNum(
+      profitLossTry: profitLossTry,
+      profitLossPercent: ResponseBodyValidator.requireFiniteDouble(
         json['profitLossPercent'],
         'profitLossPercent',
-      ).toDouble(),
-      isProfit: json['isProfit'] is bool ? json['isProfit'] as bool : false,
+      ),
+      isProfit: isProfit,
       priceHistory: priceHistory,
-      cumulativeInflationPercent: _optionalNum(
+      cumulativeInflationPercent: ResponseBodyValidator.optionalFiniteDouble(
         json['cumulativeInflationPercent'],
-      )?.toDouble(),
-      realProfitLossPercent: _optionalNum(
+        'cumulativeInflationPercent',
+      ),
+      realProfitLossPercent: ResponseBodyValidator.optionalFiniteDouble(
         json['realProfitLossPercent'],
-      )?.toDouble(),
+        'realProfitLossPercent',
+      ),
       inflationDataAsOf: _optionalDate(json['inflationDataAsOf']),
       actualBuyDate: _optionalDate(json['actualBuyDate']),
       actualSellDate: _optionalDate(json['actualSellDate']),
@@ -86,13 +96,6 @@ class ReverseWhatIfResponseModel extends ReverseWhatIfResult {
   }
 
   // ── Defensive parse yardımcıları ────────────────────────────────────────
-
-  static num _requireNum(Object? value, String field) {
-    if (value is num) return value;
-    throw FormatException('reverse what-if: $field sayı değil ($value)');
-  }
-
-  static num? _optionalNum(Object? value) => value is num ? value : null;
 
   static String _requireString(Object? value, String field) {
     if (value is String) return value;

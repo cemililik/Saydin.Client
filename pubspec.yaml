@@ -1,8 +1,8 @@
 name: saydin
 description: "Saydın - Ya Alsaydım? finansal hesaplama uygulaması."
 publish_to: 'none'
-# CI bu versiyonu override eder (conventional commits'ten hesaplar).
-# Lokal geliştirme için referans değer.
+# Release build adı/numarası tag'den türetilir; bu değer lokal geliştirme ve
+# Flutter tooling için referans package versiyonudur.
 version: 0.1.1+1
 
 environment:
@@ -57,7 +57,34 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   bloc_test: ^10.0.0
   mocktail: ^1.0.4
+  # Release build'lerindeki Dart/native debug sembollerini Sentry'ye yükler.
+  # Auth token/org/project yalnız CI environment değişkenlerinden gelir.
+  sentry_dart_plugin: ^3.4.0
 
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/branding/saydin-logo-horizontal-light-h512.png
+    - assets/branding/saydin-logo-horizontal-dark-h512.png
+    - assets/branding/saydin-symbol-fullcolor-256.png
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/inter/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/inter/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/inter/Inter-Bold.ttf
+          weight: 700
+
+sentry:
+  upload_debug_symbols: true
+  upload_sources: false
+  upload_source_maps: false
+  dart_symbol_map_path: build/symbols/obfuscation.map.json
+  symbols_path: build/symbols
+  wait_for_processing: true
+  log_level: error

@@ -8,6 +8,7 @@ class AmountInput extends StatefulWidget {
   final String amountType;
   final List<String> allowedTypes;
   final ValueChanged<String> onAmountTypeChanged;
+  final ValueChanged<String>? onAmountChanged;
   final String? labelOverride;
   final String? validatorOverride;
 
@@ -17,6 +18,7 @@ class AmountInput extends StatefulWidget {
     required this.amountType,
     required this.allowedTypes,
     required this.onAmountTypeChanged,
+    this.onAmountChanged,
     this.labelOverride,
     this.validatorOverride,
   });
@@ -88,6 +90,7 @@ class _AmountInputState extends State<AmountInput> {
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
             ],
+            onChanged: widget.onAmountChanged,
             decoration: InputDecoration(
               labelText: widget.labelOverride ?? l10n.amount,
               border: const OutlineInputBorder(),

@@ -1,5 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:equatable/equatable.dart';
+import 'package:saydin/core/error/app_error.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_calculation.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 
@@ -25,6 +27,16 @@ class PortfolioItemResult extends Equatable {
   List<Object?> get props => [item, calculation, sharePercent];
 }
 
+class PortfolioItemFailure extends Equatable {
+  final PortfolioItem item;
+  final AppError error;
+
+  const PortfolioItemFailure({required this.item, required this.error});
+
+  @override
+  List<Object?> get props => [item, error];
+}
+
 /// Tüm portföy hesaplama sonucu.
 ///
 /// Bir veya birden çok kalem hesaplanamazsa, başarılı kalemler [items]
@@ -40,13 +52,28 @@ class PortfolioResult extends Equatable {
 
   /// Hesaplama sırasında başarısız olan kalemler. UI bunları kullanıcıya
   /// "yeniden dene" akışıyla sunabilir. Tüm kalemler başarılı ise boş liste.
-  final List<PortfolioItem> failedItems;
+  final List<PortfolioItemFailure> failures;
+
+  List<PortfolioItem> get failedItems =>
+      failures.map((failure) => failure.item).toList(growable: false);
 
   final Decimal totalInitialValueTry;
   final Decimal totalFinalValueTry;
   final Decimal totalProfitLossTry;
   final double totalProfitLossPercent;
   final bool isProfit;
+
+  /// Legacy single-date fallback used by existing presentation. Open-ended
+  /// requests are snapshotted at the use-case boundary. This value must not be
+  /// treated as aggregate transaction evidence: per-item effective dates can
+  /// differ and are preserved on [PortfolioCalculation].
+  final DateTime? effectiveSellDate;
+
+  /// Portfolio-level request/calculation snapshot. Per-item effective dates
+  /// live on [PortfolioCalculation] and can legitimately form a mixed range.
+  final DateTime? requestedBuyDate;
+  final DateTime? requestedSellDate;
+  final DateTime? calculatedAt;
 
   // Enflasyon düzeltmesi — null ise hesaplanmadı / aktif değil
   final Decimal? totalRealProfitLossTry;
@@ -60,7 +87,11 @@ class PortfolioResult extends Equatable {
     required this.totalProfitLossTry,
     required this.totalProfitLossPercent,
     required this.isProfit,
-    this.failedItems = const [],
+    this.effectiveSellDate,
+    this.requestedBuyDate,
+    this.requestedSellDate,
+    this.calculatedAt,
+    this.failures = const [],
     this.totalRealProfitLossTry,
     this.totalRealProfitLossPercent,
     this.totalCumulativeInflationPercent,
@@ -68,18 +99,27 @@ class PortfolioResult extends Equatable {
 
   bool get hasInflation => totalRealProfitLossPercent != null;
 
+  FinancialOutcome get outcome =>
+      FinancialOutcome.fromAmount(totalProfitLossTry);
+
   /// Bir veya daha fazla kalem hesaplanamadıysa true.
-  bool get hasPartialFailure => failedItems.isNotEmpty;
+  bool get hasPartialFailure => failures.isNotEmpty;
+
+  bool get isComplete => failures.isEmpty;
 
   @override
   List<Object?> get props => [
     items,
-    failedItems,
+    failures,
     totalInitialValueTry,
     totalFinalValueTry,
     totalProfitLossTry,
     totalProfitLossPercent,
     isProfit,
+    effectiveSellDate,
+    requestedBuyDate,
+    requestedSellDate,
+    calculatedAt,
     totalRealProfitLossTry,
     totalRealProfitLossPercent,
     totalCumulativeInflationPercent,

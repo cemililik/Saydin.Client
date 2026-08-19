@@ -19,6 +19,15 @@ void main() {
       expect(error, isA<AppError>());
     });
 
+    test('RequestCancelledError_created_isAppError', () {
+      const error = RequestCancelledError();
+      expect(error, isA<AppError>());
+    });
+
+    test('InvalidScenarioReplayError_created_isAppError', () {
+      expect(const InvalidScenarioReplayError(), isA<AppError>());
+    });
+
     test('ServerError_withStatusCode_carriesStatusCode', () {
       const error = ServerError(statusCode: 500);
       expect(error.statusCode, equals(500));
@@ -64,6 +73,11 @@ void main() {
     test('FeatureDisabledError_withoutFeatureKey_hasNullFeatureKey', () {
       const error = FeatureDisabledError();
       expect(error.featureKey, isNull);
+    });
+
+    test('endpointNeutralNotFoundAndForbidden_areAppErrors', () {
+      expect(const NotFoundError(), isA<AppError>());
+      expect(const ForbiddenError(), isA<AppError>());
     });
   });
 }

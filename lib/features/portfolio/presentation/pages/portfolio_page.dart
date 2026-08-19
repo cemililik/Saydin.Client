@@ -1,15 +1,20 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:saydin/core/error/app_error_messages.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
+import 'package:saydin/core/utils/date_range_utils.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
 import 'package:saydin/core/widgets/settings_icon_button.dart';
 import 'package:saydin/core/widgets/inflation_toggle.dart';
 import 'package:saydin/core/widgets/skeleton_card.dart';
 import 'package:saydin/core/widgets/share_preview_sheet.dart';
 import 'package:saydin/core/utils/percentage_formatter.dart';
+import 'package:saydin/core/utils/scenario_replay_parser.dart';
 import 'package:saydin/features/config/presentation/cubit/app_config_cubit.dart';
+import 'package:saydin/features/config/domain/policies/share_policy.dart';
+import 'package:saydin/features/config/presentation/widgets/share_result_button.dart';
 import 'package:saydin/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:saydin/features/portfolio/domain/portfolio_constants.dart';
 import 'package:saydin/features/portfolio/presentation/bloc/portfolio_bloc.dart';
@@ -118,7 +123,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   void _savePortfolioScenario(PortfolioSuccess state) {
-    if (state.buyDate == null) return;
+    if (state.buyDate == null || state.result.hasPartialFailure) return;
     context.read<ScenariosBloc>().add(
       ScenarioSaveRequested(
         assetSymbol: 'PORTFOLIO',
@@ -127,17 +132,11 @@ class _PortfolioPageState extends State<PortfolioPage> {
         ),
         buyDate: state.buyDate!,
         sellDate: state.sellDate,
-        // DİKKAT: `totalInitialValueTry` aritmetik-türevli bir Decimal
-        // (kalemlerin Decimal toplamı) ve backend'e KAYDEDİLİR — yalnızca
-        // display değil. ScenarioSaveRequested.amount hâlâ `num` olduğu için
-        // burada `.toDouble()` zorunlu; double ~15 anlamlı hane tuttuğundan
-        // gerçekçi tutarlarda kuruş kaybı yok ama tam-precision için backend
-        // string `amount` kontratına geçince MoneyParser.toJsonString
-        // kullanılmalı (Faz 4 — amount num→Decimal end-to-end).
-        amount: state.result.totalInitialValueTry.toDouble(),
+        amount: state.result.totalInitialValueTry,
         amountType: 'try',
         type: ScenarioType.portfolio,
         extraData: {
+          'schemaVersion': ScenarioReplayParser.currentSchemaVersion,
           'totalReturn': state.result.totalProfitLossPercent,
           'includeInflation': state.includeInflation,
           'items': state.items
@@ -145,7 +144,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
                 (item) => {
                   'assetSymbol': item.assetSymbol,
                   'assetDisplayName': item.assetDisplayName,
-                  'amount': item.amount,
+                  'amount': item.amount.toString(),
                   'amountType': item.amountType,
                 },
               )
@@ -156,6 +155,8 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   void _showPortfolioShare(PortfolioSuccess state) {
+    if (!SharePolicy.canShare(context.read<AppConfigCubit>().state)) return;
+    if (state.result.hasPartialFailure) return;
     final shareText = context.l10n.shareTextPortfolio(
       state.result.items.length,
       PercentageFormatter.signed(
@@ -168,6 +169,8 @@ class _PortfolioPageState extends State<PortfolioPage> {
       isScrollControlled: true,
       builder: (_) => SharePreviewSheet(
         shareText: shareText,
+        canExecuteShare: () =>
+            SharePolicy.canShare(context.read<AppConfigCubit>().state),
         cardWidget: PortfolioShareCardWidget(
           result: state.result,
           buyDate: state.buyDate!,
@@ -179,6 +182,13 @@ class _PortfolioPageState extends State<PortfolioPage> {
 
   void _onCalculate(PortfolioState state) {
     final l10n = context.l10n;
+    final config = context.read<AppConfigCubit>().state;
+    if (!config.isReady) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.configLoading)));
+      return;
+    }
     if (state.buyDate == null) {
       ScaffoldMessenger.of(
         context,
@@ -235,12 +245,18 @@ class _PortfolioPageState extends State<PortfolioPage> {
           final l10n = context.l10n;
           final isCalculating = state is PortfolioCalculating;
 
-          final config = context.read<AppConfigCubit>().state;
+          final config = context.watch<AppConfigCubit>().state;
           final priceHistoryMonths = config.features.priceHistoryMonths;
           final now = DateTime.now();
-          final buyFirstDate = priceHistoryMonths > 0
-              ? DateTime(now.year, now.month - priceHistoryMonths, now.day)
-              : null;
+          final dateRange = comparisonDateRange(
+            assets: state.assets,
+            selectedSymbols: state.items
+                .map((item) => item.assetSymbol)
+                .toList(growable: false),
+            priceHistoryMonths: priceHistoryMonths,
+          );
+          final hasDateOverlap = state.items.isEmpty || dateRange.hasOverlap;
+          final buyFirstDate = dateRange.firstDate;
           final hasDateLimit = priceHistoryMonths > 0 && !config.isPremium;
           final inflationEnabled = config.features.inflationAdjustment;
 
@@ -263,7 +279,8 @@ class _PortfolioPageState extends State<PortfolioPage> {
                   label: l10n.buyDate,
                   value: state.buyDate,
                   firstDate: buyFirstDate,
-                  lastDate: now,
+                  lastDate: dateRange.lastDate ?? now,
+                  enabled: hasDateOverlap,
                   onChanged: (v) => context.read<PortfolioBloc>().add(
                     PortfolioBuyDateChanged(v),
                   ),
@@ -287,12 +304,22 @@ class _PortfolioPageState extends State<PortfolioPage> {
                     ],
                   ),
                 ],
+                if (!hasDateOverlap) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.compareNoCommonDateRange,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 DateInput(
                   label: l10n.sellDate,
                   value: state.sellDate,
                   firstDate: state.buyDate,
-                  lastDate: now,
+                  lastDate: dateRange.lastDate ?? now,
+                  enabled: hasDateOverlap,
                   required: false,
                   onChanged: (v) => context.read<PortfolioBloc>().add(
                     PortfolioSellDateChanged(v),
@@ -384,7 +411,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
                     Expanded(
                       flex: 3,
                       child: FilledButton.icon(
-                        onPressed: isCalculating
+                        onPressed: isCalculating || !hasDateOverlap
                             ? null
                             : () => _onCalculate(state),
                         icon: isCalculating
@@ -439,7 +466,9 @@ class _PortfolioPageState extends State<PortfolioPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: state.buyDate != null
+                          onPressed:
+                              state.buyDate != null &&
+                                  !state.result.hasPartialFailure
                               ? () => _savePortfolioScenario(state)
                               : null,
                           icon: const Icon(Icons.bookmark_outline),
@@ -449,18 +478,11 @@ class _PortfolioPageState extends State<PortfolioPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: state.buyDate != null
-                              ? () => _showPortfolioShare(state)
-                              : null,
-                          icon: const Icon(Icons.share_outlined),
-                          label: Text(l10n.shareResult),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                        ),
+                      ShareResultButton(
+                        enabled:
+                            state.buyDate != null &&
+                            !state.result.hasPartialFailure,
+                        onPressed: () => _showPortfolioShare(state),
                       ),
                     ],
                   ),
@@ -516,7 +538,7 @@ class _EmptyItemsHint extends StatelessWidget {
 
 class _PortfolioItemTile extends StatelessWidget {
   final String displayName;
-  final num amount;
+  final Decimal amount;
   final String amountType;
   final VoidCallback? onEdit;
   final VoidCallback? onRemove;
@@ -534,11 +556,14 @@ class _PortfolioItemTile extends StatelessWidget {
     // Locale'e duyarlı (F-06-01/F-09-20) — static formatter yerine çağrı anında.
     final locale = context.localeName;
     return switch (amountType) {
-      'try' => AppFormat.tryCurrency(locale, decimalDigits: 2).format(amount),
+      'try' => AppFormat.tryCurrency(
+        locale,
+        decimalDigits: 2,
+      ).format(amount.toDouble()),
       'units' =>
-        '${AppFormat.custom('#,##0.####', locale).format(amount)} ${l10n.amountTypeUnits}',
+        '${AppFormat.custom('#,##0.########', locale).format(amount.toDouble())} ${l10n.amountTypeUnits}',
       'grams' =>
-        '${AppFormat.custom('#,##0.####', locale).format(amount)} ${l10n.amountTypeGrams}',
+        '${AppFormat.custom('#,##0.####', locale).format(amount.toDouble())} ${l10n.amountTypeGrams}',
       _ => amount.toString(),
     };
   }

@@ -1,4 +1,6 @@
+import 'package:saydin/core/error/response_body_validator.dart';
 import 'package:saydin/core/utils/money_parser.dart';
+import 'package:saydin/core/utils/profit_direction_validator.dart';
 import '../../domain/entities/what_if_result.dart';
 
 class WhatIfResponseModel extends WhatIfResult {
@@ -24,6 +26,10 @@ class WhatIfResponseModel extends WhatIfResult {
   });
 
   factory WhatIfResponseModel.fromJson(Map<String, dynamic> json) {
+    final profitLossTry = MoneyParser.requireDecimal(
+      json['profitLossTry'],
+      'profitLossTry',
+    );
     final rawHistory = json['priceHistory'] as List<dynamic>? ?? [];
     final priceHistory = rawHistory.map((e) {
       final map = e as Map<String, dynamic>;
@@ -54,17 +60,25 @@ class WhatIfResponseModel extends WhatIfResult {
         json['finalValueTry'],
         'finalValueTry',
       ),
-      profitLossTry: MoneyParser.requireDecimal(
-        json['profitLossTry'],
-        'profitLossTry',
+      profitLossTry: profitLossTry,
+      profitLossPercent: ResponseBodyValidator.requireFiniteDouble(
+        json['profitLossPercent'],
+        'profitLossPercent',
       ),
-      profitLossPercent: (json['profitLossPercent'] as num).toDouble(),
-      isProfit: json['isProfit'] as bool,
+      isProfit: ProfitDirectionValidator.derive(
+        rawIsProfit: json['isProfit'],
+        profitLossTry: profitLossTry,
+        context: 'what-if response',
+      ),
       priceHistory: priceHistory,
-      cumulativeInflationPercent: (json['cumulativeInflationPercent'] as num?)
-          ?.toDouble(),
-      realProfitLossPercent: (json['realProfitLossPercent'] as num?)
-          ?.toDouble(),
+      cumulativeInflationPercent: ResponseBodyValidator.optionalFiniteDouble(
+        json['cumulativeInflationPercent'],
+        'cumulativeInflationPercent',
+      ),
+      realProfitLossPercent: ResponseBodyValidator.optionalFiniteDouble(
+        json['realProfitLossPercent'],
+        'realProfitLossPercent',
+      ),
       inflationDataAsOf: json['inflationDataAsOf'] != null
           ? DateTime.parse(json['inflationDataAsOf'] as String)
           : null,

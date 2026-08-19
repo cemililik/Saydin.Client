@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:saydin/core/constants/app_colors.dart';
 import 'package:saydin/core/l10n/l10n_extensions.dart';
+import 'package:saydin/core/theme/financial_outcome_style.dart';
+import 'package:saydin/core/utils/financial_outcome.dart';
 import 'package:saydin/core/utils/app_formatters.dart';
 import 'package:saydin/core/utils/duration_label.dart';
 import 'package:saydin/core/widgets/count_up_text.dart';
@@ -72,12 +73,12 @@ class _DcaResultCardState extends State<DcaResultCard>
   String? _cachedLocale;
 
   String _pctSignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_pctFormatter.format(v / 100)}';
   }
 
   String _trySignedFormatter(double v) {
-    final sign = v >= 0 ? '+' : '';
+    final sign = v > 0 ? '+' : '';
     return '$sign${_tryFormatter.format(v)}';
   }
 
@@ -96,8 +97,9 @@ class _DcaResultCardState extends State<DcaResultCard>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final color = result.isProfit ? AppColors.profit : AppColors.loss;
-    final icon = result.isProfit ? Icons.trending_up : Icons.trending_down;
+    final outcome = result.outcome;
+    final color = outcome.color(context);
+    final icon = outcome.icon;
 
     final periodLabel = result.period == 'weekly'
         ? l10n.dcaPeriodWeekly
@@ -124,7 +126,7 @@ class _DcaResultCardState extends State<DcaResultCard>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            result.isProfit ? l10n.profit : l10n.loss,
+                            outcome.title(l10n),
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(
                                   color: color,
@@ -151,10 +153,7 @@ class _DcaResultCardState extends State<DcaResultCard>
                 const SizedBox(height: 12),
 
                 // Grafik
-                DcaChart(
-                  chartData: result.chartData,
-                  isProfit: result.isProfit,
-                ),
+                DcaChart(chartData: result.chartData, outcome: outcome),
 
                 const Divider(height: 24),
 
@@ -171,7 +170,7 @@ class _DcaResultCardState extends State<DcaResultCard>
                   bold: true,
                 ),
                 _AnimatedRow(
-                  result.isProfit ? l10n.profitLabel : l10n.lossLabel,
+                  outcome.amountLabel(l10n),
                   result.profitLossTry.toDouble(),
                   formatter: _trySignedFormatter,
                   valueColor: color,
@@ -208,7 +207,8 @@ class _DcaResultCardState extends State<DcaResultCard>
                 _Row(l10n.resultDuration, _formatDuration(l10n)),
 
                 // Enflasyon düzeltmesi
-                if (result.realProfitLossPercent != null) ...[
+                if (result.realProfitLossPercent != null ||
+                    result.cumulativeInflationPercent != null) ...[
                   const Divider(height: 24),
                   Text(
                     l10n.inflationSectionTitle,
@@ -218,34 +218,35 @@ class _DcaResultCardState extends State<DcaResultCard>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _AnimatedRow(
-                    l10n.cumulativeInflation,
-                    result.cumulativeInflationPercent!,
-                    formatter: _pctSignedFormatter,
-                  ),
-                  _AnimatedRow(
-                    l10n.realReturn,
-                    result.realProfitLossPercent!,
-                    formatter: _pctSignedFormatter,
-                    valueColor: result.realProfitLossPercent! >= 0
-                        ? AppColors.profit
-                        : AppColors.loss,
-                    bold: true,
-                  ),
-                  // WhatIf result_card.dart ile paralel: reel kar/zarar TL
-                  // tutarı (totalInvestedTry * realPct / 100). Sadece percent
-                  // göstermek kullanıcıyı "kaç TL kazandım gerçekten?"
-                  // sorusuyla baş başa bırakıyordu.
-                  _AnimatedRow(
-                    l10n.realProfitLoss,
-                    result.totalInvestedTry.toDouble() *
-                        result.realProfitLossPercent! /
-                        100,
-                    formatter: _trySignedFormatter,
-                    valueColor: result.realProfitLossPercent! >= 0
-                        ? AppColors.profit
-                        : AppColors.loss,
-                  ),
+                  if (result.cumulativeInflationPercent case final value?)
+                    _AnimatedRow(
+                      l10n.cumulativeInflation,
+                      value,
+                      formatter: _pctSignedFormatter,
+                    ),
+                  if (result.realProfitLossPercent case final value?) ...[
+                    _AnimatedRow(
+                      l10n.realReturn,
+                      value,
+                      formatter: _pctSignedFormatter,
+                      valueColor: FinancialOutcome.fromPercent(
+                        value,
+                      ).color(context),
+                      bold: true,
+                    ),
+                    // WhatIf result_card.dart ile paralel: reel kar/zarar TL
+                    // tutarı (totalInvestedTry * realPct / 100). Sadece percent
+                    // göstermek kullanıcıyı "kaç TL kazandım gerçekten?"
+                    // sorusuyla baş başa bırakıyordu.
+                    _AnimatedRow(
+                      l10n.realProfitLoss,
+                      result.totalInvestedTry.toDouble() * value / 100,
+                      formatter: _trySignedFormatter,
+                      valueColor: FinancialOutcome.fromPercent(
+                        value,
+                      ).color(context),
+                    ),
+                  ],
                   if (result.inflationDataAsOf != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),

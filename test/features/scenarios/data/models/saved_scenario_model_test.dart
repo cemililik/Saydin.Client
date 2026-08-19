@@ -33,9 +33,11 @@ void main() {
       expect(m.type, ScenarioType.whatIf);
     });
 
-    test('bilinmeyen type → whatIf default (sessiz veri kaybı yok)', () {
-      final m = SavedScenarioModel.fromJson(baseJson(type: 'gelecekteki_tip'));
-      expect(m.type, ScenarioType.whatIf);
+    test('bilinmeyen type → FormatException (whatIf fail-open yok)', () {
+      expect(
+        () => SavedScenarioModel.fromJson(baseJson(type: 'gelecekteki_tip')),
+        throwsFormatException,
+      );
     });
 
     test('id yanlış tipte (int) → FormatException (raw TypeError değil)', () {
@@ -78,9 +80,59 @@ void main() {
       },
     );
 
-    test('type yanlış tipte (int) → TypeError değil, whatIf default', () {
-      final m = SavedScenarioModel.fromJson(baseJson()..['type'] = 42);
-      expect(m.type, ScenarioType.whatIf);
+    test('type yanlış tipte (int) → TypeError değil, FormatException', () {
+      expect(
+        () => SavedScenarioModel.fromJson(baseJson()..['type'] = 42),
+        throwsFormatException,
+      );
+    });
+
+    test('type eksik → FormatException', () {
+      expect(
+        () => SavedScenarioModel.fromJson(baseJson()..remove('type')),
+        throwsFormatException,
+      );
+    });
+
+    test('tüm canonical type değerleri geriye uyumlu parse edilir', () {
+      expect(
+        SavedScenarioModel.fromJson(baseJson(type: 'comparison')).type,
+        ScenarioType.comparison,
+      );
+      expect(
+        SavedScenarioModel.fromJson(baseJson(type: 'portfolio')).type,
+        ScenarioType.portfolio,
+      );
+      expect(
+        SavedScenarioModel.fromJson(baseJson(type: 'dca')).type,
+        ScenarioType.dca,
+      );
+    });
+
+    test('version alanı olmayan legacy extraData kabul edilir', () {
+      final model = SavedScenarioModel.fromJson(
+        baseJson()..['extraData'] = {'mode': 'reverse'},
+      );
+
+      expect(model.extraData, {'mode': 'reverse'});
+    });
+
+    test('future/bozuk extraData schemaVersion → FormatException', () {
+      for (final version in <Object>[999, '2']) {
+        expect(
+          () => SavedScenarioModel.fromJson(
+            baseJson()..['extraData'] = {'schemaVersion': version},
+          ),
+          throwsFormatException,
+        );
+      }
+    });
+
+    test('extraData map değilse → FormatException', () {
+      expect(
+        () => SavedScenarioModel.fromJson(baseJson()..['extraData'] = 'bozuk'),
+        throwsFormatException,
+      );
     });
 
     test(
