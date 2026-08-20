@@ -56,4 +56,31 @@ void main() {
     expect(BrandColors.teal.toARGB32(), 0xFF2CB1B8);
     expect(BrandColors.offWhite.toARGB32(), 0xFFF5F6F7);
   });
+
+  test('light-surface teal variant meets WCAG AA where teal cannot', () {
+    // Onaylı teal koyu zeminde okunur, açık zeminde 3:1 non-text eşiğini
+    // bile geçemez; bu yüzden ayrı bir açık-zemin varyantı gerekir.
+    expect(_contrast(BrandColors.teal, BrandColors.navy), greaterThan(4.5));
+    expect(_contrast(BrandColors.teal, Colors.white), lessThan(3));
+
+    expect(
+      _contrast(BrandColors.tealOnLight, Colors.white),
+      greaterThanOrEqualTo(4.5),
+    );
+    // En dar pay burada: 4,59:1, AA eşiğinin yalnız 0,09 üstünde. Tonu
+    // koyulaştırmadan değiştiren her düzenleme bu assertion'ı düşürür.
+    expect(
+      _contrast(BrandColors.tealOnLight, ShareCardColors.surfaceSubtle),
+      greaterThanOrEqualTo(4.5),
+    );
+    expect(
+      _contrast(BrandColors.tealOnLight, ShareCardColors.surfaceSubtle),
+      closeTo(4.59, 0.01),
+    );
+  });
+
+  test('tealFor resolves the readable tone per brightness', () {
+    expect(BrandColors.tealFor(Brightness.light), BrandColors.tealOnLight);
+    expect(BrandColors.tealFor(Brightness.dark), BrandColors.teal);
+  });
 }

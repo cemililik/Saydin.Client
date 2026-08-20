@@ -786,46 +786,36 @@ class AppLocalizationsEn extends AppLocalizations {
       'The legal notice record could not be saved. Please try again.';
 
   @override
-  String get onboardingPage1Title => 'What If I Bought?';
+  String onboardingProgress(int current, int total) {
+    return 'Page $current of $total';
+  }
+
+  @override
+  String get onboardingPastLabel => 'Then';
+
+  @override
+  String get onboardingTodayLabel => 'Today';
+
+  @override
+  String get onboardingPage1Title => 'What if I bought? No longer a mystery.';
 
   @override
   String get onboardingPage1Body =>
-      'Calculate any investment retroactively. Dollar, gold, Bitcoin and more.';
+      'Dollar, gold, Bitcoin and more. Calculate the past in seconds with your chosen date and amount.';
 
   @override
-  String get onboardingPage2Title => 'Compare and Discover';
+  String get onboardingPage2Title => 'More than one question.';
 
   @override
   String get onboardingPage2Body =>
-      'Compare assets side by side, build portfolios. Which one performed better?';
+      'Compare, simulate regular investing, or calculate in reverse. Every scenario in one place.';
 
   @override
-  String get onboardingPage3Title => 'Build a Portfolio';
+  String get onboardingPage3Title => 'Turn curiosity into numbers.';
 
   @override
   String get onboardingPage3Body =>
-      'Create portfolios with multiple assets, calculate total returns and discover the best strategy.';
-
-  @override
-  String get onboardingPage4Title => 'Regular Investing';
-
-  @override
-  String get onboardingPage4Body =>
-      'Simulate weekly or monthly recurring purchases, see average cost and total return.';
-
-  @override
-  String get onboardingPage5Title => 'Reverse Scenario';
-
-  @override
-  String get onboardingPage5Body =>
-      'How much should you have invested to reach your goal? Find out with reverse calculation.';
-
-  @override
-  String get onboardingPage6Title => 'Share and Save';
-
-  @override
-  String get onboardingPage6Body =>
-      'Share your results with friends, save your scenarios and come back anytime.';
+      'See past performance in clear results, then save or share your scenario.';
 
   @override
   String get tabDca => 'DCA';

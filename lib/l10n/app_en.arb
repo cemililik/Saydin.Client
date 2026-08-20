@@ -367,18 +367,21 @@
   "onboardingPrivacyPolicyLink": "Privacy Policy",
   "onboardingKvkkLink": "KVKK Disclosure",
   "legalRecordSaveFailed": "The legal notice record could not be saved. Please try again.",
-  "onboardingPage1Title": "What If I Bought?",
-  "onboardingPage1Body": "Calculate any investment retroactively. Dollar, gold, Bitcoin and more.",
-  "onboardingPage2Title": "Compare and Discover",
-  "onboardingPage2Body": "Compare assets side by side, build portfolios. Which one performed better?",
-  "onboardingPage3Title": "Build a Portfolio",
-  "onboardingPage3Body": "Create portfolios with multiple assets, calculate total returns and discover the best strategy.",
-  "onboardingPage4Title": "Regular Investing",
-  "onboardingPage4Body": "Simulate weekly or monthly recurring purchases, see average cost and total return.",
-  "onboardingPage5Title": "Reverse Scenario",
-  "onboardingPage5Body": "How much should you have invested to reach your goal? Find out with reverse calculation.",
-  "onboardingPage6Title": "Share and Save",
-  "onboardingPage6Body": "Share your results with friends, save your scenarios and come back anytime.",
+  "onboardingProgress": "Page {current} of {total}",
+  "@onboardingProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "onboardingPastLabel": "Then",
+  "onboardingTodayLabel": "Today",
+  "onboardingPage1Title": "What if I bought? No longer a mystery.",
+  "onboardingPage1Body": "Dollar, gold, Bitcoin and more. Calculate the past in seconds with your chosen date and amount.",
+  "onboardingPage2Title": "More than one question.",
+  "onboardingPage2Body": "Compare, simulate regular investing, or calculate in reverse. Every scenario in one place.",
+  "onboardingPage3Title": "Turn curiosity into numbers.",
+  "onboardingPage3Body": "See past performance in clear results, then save or share your scenario.",
 
   "tabDca": "DCA",
   "dcaTitle": "DCA Simulation",
