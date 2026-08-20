@@ -1387,77 +1387,59 @@ abstract class AppLocalizations {
   /// **'Legal bilgilendirme kaydı kaydedilemedi. Lütfen tekrar deneyin.'**
   String get legalRecordSaveFailed;
 
+  /// No description provided for @onboardingProgress.
+  ///
+  /// In tr, this message translates to:
+  /// **'{total} sayfadan {current}. sayfa'**
+  String onboardingProgress(int current, int total);
+
+  /// No description provided for @onboardingPastLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçmiş'**
+  String get onboardingPastLabel;
+
+  /// No description provided for @onboardingTodayLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bugün'**
+  String get onboardingTodayLabel;
+
   /// No description provided for @onboardingPage1Title.
   ///
   /// In tr, this message translates to:
-  /// **'Ya Alsaydım?'**
+  /// **'Ya alsaydım, artık merak değil.'**
   String get onboardingPage1Title;
 
   /// No description provided for @onboardingPage1Body.
   ///
   /// In tr, this message translates to:
-  /// **'Merak ettiğiniz yatırımı geçmişe dönük hesaplayın. Dolar, altın, Bitcoin ve daha fazlası.'**
+  /// **'Dolar, altın, Bitcoin ve daha fazlası. Seçtiğiniz tarih ve tutarla geçmişi saniyeler içinde hesaplayın.'**
   String get onboardingPage1Body;
 
   /// No description provided for @onboardingPage2Title.
   ///
   /// In tr, this message translates to:
-  /// **'Karşılaştır ve Keşfet'**
+  /// **'Bir sorudan fazlası.'**
   String get onboardingPage2Title;
 
   /// No description provided for @onboardingPage2Body.
   ///
   /// In tr, this message translates to:
-  /// **'Varlıkları yan yana karşılaştırın, portföy oluşturun. Hangisi daha çok kazandırdı?'**
+  /// **'Karşılaştırın, düzenli alımı simüle edin, ters hesaplayın. Bütün senaryolarınız tek yerde.'**
   String get onboardingPage2Body;
 
   /// No description provided for @onboardingPage3Title.
   ///
   /// In tr, this message translates to:
-  /// **'Portföy Oluştur'**
+  /// **'Merakınızı rakama dönüştürün.'**
   String get onboardingPage3Title;
 
   /// No description provided for @onboardingPage3Body.
   ///
   /// In tr, this message translates to:
-  /// **'Birden fazla varlıkla portföy kurun, toplam getirinizi hesaplayın ve en iyi stratejiyi keşfedin.'**
+  /// **'Geçmiş performansı sade sonuçlarla görün; senaryonuzu kaydedin veya paylaşın.'**
   String get onboardingPage3Body;
-
-  /// No description provided for @onboardingPage4Title.
-  ///
-  /// In tr, this message translates to:
-  /// **'Düzenli Yatırım'**
-  String get onboardingPage4Title;
-
-  /// No description provided for @onboardingPage4Body.
-  ///
-  /// In tr, this message translates to:
-  /// **'Aylık veya haftalık düzenli alım simüle edin, ortalama maliyetinizi ve toplam getirinizi görün.'**
-  String get onboardingPage4Body;
-
-  /// No description provided for @onboardingPage5Title.
-  ///
-  /// In tr, this message translates to:
-  /// **'Ters Senaryo'**
-  String get onboardingPage5Title;
-
-  /// No description provided for @onboardingPage5Body.
-  ///
-  /// In tr, this message translates to:
-  /// **'Hedefinize ulaşmak için ne kadar yatırmalıydınız? Ters hesaplama ile gereken tutarı öğrenin.'**
-  String get onboardingPage5Body;
-
-  /// No description provided for @onboardingPage6Title.
-  ///
-  /// In tr, this message translates to:
-  /// **'Paylaş ve Kaydet'**
-  String get onboardingPage6Title;
-
-  /// No description provided for @onboardingPage6Body.
-  ///
-  /// In tr, this message translates to:
-  /// **'Sonuçlarınızı arkadaşlarınızla paylaşın, senaryolarınızı kaydedin ve istediğiniz zaman geri dönün.'**
-  String get onboardingPage6Body;
 
   /// No description provided for @tabDca.
   ///

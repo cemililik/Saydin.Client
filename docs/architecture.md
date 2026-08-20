@@ -602,6 +602,31 @@ context.financialColors.portfolioPalette
 Renk tek başına anlam taşımaz; sonuç yönü ikon/metinle, grafik serileri ise
 legend/tooltip ve erişilebilir veri listesiyle de belirtilir.
 
+### Marka Renkleri ve Zemin Parlaklığı (BrandColors)
+
+`core/constants/brand_colors.dart` onaylı kimlik tokenlarını (`navy`, `teal`,
+`offWhite`) ve marka yüzeylerinde kullanılan türev tonları tutar. Bu tokenlar
+`ColorScheme`'den bağımsızdır; marka yüzeyi (paylaşım kartı, onboarding kartı,
+native icon/splash dili) global tema migrasyonundan ayrı evrilebilsin diye
+ayrı tutulur.
+
+Onaylı `teal` (`#2CB1B8`) **yalnız koyu zeminde** okunabilir: navy kart üzerinde
+6,5:1, beyaz üzerinde 2,6:1 — yani WCAG'ın 4,5:1 metin eşiğini de 3:1 non-text
+eşiğini de geçemez. Açık zeminde kullanılacak metin, ikon ve ince çizgi rengi
+bu yüzden `tealOnLight` (`#127C82`, beyazda 4,96:1) tonudur:
+
+```dart
+// Zemin parlaklığına göre okunabilir teal
+Icon(icon, color: BrandColors.tealFor(theme.brightness))
+
+// Koyu marka kartı üzerinde doğrudan onaylı ton
+Icon(icon, color: BrandColors.teal)   // navy kart / dark tema
+```
+
+Kural `test/core/constants/brand_colors_test.dart` içinde kontrast testiyle
+korunur: `teal`'in beyazda 3:1'in altında, `tealOnLight`'ın açık yüzeylerde
+4,5:1'in üstünde kaldığı assert edilir.
+
 ### BottomNavigationBar
 
 Tema renkleri `BottomNavigationBarThemeData` üzerinden `AppTheme.light` ve `AppTheme.dark` içinde tanımlanır. Hardcoded `Colors.white` / `Color(0xFF757575)` **kullanılmaz** — `colorScheme.primary` ve `colorScheme.onSurfaceVariant` kullanılır.
@@ -725,6 +750,12 @@ stateless bir widget'tır. Güncel `LegalNoticeRecord` sürüm + legal bundle ha
 doküman kimlikleri + locale + UTC zaman + `seen/acknowledged` kararını taşır.
 Atla işlemi kabul yazmaz; bildirimin görüldüğünü kaydeder. Güncel kayıt oluşmadan
 `ConfigReadinessGate` kurulmaz ve device-ID taşıyan ilk config isteği başlamaz.
+
+`OnboardingPage` üç sayfalık marka akışıdır (`_pageCount = 3`); sayfa görselleri
+tümüyle dekoratiftir ve `ExcludeSemantics` ile semantik ağaçtan çıkarılır —
+anlamı başlık/gövde metni ile `onboardingProgress` etiketi taşır. `legalUpdateOnly`
+modunda son sayfanın görseli nötr `_LegalUpdateVisual` ile değiştirilir; KVKK
+yüzeyinde kurgusal kazanç kartı gösterilmez.
 
 ## Backend API Namespace Sözleşmesi
 

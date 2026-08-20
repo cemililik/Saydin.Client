@@ -785,46 +785,36 @@ class AppLocalizationsTr extends AppLocalizations {
       'Legal bilgilendirme kaydı kaydedilemedi. Lütfen tekrar deneyin.';
 
   @override
-  String get onboardingPage1Title => 'Ya Alsaydım?';
+  String onboardingProgress(int current, int total) {
+    return '$total sayfadan $current. sayfa';
+  }
+
+  @override
+  String get onboardingPastLabel => 'Geçmiş';
+
+  @override
+  String get onboardingTodayLabel => 'Bugün';
+
+  @override
+  String get onboardingPage1Title => 'Ya alsaydım, artık merak değil.';
 
   @override
   String get onboardingPage1Body =>
-      'Merak ettiğiniz yatırımı geçmişe dönük hesaplayın. Dolar, altın, Bitcoin ve daha fazlası.';
+      'Dolar, altın, Bitcoin ve daha fazlası. Seçtiğiniz tarih ve tutarla geçmişi saniyeler içinde hesaplayın.';
 
   @override
-  String get onboardingPage2Title => 'Karşılaştır ve Keşfet';
+  String get onboardingPage2Title => 'Bir sorudan fazlası.';
 
   @override
   String get onboardingPage2Body =>
-      'Varlıkları yan yana karşılaştırın, portföy oluşturun. Hangisi daha çok kazandırdı?';
+      'Karşılaştırın, düzenli alımı simüle edin, ters hesaplayın. Bütün senaryolarınız tek yerde.';
 
   @override
-  String get onboardingPage3Title => 'Portföy Oluştur';
+  String get onboardingPage3Title => 'Merakınızı rakama dönüştürün.';
 
   @override
   String get onboardingPage3Body =>
-      'Birden fazla varlıkla portföy kurun, toplam getirinizi hesaplayın ve en iyi stratejiyi keşfedin.';
-
-  @override
-  String get onboardingPage4Title => 'Düzenli Yatırım';
-
-  @override
-  String get onboardingPage4Body =>
-      'Aylık veya haftalık düzenli alım simüle edin, ortalama maliyetinizi ve toplam getirinizi görün.';
-
-  @override
-  String get onboardingPage5Title => 'Ters Senaryo';
-
-  @override
-  String get onboardingPage5Body =>
-      'Hedefinize ulaşmak için ne kadar yatırmalıydınız? Ters hesaplama ile gereken tutarı öğrenin.';
-
-  @override
-  String get onboardingPage6Title => 'Paylaş ve Kaydet';
-
-  @override
-  String get onboardingPage6Body =>
-      'Sonuçlarınızı arkadaşlarınızla paylaşın, senaryolarınızı kaydedin ve istediğiniz zaman geri dönün.';
+      'Geçmiş performansı sade sonuçlarla görün; senaryonuzu kaydedin veya paylaşın.';
 
   @override
   String get tabDca => 'Düzenli Yatırım';

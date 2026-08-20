@@ -11,6 +11,23 @@ class BrandColors {
   static const navy = Color(0xFF0B1D34);
   static const teal = Color(0xFF2CB1B8);
   static const offWhite = Color(0xFFF5F6F7);
+
+  /// Açık zeminde WCAG AA sağlayan teal varyantı. `teal` yalnız koyu zeminde
+  /// (navy kart, dark tema) okunabilir; açık yüzeyde 2,5:1'de kalarak hem
+  /// 4,5:1 metin hem 3:1 non-text eşiğinin altına düşer.
+  static const tealOnLight = Color(0xFF127C82);
+
+  /// Marka gradient'lerinin ikinci durakları ve onboarding aksan tonu.
+  static const navyCardEnd = Color(0xFF123D4B);
+  static const ctaGradientEnd = Color(0xFF164354);
+  static const steelAccent = Color(0xFF4678A9);
+
+  /// Marka yüzeylerinde kullanılan nötr gölge/scrim tonu.
+  static const scrim = Color(0x33000000);
+
+  /// Zemin parlaklığına göre okunabilir teal tonunu verir.
+  static Color tealFor(Brightness brightness) =>
+      brightness == Brightness.dark ? teal : tealOnLight;
 }
 
 /// Açık renk paylaşım kartının erişilebilir surface/text tokenları.
