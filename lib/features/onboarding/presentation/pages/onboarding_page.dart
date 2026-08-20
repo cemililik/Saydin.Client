@@ -14,6 +14,11 @@ import 'package:saydin/features/legal/presentation/pages/legal_document_page.dar
 import 'package:saydin/features/onboarding/domain/repositories/onboarding_repository.dart';
 
 class OnboardingPage extends StatefulWidget {
+  /// Sayfa geçiş animasyonu süresi. Test'ler bekleme süresini bu sabitten
+  /// türetir: `_ambientMotion` sonsuz döngüde olduğu için `pumpAndSettle`
+  /// asla settle etmez ve sabit bir bekleme süresi gerekir.
+  static const pageTransitionDuration = Duration(milliseconds: 380);
+
   final VoidCallback onComplete;
   final bool legalUpdateOnly;
 
@@ -91,7 +96,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   Future<void> _nextPage() async {
     if (_currentPage < _pageCount - 1) {
       await _controller.nextPage(
-        duration: const Duration(milliseconds: 380),
+        duration: OnboardingPage.pageTransitionDuration,
         curve: Curves.easeOutCubic,
       );
       return;
@@ -104,7 +109,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   Future<void> _previousPage() async {
     if (_currentPage == 0) return;
     await _controller.previousPage(
-      duration: const Duration(milliseconds: 380),
+      duration: OnboardingPage.pageTransitionDuration,
       curve: Curves.easeOutCubic,
     );
   }
@@ -200,13 +205,13 @@ class _OnboardingPageState extends State<OnboardingPage>
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                // Sabit 220dp taban kısa viewport'ta (yatay mod, küçük
-                // telefon) CTA'yı gereksiz derinliğe itiyordu; taban
-                // viewport'a göre kısılır. Görseller kendi içinde ölçeğe
-                // uyum sağladığı için düşük tabanda da taşma olmaz.
-                final visualHeight = math.max(
-                  math.min(220.0, constraints.maxHeight * 0.30),
-                  math.min(constraints.maxHeight * 0.34, 292.0),
+                // Görsel alan viewport'un %34'ü, 292dp ile sınırlı. Sabit
+                // alt taban yok: kısa viewport'ta (yatay mod, küçük telefon)
+                // taban CTA'yı gereksiz derinliğe itiyordu. Görseller kendi
+                // içinde ölçeğe uyduğu için küçük yükseklikte de taşma olmaz.
+                final visualHeight = math.min(
+                  constraints.maxHeight * 0.34,
+                  292.0,
                 );
                 return SingleChildScrollView(
                   key: const Key('onboarding-scroll-view'),
@@ -598,7 +603,7 @@ class _PrimaryAction extends StatelessWidget {
                     label,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: BrandColors.onNavy,
                       fontFamily: AppBranding.uiFontFamily,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -820,7 +825,7 @@ class _BrandMomentVisual extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: BrandColors.offWhite,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(color: BrandColors.onNavy, width: 2),
                     boxShadow: const [
                       BoxShadow(
                         color: BrandColors.scrim,
@@ -861,10 +866,10 @@ class _TimelineChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
     decoration: BoxDecoration(
-      color: emphasized ? BrandColors.teal : Colors.white.withAlpha(24),
+      color: emphasized ? BrandColors.teal : BrandColors.surfaceOnNavy,
       borderRadius: BorderRadius.circular(99),
       border: Border.all(
-        color: emphasized ? BrandColors.teal : Colors.white.withAlpha(40),
+        color: emphasized ? BrandColors.teal : BrandColors.hairlineOnNavy,
       ),
     ),
     child: Row(
@@ -903,7 +908,7 @@ class _TrendPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = Colors.white.withAlpha(12)
+      ..color = BrandColors.gridOnNavy
       ..strokeWidth = 1;
     for (var i = 1; i < 4; i++) {
       final y = size.height * i / 4;
@@ -973,9 +978,16 @@ class _ToolkitVisual extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 360),
         child: LayoutBuilder(
           builder: (context, constraints) {
+            // Tile'ın metin dışı dikey bütçesi (ikon bloğu + iç boşluk).
+            const tileChrome = 52.0;
+            // Grid'in tile dışı dikey tüketimi: 4+4 padding + 12 satır arası.
+            const gridChrome = 20.0;
             final tileExtent = math.max(
               1.0,
-              math.min(labelHeight + 52, (constraints.maxHeight - 20) / 2),
+              math.min(
+                labelHeight + tileChrome,
+                (constraints.maxHeight - gridChrome) / 2,
+              ),
             );
             return Stack(
               alignment: Alignment.center,

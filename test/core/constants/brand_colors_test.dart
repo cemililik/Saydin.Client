@@ -67,9 +67,15 @@ void main() {
       _contrast(BrandColors.tealOnLight, Colors.white),
       greaterThanOrEqualTo(4.5),
     );
+    // En dar pay burada: 4,59:1, AA eşiğinin yalnız 0,09 üstünde. Tonu
+    // koyulaştırmadan değiştiren her düzenleme bu assertion'ı düşürür.
     expect(
       _contrast(BrandColors.tealOnLight, ShareCardColors.surfaceSubtle),
       greaterThanOrEqualTo(4.5),
+    );
+    expect(
+      _contrast(BrandColors.tealOnLight, ShareCardColors.surfaceSubtle),
+      closeTo(4.59, 0.01),
     );
   });
 

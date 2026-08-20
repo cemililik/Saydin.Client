@@ -99,13 +99,19 @@ void main() {
 
   /// CTA'ya basarak bir sonraki sayfaya geçer. `jumpToPage` butonun kendi
   /// ilerletme dalını atladığı için akış testlerinde kullanılmaz.
+  ///
+  /// Bekleme süresi widget'ın kendi geçiş süresinden türetilir.
+  /// `pumpAndSettle` kullanılamaz: onboarding'in ambient animasyonu
+  /// `repeat(reverse: true)` ile sonsuz döndüğü için asla settle etmez.
   Future<void> tapPrimaryAction(WidgetTester tester) async {
     final action = find.byKey(const Key('onboarding-primary-action'));
     await tester.ensureVisible(action);
     await tester.pump();
     await tester.tap(action);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(
+      OnboardingPage.pageTransitionDuration + const Duration(milliseconds: 20),
+    );
   }
 
   testWidgets('skip records visible legal notice as seen, not acceptance', (
@@ -316,6 +322,10 @@ void main() {
     expect(
       tester.getSize(find.text('Karşılaştır')).width,
       greaterThanOrEqualTo(96.0),
+      reason:
+          '96dp alt sınırı _FeatureTile yatay chrome bütçesinden gelir: '
+          '360dp viewport → 150dp tile − 16dp padding − 30dp ikon − 6dp '
+          'boşluk = 98dp etiket genişliği.',
     );
   });
 

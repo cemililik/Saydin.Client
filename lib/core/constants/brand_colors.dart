@@ -25,6 +25,16 @@ class BrandColors {
   /// Marka yüzeylerinde kullanılan nötr gölge/scrim tonu.
   static const scrim = Color(0x33000000);
 
+  /// Navy marka yüzeyi üzerindeki ön plan rengi. Navy her iki temada da sabit
+  /// kaldığı için bu ton tema ile değişmez (navy üzerinde 17,1:1).
+  static const onNavy = Color(0xFFFFFFFF);
+
+  /// Navy yüzey üzerine bindirilen saydam katmanlar: kart içi yüzey, saç teli
+  /// kenarlık ve grafik ızgarası. Hepsi `onNavy`'nin alfa varyantıdır.
+  static const surfaceOnNavy = Color(0x18FFFFFF);
+  static const hairlineOnNavy = Color(0x28FFFFFF);
+  static const gridOnNavy = Color(0x0CFFFFFF);
+
   /// Zemin parlaklığına göre okunabilir teal tonunu verir.
   static Color tealFor(Brightness brightness) =>
       brightness == Brightness.dark ? teal : tealOnLight;
